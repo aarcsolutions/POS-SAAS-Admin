@@ -1,4 +1,7 @@
+'use client';
+
 import { AlertTriangle, ArrowUpRight, Building2, Package, TrendingUp, Wallet } from 'lucide-react';
+import SalesPerformanceChart from '@/components/dashboard/SalesPerformanceChart';
 
 const stats = [
   {
@@ -86,15 +89,8 @@ export default function DashboardPage() {
               <option>This year</option>
             </select>
           </div>
-          <div className="flex h-72 items-end gap-3 rounded-2xl bg-slate-50 p-5">
-            {[35, 58, 44, 72, 64, 88, 76, 92, 67, 83, 79, 96].map((height, index) => (
-              <div key={index} className="flex flex-1 items-end">
-                <div
-                  className="w-full rounded-t-xl bg-emerald-500/80"
-                  style={{ height: `${height}%` }}
-                />
-              </div>
-            ))}
+          <div className="rounded-2xl bg-slate-50 p-5">
+            <SalesPerformanceChart />
           </div>
         </div>
 

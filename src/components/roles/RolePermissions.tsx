@@ -228,17 +228,17 @@ export default function RolePermissions() {
                     </button>
                     {isOpen && (
                       <div className="border-t border-slate-200 bg-white p-5">
-                        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
                           {module.permissions.map((p) => {
                             const isAllowed = !!localPermissions[p.id];
                             return (
-                              <div key={p.id} className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50 px-4 py-3">
-                                <span className={`text-sm font-medium transition-colors ${isAllowed ? 'text-slate-800' : 'text-slate-400'}`}>{p.title}</span>
+                              <div key={p.id} className="flex items-center justify-between rounded-lg border border-slate-100 bg-slate-50 px-3 py-2.5 hover:bg-slate-100 transition-colors">
+                                <span className={`text-xs font-medium transition-colors truncate ${isAllowed ? 'text-slate-800' : 'text-slate-400'}`}>{p.title}</span>
                                 <button
                                   onClick={() => togglePermission(p.id)}
-                                  className={`relative h-6 w-11 rounded-full transition-colors focus:outline-none ${isAllowed ? 'bg-emerald-600' : 'bg-slate-200'}`}
+                                  className={`relative h-5 w-9 rounded-full transition-colors focus:outline-none flex-shrink-0 ml-2 ${isAllowed ? 'bg-emerald-600' : 'bg-slate-200'}`}
                                 >
-                                  <div className={`absolute left-1 top-1 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${isAllowed ? 'translate-x-5' : 'translate-x-0'}`} />
+                                  <div className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${isAllowed ? 'translate-x-4' : 'translate-x-0'}`} />
                                 </button>
                               </div>
                             );

@@ -24,7 +24,7 @@ export default function DashboardLayout({
         : 'text-slate-600 hover:bg-emerald-50 hover:text-emerald-700'
     }`;
 
-  const visibleModules = SIDEBAR_MODULES.filter((item) => hasPermission(item.permission));
+  const visibleModules = SIDEBAR_MODULES.filter((item) => item.public || hasPermission(item.permission));
 
   return (
     <div className="flex h-screen bg-slate-50 text-slate-800">

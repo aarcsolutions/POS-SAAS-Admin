@@ -11,6 +11,7 @@ import {
   Shield,
   Truck,
   Users,
+    ShoppingCart,
 } from 'lucide-react';
 
 export interface SidebarItem {
@@ -18,6 +19,8 @@ export interface SidebarItem {
   href: string;
   icon: React.ComponentType<{ className?: string }>;
   permission: string;
+  // if true, show in sidebar even if user permissions don't include the permission (useful for dev)
+  public?: boolean;
   section?: string;
 }
 
@@ -70,6 +73,22 @@ export const SIDEBAR_MODULES: SidebarItem[] = [
     icon: BriefcaseBusiness,
     permission: 'customers/getAll',
   },
+    {
+      label: 'Orders',
+      href: '/orders',
+      icon: ShoppingCart,
+      permission: 'orders/getAll',
+      // show in sidebar even if permissions are not yet wired in dev
+      public: true,
+    },
+    {
+      label: 'Raw Materials',
+      href: '/raw-materials',
+      icon: Package,
+      permission: 'raw_materials/getAll',
+      // show in sidebar during development
+      public: true,
+    },
   {
     label: 'Suppliers',
     href: '/suppliers',
