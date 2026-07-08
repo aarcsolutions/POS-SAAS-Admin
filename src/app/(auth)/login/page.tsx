@@ -69,55 +69,46 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-50 via-emerald-50/30 to-stone-100 px-4 py-12 text-slate-800">
-      {/* Decorative background shapes */}
+    <div className="relative flex min-h-screen items-center justify-center bg-gradient-to-br from-[#f7f1e6] via-[#f2e3cd] to-[#fff7ec] px-4 py-12 text-[#3e2a18]">
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute -top-32 -right-32 h-[28rem] w-[28rem] rounded-full bg-gradient-to-br from-emerald-200/40 to-emerald-100/20 blur-3xl" />
-        <div className="absolute -bottom-32 -left-32 h-[28rem] w-[28rem] rounded-full bg-gradient-to-tr from-amber-200/40 to-amber-100/20 blur-3xl" />
-        <div className="absolute top-1/2 left-1/2 h-96 w-96 -translate-x-1/2 -translate-y-1/2 rounded-full bg-gradient-to-br from-blue-100/20 to-purple-100/10 blur-3xl" />
+        <div className="absolute -top-28 -right-28 h-[26rem] w-[26rem] rounded-full bg-gradient-to-br from-[#d7a469]/80 to-[#f4dcba]/50 blur-3xl" />
+        <div className="absolute -bottom-28 -left-28 h-[26rem] w-[26rem] rounded-full bg-gradient-to-tr from-[#b26407]/15 to-[#f6d29b]/15 blur-3xl" />
       </div>
 
-      <div className="relative w-full max-w-[420px]">
-        {/* Logo / Brand */}
+      <div className="relative w-full max-w-[460px]">
         <div className="mb-10 text-center">
-          <div className="mb-6 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-600 to-emerald-700 shadow-xl shadow-emerald-600/25 ring-4 ring-white/50 backdrop-blur-sm">
-            <CircleDot className="h-7 w-7 text-white" strokeWidth={2.5} />
+          <div className="mb-5 inline-flex h-16 w-16 items-center justify-center rounded-[26px] bg-[#8b5a2b] text-white shadow-[0_20px_50px_rgba(139,90,43,0.22)]">
+            <CircleDot className="h-8 w-8" strokeWidth={2.5} />
           </div>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900 mb-2">
-            Admin Portal
-          </h1>
-          <p className="text-base text-slate-600 font-medium">
-            Sign in to manage your business
-          </p>
+          <p className="text-sm uppercase tracking-[0.3em] text-[#b0783d]">Baba Flour Mill</p>
+          <h1 className="mt-4 text-4xl font-bold tracking-tight text-[#3e2a18]">Master Admin Login</h1>
+          <p className="mt-2 text-sm text-[#6e553d]">Sign in to manage your mill operations.</p>
         </div>
 
         {/* Card */}
-        <div className="relative rounded-3xl border border-slate-200/60 bg-white/90 p-9 shadow-2xl shadow-slate-200/60 backdrop-blur-xl ring-1 ring-white/20">
+        <div className="relative rounded-[36px] border border-[#dec3a3] bg-white/95 p-10 shadow-[0_30px_70px_rgba(71,55,34,0.12)] ring-1 ring-[#f3e1cb]/60">
           {loginMutation.error && (
-            <div className="mb-6 flex items-center gap-3 rounded-xl bg-red-50/80 p-4 text-red-700 border border-red-200/60">
-              <AlertCircle className="h-5 w-5 flex-shrink-0" strokeWidth={2} />
-              <span className="text-sm font-medium">
-                {loginMutation.error.message || 'Login failed. Please check your credentials.'}
-              </span>
+            <div className="mb-6 rounded-3xl border border-[#f1c0a2] bg-[#fff1ec] p-4 text-sm text-[#9b2b0d]">
+              {loginMutation.error.message || 'Login failed. Please check your credentials.'}
             </div>
           )}
           <div className="mb-6">
-            <label className="mb-3 block text-sm font-semibold text-slate-700">
+            <label className="mb-3 block text-sm font-semibold text-[#5f4b35]">
               Email address
             </label>
             <div className="relative group">
               <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
-                <Mail className="h-5 w-5 text-slate-400 group-focus-within:text-emerald-500 transition-colors" strokeWidth={1.5} />
+                <Mail className="h-5 w-5 text-[#7e6a54] group-focus-within:text-[#a86b19] transition-colors" strokeWidth={1.5} />
               </div>
               <input
                 type="email"
                 value={email}
                 onChange={handleEmailChange}
                 onBlur={handleEmailBlur}
-                className={`h-12 w-full rounded-xl border bg-white pl-11 pr-4 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-4 transition-all ${
+                className={`h-12 w-full rounded-xl border bg-white pl-11 pr-4 text-sm text-[#3b2a1b] placeholder:text-[#b79b7f] focus:outline-none focus:ring-4 transition-all ${
                   errors.email && touched.email
-                    ? 'border-red-300 focus:border-red-500 focus:ring-red-500/10'
-                    : 'border-slate-200 focus:border-emerald-500 focus:ring-emerald-500/10'
+                    ? 'border-[#f0a38b] focus:border-[#c97a48] focus:ring-[#f3d2af]/50'
+                    : 'border-[#e3d1be] focus:border-[#c47b1d] focus:ring-[#f5d4a5]/50'
                 }`}
                 placeholder="you@company.com"
               />
@@ -132,33 +123,33 @@ export default function LoginPage() {
 
           <div className="mb-8">
             <div className="mb-3 flex items-center justify-between">
-              <label className="block text-sm font-semibold text-slate-700">
+              <label className="block text-sm font-semibold text-[#5f4b35]">
                 Password
               </label>
-              <a href="#" className="text-xs font-semibold text-emerald-600 hover:text-emerald-700 transition-colors">
+              <a href="#" className="text-xs font-semibold text-[#9c5a0e] hover:text-[#b76c10] transition-colors">
                 Forgot password?
               </a>
             </div>
             <div className="relative group">
               <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
-                <Lock className="h-5 w-5 text-slate-400 group-focus-within:text-emerald-500 transition-colors" strokeWidth={1.5} />
+                <Lock className="h-5 w-5 text-[#7e6a54] group-focus-within:text-[#a86b19] transition-colors" strokeWidth={1.5} />
               </div>
               <input
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={handlePasswordChange}
                 onBlur={handlePasswordBlur}
-                className={`h-12 w-full rounded-xl border bg-white pl-11 pr-12 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-4 transition-all ${
+                className={`h-12 w-full rounded-xl border bg-white pl-11 pr-12 text-sm text-[#3b2a1b] placeholder:text-[#b79b7f] focus:outline-none focus:ring-4 transition-all ${
                   errors.password && touched.password
-                    ? 'border-red-300 focus:border-red-500 focus:ring-red-500/10'
-                    : 'border-slate-200 focus:border-emerald-500 focus:ring-emerald-500/10'
+                    ? 'border-[#f0a38b] focus:border-[#c97a48] focus:ring-[#f3d2af]/50'
+                    : 'border-[#e3d1be] focus:border-[#c47b1d] focus:ring-[#f5d4a5]/50'
                 }`}
                 placeholder="Enter your password"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute inset-y-0 right-0 flex items-center pr-4 text-slate-400 hover:text-slate-600 transition-colors group-focus-within:text-emerald-500"
+                className="absolute inset-y-0 right-0 flex items-center pr-4 text-[#7e6a54] hover:text-[#5d3f1f] transition-colors"
               >
                 {showPassword ? (
                   <EyeOff className="h-5 w-5" strokeWidth={1.5} />
@@ -179,7 +170,7 @@ export default function LoginPage() {
             type="button"
             onClick={handleLogin}
             disabled={loginMutation.isPending}
-            className="relative flex h-12 w-full items-center justify-center gap-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-700 px-4 text-sm font-bold text-white shadow-lg shadow-emerald-600/25 transition-all hover:from-emerald-700 hover:to-emerald-800 hover:shadow-emerald-600/35 active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100 group"
+            className="relative flex h-12 w-full items-center justify-center gap-2.5 rounded-xl bg-[#b45309] px-4 text-sm font-bold text-white shadow-[0_16px_40px_rgba(180,83,9,0.25)] transition-all hover:bg-[#8f3f08] active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed group"
           >
             {loginMutation.isPending ? (
               <>
@@ -196,11 +187,11 @@ export default function LoginPage() {
           </button>
 
           <div className="mt-8 text-center">
-            <p className="text-sm text-slate-600">
+            <p className="text-sm text-[#6e553d]">
               Don&apos;t have an account?{' '}
               <Link 
                 href="/signup" 
-                className="font-bold text-emerald-600 hover:text-emerald-700 transition-colors underline decoration-2 underline-offset-2 hover:underline-offset-4"
+                className="font-bold text-[#9c5a0e] hover:text-[#b76c10] transition-colors underline decoration-[#f2d2a0] underline-offset-2 hover:underline-offset-4"
               >
                 Create one
               </Link>
@@ -209,9 +200,9 @@ export default function LoginPage() {
         </div>
 
         {/* Footer */}
-        <div className="mt-10 text-center text-xs text-slate-400">
+        <div className="mt-10 text-center text-xs text-[#7e6a54]">
           <div className="flex items-center justify-center gap-2">
-            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" strokeWidth={2} />
+            <CheckCircle2 className="h-3.5 w-3.5 text-[#b45309]" strokeWidth={2} />
             <p>Secure, encrypted connection</p>
           </div>
         </div>

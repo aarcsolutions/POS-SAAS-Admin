@@ -5,6 +5,7 @@ export const API_CONFIG = {
 export const ROUTES = {
   AUTH: {
     LOGIN: '/auth/login',
+    SIGNUP: '/auth/signup',
     LOGOUT: '/auth/logout',
     ME: '/auth/me',
   },

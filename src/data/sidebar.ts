@@ -123,3 +123,21 @@ export const SIDEBAR_MODULES: SidebarItem[] = [
     section: 'Access Control',
   },
 ];
+
+export const MODULE_ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
+  dashboard: LayoutDashboard,
+  business_settings: Settings,
+  branches: Building2,
+  users: Users,
+  products: Package,
+  inventory: Boxes,
+  reports: BarChart3,
+  customers: BriefcaseBusiness,
+  orders: ShoppingCart,
+  raw_materials: Package,
+  suppliers: Truck,
+  transactions: ReceiptText,
+  roles: Shield,
+  permissions: Lock,
+  modules: Boxes,
+};
