@@ -5,10 +5,12 @@ import { usePermission } from '@/hooks/use-permission';
 import { ENTITY_PERMS } from '@/rbac/permissions-map';
 import {
   Truck, Search, Plus, Phone, Mail, MapPin, Calendar, Package,
-  ArrowLeft, Pencil, Trash2, Eye, MoreHorizontal,
+  ArrowLeft, Pencil, Trash2, Eye,
   TrendingUp, Check, Clock, DollarSign, Boxes, Star,
 } from 'lucide-react';
 import SupplierForm from '@/components/suppliers/SupplierForm';
+import RowActionsMenu from '@/components/ui/RowActionsMenu';
+import { Select } from '@/components/ui/Select';
 
 interface Supplier {
   id: string;
@@ -142,19 +144,29 @@ export default function SuppliersPage() {
             placeholder="Search by name, email, or phone..."
             className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10" />
         </div>
-        <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}
-          className="h-11 rounded-xl border border-slate-200 bg-white px-4 text-sm outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10">
-          <option value="all">All Types</option>
-          <option value="manufacturer">Manufacturer</option>
-          <option value="distributor">Distributor</option>
-          <option value="local">Local</option>
-        </select>
-        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
-          className="h-11 rounded-xl border border-slate-200 bg-white px-4 text-sm outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10">
-          <option value="all">All Statuses</option>
-          <option value="active">Active</option>
-          <option value="inactive">Inactive</option>
-        </select>
+        <Select
+          value={typeFilter}
+          onChange={setTypeFilter}
+          size="lg"
+          allowEmpty={false}
+          options={[
+            { value: 'all', label: 'All Types' },
+            { value: 'manufacturer', label: 'Manufacturer' },
+            { value: 'distributor', label: 'Distributor' },
+            { value: 'local', label: 'Local' },
+          ]}
+        />
+        <Select
+          value={statusFilter}
+          onChange={setStatusFilter}
+          size="lg"
+          allowEmpty={false}
+          options={[
+            { value: 'all', label: 'All Statuses' },
+            { value: 'active', label: 'Active' },
+            { value: 'inactive', label: 'Inactive' },
+          ]}
+        />
       </div>
 
       {/* Table */}
@@ -208,22 +220,43 @@ export default function SuppliersPage() {
                   }`}>{s.status === 'active' ? 'Active' : 'Inactive'}</span>
                 </td>
                 <td className="px-5 py-4 text-right">
-                  <div className="relative inline-block">
-                    <button onClick={() => setDropdownOpen(dropdownOpen === s.id ? null : s.id)}
-                      className="rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"><MoreHorizontal className="h-4 w-4" /></button>
-                    {dropdownOpen === s.id && (
-                      <div className="absolute right-0 z-20 mt-1 w-44 rounded-xl border border-slate-200 bg-white py-1 shadow-lg">
-                        <button onClick={() => { setShowDetail(s.id); setDropdownOpen(null); }}
-                          className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-slate-700 transition hover:bg-slate-50"><Eye className="h-4 w-4" /> View Details</button>
-                        {canUpdate && (
-                          <button onClick={() => { setFormMode('edit'); setEditingId(s.id); setDropdownOpen(null); }} className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-slate-700 transition hover:bg-slate-50"><Pencil className="h-4 w-4" /> Edit</button>
-                        )}
-                        {canDelete && (
-                          <button className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-rose-600 transition hover:bg-rose-50"><Trash2 className="h-4 w-4" /> Delete</button>
-                        )}
-                      </div>
+                  <RowActionsMenu
+                    open={dropdownOpen === s.id}
+                    onOpenChange={(open) => setDropdownOpen(open ? s.id : null)}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDropdownOpen(null);
+                        setShowDetail(s.id);
+                      }}
+                      className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-slate-700 transition hover:bg-slate-50"
+                    >
+                      <Eye className="h-4 w-4" /> View Details
+                    </button>
+                    {canUpdate && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setDropdownOpen(null);
+                          setFormMode('edit');
+                          setEditingId(s.id);
+                        }}
+                        className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-slate-700 transition hover:bg-slate-50"
+                      >
+                        <Pencil className="h-4 w-4" /> Edit
+                      </button>
                     )}
-                  </div>
+                    {canDelete && (
+                      <button
+                        type="button"
+                        onClick={() => setDropdownOpen(null)}
+                        className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-rose-600 transition hover:bg-rose-50"
+                      >
+                        <Trash2 className="h-4 w-4" /> Delete
+                      </button>
+                    )}
+                  </RowActionsMenu>
                 </td>
               </tr>
             ))}

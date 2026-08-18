@@ -3,6 +3,7 @@ import {
   Building2,
   Boxes,
   BriefcaseBusiness,
+  ChefHat,
   LayoutDashboard,
   Lock,
   Package,
@@ -11,7 +12,8 @@ import {
   Shield,
   Truck,
   Users,
-    ShoppingCart,
+  ShoppingCart,
+  Tags,
 } from 'lucide-react';
 
 export interface SidebarItem {
@@ -29,7 +31,7 @@ export const SIDEBAR_MODULES: SidebarItem[] = [
     label: 'Dashboard',
     href: '/dashboard',
     icon: LayoutDashboard,
-    permission: 'dashboard/view',
+    permission: 'dashboard/getAll',
   },
   {
     label: 'Business Settings',
@@ -50,10 +52,22 @@ export const SIDEBAR_MODULES: SidebarItem[] = [
     permission: 'users/getAll',
   },
   {
+    label: 'Categories',
+    href: '/categories',
+    icon: Tags,
+    permission: 'categories/getAll',
+  },
+  {
     label: 'Product Management',
     href: '/products',
     icon: Package,
     permission: 'products/getAll',
+  },
+  {
+    label: 'Recipes',
+    href: '/recipes',
+    icon: ChefHat,
+    permission: 'recipes/getAll',
   },
   {
     label: 'Inventory Management',
@@ -78,16 +92,12 @@ export const SIDEBAR_MODULES: SidebarItem[] = [
       href: '/orders',
       icon: ShoppingCart,
       permission: 'orders/getAll',
-      // show in sidebar even if permissions are not yet wired in dev
-      public: true,
     },
     {
       label: 'Raw Materials',
       href: '/raw-materials',
       icon: Package,
-      permission: 'raw_materials/getAll',
-      // show in sidebar during development
-      public: true,
+      permission: 'raw-materials/getAll',
     },
   {
     label: 'Suppliers',
@@ -129,11 +139,14 @@ export const MODULE_ICON_MAP: Record<string, React.ComponentType<{ className?: s
   business_settings: Settings,
   branches: Building2,
   users: Users,
+  categories: Tags,
   products: Package,
+  recipes: ChefHat,
   inventory: Boxes,
   reports: BarChart3,
   customers: BriefcaseBusiness,
   orders: ShoppingCart,
+  'raw-materials': Package,
   raw_materials: Package,
   suppliers: Truck,
   transactions: ReceiptText,

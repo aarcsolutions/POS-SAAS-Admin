@@ -17,6 +17,8 @@ export interface User {
   email: string;
   name: string;
   role: string;
+  tenantId?: string;
+  tenantName?: string;
 }
 
 export interface AuthResponse {

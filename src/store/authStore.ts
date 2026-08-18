@@ -2,15 +2,13 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { User, ModulePermission } from '@/types/auth.types';
 
-
-
 interface AuthState {
   user: User | null;
   permissions: string[];
   modulesWithPermisssions: ModulePermission[];
   isAuthenticated: boolean;
   isLoading: boolean;
-  isHydrated: boolean; // Added for persistence check
+  isHydrated: boolean;
 
   logout: () => void;
   setAuth: (user: User, modules: ModulePermission[]) => void;
@@ -28,17 +26,32 @@ export const useAuthStore = create<AuthState>()(
       isLoading: false,
       isHydrated: false,
 
-
       logout: () => {
-        set({ user: null, permissions: [], modulesWithPermisssions: [], isAuthenticated: false });
-        localStorage.removeItem('auth-storage'); 
+        set({
+          user: null,
+          permissions: [],
+          modulesWithPermisssions: [],
+          isAuthenticated: false,
+          isHydrated: true,
+        });
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('auth-storage');
+        }
       },
 
       setAuth: (user: User, modules: ModulePermission[]) => {
-        const flatPermissions = modules.flatMap(m => 
-          m.permissions.filter(p => p.is_allowed).map(p => `${m.module_slug}/${p.permission_slug}`)
+        const flatPermissions = modules.flatMap((m) =>
+          m.permissions
+            .filter((p) => p.is_allowed)
+            .map((p) => `${m.module_slug}/${p.permission_slug}`)
         );
-        set({ user, modulesWithPermisssions: modules, permissions: flatPermissions, isAuthenticated: true });
+        set({
+          user,
+          modulesWithPermisssions: modules,
+          permissions: flatPermissions,
+          isAuthenticated: true,
+          isHydrated: true,
+        });
       },
 
       hasPermission: (permissionPath: string) => {
@@ -52,13 +65,26 @@ export const useAuthStore = create<AuthState>()(
     {
       name: 'auth-storage',
       storage: createJSONStorage(() => localStorage),
-      onRehydrateStorage: (state) => {
-        return (state, error) => {
-          if (!error && state) {
-            state.setHydrated();
-          }
-        };
-      },
+      partialize: (state) => ({
+        user: state.user,
+        permissions: state.permissions,
+        modulesWithPermisssions: state.modulesWithPermisssions,
+        isAuthenticated: state.isAuthenticated,
+        isLoading: state.isLoading,
+      }),
     }
   )
 );
+
+function markAuthHydrated() {
+  useAuthStore.setState({ isHydrated: true });
+}
+
+// Mark hydrated AFTER create() — never reference useAuthStore inside onRehydrateStorage
+if (typeof window !== 'undefined') {
+  if (useAuthStore.persist.hasHydrated()) {
+    markAuthHydrated();
+  } else {
+    useAuthStore.persist.onFinishHydration(markAuthHydrated);
+  }
+}

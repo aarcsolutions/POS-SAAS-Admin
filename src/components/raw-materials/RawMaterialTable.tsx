@@ -1,26 +1,41 @@
 'use client';
 
-import { useState } from 'react';
-import { MoreHorizontal, Eye, Pencil, Trash2 } from 'lucide-react';
-
-interface RawMaterial {
-  id: string;
-  name: string;
-  unit: string;
-  stock: number;
-  createdAt: string;
-}
+import { Eye, Pencil, Trash2, Loader2, Package } from 'lucide-react';
+import RowActionsMenu from '@/components/ui/RowActionsMenu';
+import { RawMaterial } from '@/types/raw-material.types';
 
 interface Props {
   materials: RawMaterial[];
+  loading?: boolean;
+  canUpdate?: boolean;
+  canDelete?: boolean;
+  dropdownOpen: string | null;
+  onDropdownChange: (id: string | null) => void;
   onView: (m: RawMaterial) => void;
   onEdit: (m: RawMaterial) => void;
   onDelete: (id: string) => void;
 }
 
-export default function RawMaterialTable({ materials, onView, onEdit, onDelete }: Props) {
-  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+function formatDate(value: string) {
+  if (!value) return '—';
+  try {
+    return new Date(value).toLocaleDateString();
+  } catch {
+    return value;
+  }
+}
 
+export default function RawMaterialTable({
+  materials,
+  loading,
+  canUpdate,
+  canDelete,
+  dropdownOpen,
+  onDropdownChange,
+  onView,
+  onEdit,
+  onDelete,
+}: Props) {
   return (
     <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
       <table className="w-full text-left text-sm">
@@ -34,30 +49,71 @@ export default function RawMaterialTable({ materials, onView, onEdit, onDelete }
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-200 bg-white">
-          {materials.map((m) => (
-            <tr key={m.id} className="transition hover:bg-slate-50">
-              <td className="px-5 py-4 font-semibold text-slate-900">{m.name}</td>
-              <td className="px-5 py-4 text-slate-600">{m.unit}</td>
-              <td className="px-5 py-4 text-slate-800 font-semibold">{m.stock}</td>
-              <td className="px-5 py-4 text-slate-600">{m.createdAt}</td>
-              <td className="px-5 py-4 text-right">
-                <div className="relative inline-block">
-                  <button onClick={() => setOpenDropdown(openDropdown === m.id ? null : m.id)} className="rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"><MoreHorizontal className="h-4 w-4" /></button>
-                  {openDropdown === m.id && (
-                    <div className="absolute right-0 z-20 mt-1 w-40 rounded-xl border border-slate-200 bg-white py-1 shadow-lg">
-                      <button onClick={() => { setOpenDropdown(null); onView(m); }} className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-slate-700 transition hover:bg-slate-50"><Eye className="h-4 w-4" /> View</button>
-                      <button onClick={() => { setOpenDropdown(null); onEdit(m); }} className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-slate-700 transition hover:bg-slate-50"><Pencil className="h-4 w-4" /> Edit</button>
-                      <button onClick={() => { setOpenDropdown(null); onDelete(m.id); }} className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-rose-600 transition hover:bg-rose-50"><Trash2 className="h-4 w-4" /> Delete</button>
-                    </div>
-                  )}
-                </div>
+          {loading ? (
+            <tr>
+              <td colSpan={5} className="py-12 text-center text-slate-400">
+                <Loader2 className="mx-auto h-5 w-5 animate-spin" />
               </td>
             </tr>
-          ))}
+          ) : materials.length === 0 ? (
+            <tr>
+              <td colSpan={5} className="py-12 text-center text-slate-400">
+                <Package className="mx-auto mb-2 h-8 w-8 opacity-40" />
+                No raw materials found.
+              </td>
+            </tr>
+          ) : (
+            materials.map((m) => (
+              <tr key={m.id} className="transition hover:bg-slate-50">
+                <td className="px-5 py-4 font-semibold text-slate-900">
+                  {m.name}
+                </td>
+                <td className="px-5 py-4 text-slate-600">{m.unit}</td>
+                <td className="px-5 py-4 font-semibold text-slate-800">
+                  {Number(m.stock_quantity).toLocaleString()}
+                </td>
+                <td className="px-5 py-4 text-slate-600">
+                  {formatDate(m.created_at)}
+                </td>
+                <td className="px-5 py-4 text-right">
+                  <RowActionsMenu
+                    open={dropdownOpen === m.id}
+                    onOpenChange={(open) =>
+                      onDropdownChange(open ? m.id : null)
+                    }
+                  >
+                    <button
+                      type="button"
+                      onClick={() => onView(m)}
+                      className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
+                    >
+                      <Eye className="h-4 w-4" /> View
+                    </button>
+                    {canUpdate && (
+                      <button
+                        type="button"
+                        onClick={() => onEdit(m)}
+                        className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
+                      >
+                        <Pencil className="h-4 w-4" /> Edit
+                      </button>
+                    )}
+                    {canDelete && (
+                      <button
+                        type="button"
+                        onClick={() => onDelete(m.id)}
+                        className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-rose-600 hover:bg-rose-50"
+                      >
+                        <Trash2 className="h-4 w-4" /> Delete
+                      </button>
+                    )}
+                  </RowActionsMenu>
+                </td>
+              </tr>
+            ))
+          )}
         </tbody>
       </table>
-
-      {materials.length === 0 && <div className="py-12 text-center text-sm text-slate-400">No raw materials found.</div>}
     </div>
   );
 }

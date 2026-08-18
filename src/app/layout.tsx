@@ -4,6 +4,7 @@ import "./globals.css";
 import { Toaster } from "sonner";
 import LoaderProvider from "@/components/providers/LoaderProvider";
 import { QueryProvider } from "@/components/providers/query-provider";
+import { AppDialog } from "@/components/ui/app-dialog";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -36,6 +37,7 @@ export default function RootLayout({
             {children}
           </LoaderProvider>
         </QueryProvider>
+        <AppDialog />
         <Toaster position="top-right" richColors />
       </body>
     </html>

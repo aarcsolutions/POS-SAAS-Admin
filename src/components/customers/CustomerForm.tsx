@@ -1,43 +1,58 @@
 'use client';
 
 import { useState } from 'react';
-import { ArrowLeft, Save, Loader2, User, Mail, Phone, MapPin, FileText, Tag } from 'lucide-react';
+import {
+  ArrowLeft,
+  Loader2,
+  User,
+  MapPin,
+  FileText,
+} from 'lucide-react';
+import { CustomerPayload } from '@/types/customer.types';
 
 interface CustomerFormData {
   name: string;
   email: string;
   phone: string;
-  type: 'retail' | 'wholesale' | 'corporate';
-  status: 'active' | 'inactive';
   address: string;
   city: string;
   notes: string;
+  is_active: boolean;
 }
 
 interface Props {
-  mode: 'add' | 'edit';
+  mode: 'create' | 'edit' | 'view';
   initialData?: CustomerFormData;
+  saving?: boolean;
   onClose: () => void;
-  onSubmit: (data: CustomerFormData) => void;
+  onSubmit: (data: CustomerPayload) => Promise<void> | void;
 }
 
 const emptyData: CustomerFormData = {
   name: '',
   email: '',
   phone: '',
-  type: 'retail',
-  status: 'active',
   address: '',
   city: '',
   notes: '',
+  is_active: true,
 };
 
-export default function CustomerForm({ mode, initialData, onClose, onSubmit }: Props) {
-  const [saving, setSaving] = useState(false);
+export default function CustomerForm({
+  mode,
+  initialData,
+  saving = false,
+  onClose,
+  onSubmit,
+}: Props) {
   const [data, setData] = useState<CustomerFormData>(initialData || emptyData);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const readOnly = mode === 'view';
 
-  const update = <K extends keyof CustomerFormData>(key: K, value: CustomerFormData[K]) => {
+  const update = <K extends keyof CustomerFormData>(
+    key: K,
+    value: CustomerFormData[K]
+  ) => {
     setData((prev) => ({ ...prev, [key]: value }));
     if (errors[key]) setErrors((prev) => ({ ...prev, [key]: '' }));
   };
@@ -45,37 +60,62 @@ export default function CustomerForm({ mode, initialData, onClose, onSubmit }: P
   const validate = () => {
     const e: Record<string, string> = {};
     if (!data.name.trim()) e.name = 'Name is required';
-    if (!data.email.trim()) e.email = 'Email is required';
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) e.email = 'Invalid email format';
     if (!data.phone.trim()) e.phone = 'Phone is required';
+    if (
+      data.email.trim() &&
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email.trim())
+    ) {
+      e.email = 'Invalid email format';
+    }
     setErrors(e);
     return Object.keys(e).length === 0;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (readOnly) return;
     if (!validate()) return;
-    setSaving(true);
-    await new Promise((r) => setTimeout(r, 600));
-    onSubmit(data);
-    setSaving(false);
+
+    await onSubmit({
+      name: data.name.trim(),
+      phone: data.phone.trim(),
+      email: data.email.trim() || null,
+      address: data.address.trim() || null,
+      city: data.city.trim() || null,
+      notes: data.notes.trim() || null,
+      is_active: data.is_active,
+    });
   };
 
-  const title = mode === 'add' ? 'Add Customer' : 'Edit Customer';
-  const subtitle = mode === 'add' ? 'Create a new customer record.' : 'Update customer information.';
+  const title =
+    mode === 'create'
+      ? 'Add Customer'
+      : mode === 'edit'
+        ? 'Edit Customer'
+        : 'Customer Details';
+  const subtitle =
+    mode === 'create'
+      ? 'Create a new customer record.'
+      : mode === 'edit'
+        ? 'Update customer information.'
+        : 'View customer information.';
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
       <div className="mb-8">
-        <button onClick={onClose} className="mb-4 flex items-center gap-2 text-sm font-medium text-slate-500 transition hover:text-slate-700">
+        <button
+          onClick={onClose}
+          className="mb-4 flex items-center gap-2 text-sm font-medium text-slate-500 transition hover:text-slate-700"
+        >
           <ArrowLeft className="h-4 w-4" /> Back to Customers
         </button>
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900">{title}</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+          {title}
+        </h1>
         <p className="mt-1 text-sm text-slate-500">{subtitle}</p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Basic Info */}
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="mb-5 flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-slate-400">
             <User className="h-4 w-4" /> Basic Information
@@ -86,72 +126,83 @@ export default function CustomerForm({ mode, initialData, onClose, onSubmit }: P
                 Full Name <span className="text-rose-500">*</span>
               </label>
               <input
-                type="text" value={data.name} onChange={(e) => update('name', e.target.value)}
+                type="text"
+                value={data.name}
+                onChange={(e) => update('name', e.target.value)}
+                disabled={readOnly}
                 placeholder="e.g. Ali Hassan"
-                className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10"
+                className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 disabled:opacity-70"
               />
-              {errors.name && <p className="mt-1 text-xs text-rose-500">{errors.name}</p>}
-            </div>
-            <div>
-              <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500">
-                Email <span className="text-rose-500">*</span>
-              </label>
-              <input
-                type="email" value={data.email} onChange={(e) => update('email', e.target.value)}
-                placeholder="e.g. ali@example.com"
-                className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10"
-              />
-              {errors.email && <p className="mt-1 text-xs text-rose-500">{errors.email}</p>}
+              {errors.name && (
+                <p className="mt-1 text-xs text-rose-500">{errors.name}</p>
+              )}
             </div>
             <div>
               <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500">
                 Phone <span className="text-rose-500">*</span>
               </label>
               <input
-                type="tel" value={data.phone} onChange={(e) => update('phone', e.target.value)}
-                placeholder="e.g. +92 300 1234 567"
-                className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10"
+                type="tel"
+                value={data.phone}
+                onChange={(e) => update('phone', e.target.value)}
+                disabled={readOnly}
+                placeholder="e.g. 03001234567"
+                className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 disabled:opacity-70"
               />
-              {errors.phone && <p className="mt-1 text-xs text-rose-500">{errors.phone}</p>}
+              {errors.phone && (
+                <p className="mt-1 text-xs text-rose-500">{errors.phone}</p>
+              )}
             </div>
             <div>
               <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500">
-                Customer Type
+                Email
               </label>
-              <select
-                value={data.type} onChange={(e) => update('type', e.target.value as CustomerFormData['type'])}
-                className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-800 outline-none transition focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10"
-              >
-                <option value="retail">Retail</option>
-                <option value="wholesale">Wholesale</option>
-                <option value="corporate">Corporate</option>
-              </select>
+              <input
+                type="email"
+                value={data.email}
+                onChange={(e) => update('email', e.target.value)}
+                disabled={readOnly}
+                placeholder="e.g. ali@example.com (optional)"
+                className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 disabled:opacity-70"
+              />
+              {errors.email && (
+                <p className="mt-1 text-xs text-rose-500">{errors.email}</p>
+              )}
             </div>
             <div>
               <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500">
                 Status
               </label>
               <div className="flex gap-4">
-                <label className="flex items-center gap-2.5 rounded-xl border border-slate-200 px-4 py-3 transition hover:bg-slate-50 cursor-pointer">
+                <label className="flex cursor-pointer items-center gap-2.5 rounded-xl border border-slate-200 px-4 py-3 transition hover:bg-slate-50">
                   <input
-                    type="radio" checked={data.status === 'active'} onChange={() => update('status', 'active')}
+                    type="radio"
+                    checked={data.is_active}
+                    onChange={() => update('is_active', true)}
+                    disabled={readOnly}
                     className="h-4 w-4 accent-emerald-600"
                   />
-                  <span className="text-sm font-medium text-slate-700">Active</span>
+                  <span className="text-sm font-medium text-slate-700">
+                    Active
+                  </span>
                 </label>
-                <label className="flex items-center gap-2.5 rounded-xl border border-slate-200 px-4 py-3 transition hover:bg-slate-50 cursor-pointer">
+                <label className="flex cursor-pointer items-center gap-2.5 rounded-xl border border-slate-200 px-4 py-3 transition hover:bg-slate-50">
                   <input
-                    type="radio" checked={data.status === 'inactive'} onChange={() => update('status', 'inactive')}
+                    type="radio"
+                    checked={!data.is_active}
+                    onChange={() => update('is_active', false)}
+                    disabled={readOnly}
                     className="h-4 w-4 accent-emerald-600"
                   />
-                  <span className="text-sm font-medium text-slate-700">Inactive</span>
+                  <span className="text-sm font-medium text-slate-700">
+                    Inactive
+                  </span>
                 </label>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Address */}
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="mb-5 flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-slate-400">
             <MapPin className="h-4 w-4" /> Address Details
@@ -162,9 +213,12 @@ export default function CustomerForm({ mode, initialData, onClose, onSubmit }: P
                 Street Address
               </label>
               <input
-                type="text" value={data.address} onChange={(e) => update('address', e.target.value)}
+                type="text"
+                value={data.address}
+                onChange={(e) => update('address', e.target.value)}
+                disabled={readOnly}
                 placeholder="Enter street address"
-                className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10"
+                className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 disabled:opacity-70"
               />
             </div>
             <div>
@@ -172,39 +226,54 @@ export default function CustomerForm({ mode, initialData, onClose, onSubmit }: P
                 City
               </label>
               <input
-                type="text" value={data.city} onChange={(e) => update('city', e.target.value)}
+                type="text"
+                value={data.city}
+                onChange={(e) => update('city', e.target.value)}
+                disabled={readOnly}
                 placeholder="Enter city"
-                className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10"
+                className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 disabled:opacity-70"
               />
             </div>
           </div>
         </div>
 
-        {/* Notes */}
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="mb-5 flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-slate-400">
             <FileText className="h-4 w-4" /> Additional Notes
           </div>
           <textarea
-            value={data.notes} onChange={(e) => update('notes', e.target.value)}
+            value={data.notes}
+            onChange={(e) => update('notes', e.target.value)}
+            disabled={readOnly}
             rows={4}
             placeholder="Add any notes about this customer..."
-            className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 resize-none"
+            className="w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 disabled:opacity-70"
           />
         </div>
 
-        {/* Actions */}
-        <div className="flex items-center justify-end gap-3 border-t border-slate-100 pt-6">
-          <button type="button" onClick={onClose}
-            className="rounded-xl border border-slate-200 bg-white px-6 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
-            Cancel
-          </button>
-          <button type="submit" disabled={saving}
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-6 py-2.5 text-sm font-bold text-white shadow-lg shadow-emerald-600/20 transition hover:bg-emerald-700 disabled:opacity-60 disabled:cursor-not-allowed">
-            {saving && <Loader2 className="h-4 w-4 animate-spin" />}
-            {saving ? 'Saving...' : mode === 'add' ? 'Create Customer' : 'Save Changes'}
-          </button>
-        </div>
+        {!readOnly && (
+          <div className="flex items-center justify-end gap-3 border-t border-slate-100 pt-6">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-xl border border-slate-200 bg-white px-6 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={saving}
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-6 py-2.5 text-sm font-bold text-white shadow-lg shadow-emerald-600/20 transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {saving && <Loader2 className="h-4 w-4 animate-spin" />}
+              {saving
+                ? 'Saving...'
+                : mode === 'create'
+                  ? 'Create Customer'
+                  : 'Save Changes'}
+            </button>
+          </div>
+        )}
       </form>
     </div>
   );

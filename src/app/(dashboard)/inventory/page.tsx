@@ -16,13 +16,14 @@ import {
   FileText,
   Check,
   X,
-  ChevronDown,
   TrendingUp,
   TrendingDown,
   Warehouse,
 } from 'lucide-react';
 import StockTransactionForm from '@/components/inventory/StockTransactionForm';
 import LowStockPanel from '@/components/inventory/LowStockPanel';
+import RowActionsMenu from '@/components/ui/RowActionsMenu';
+import { Select } from '@/components/ui/Select';
 
 interface InventoryItem {
   id: string;
@@ -296,28 +297,32 @@ export default function InventoryPage() {
           />
         </div>
         {activeTab === 'overview' && (
-          <select
+          <Select
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="h-11 rounded-xl border border-slate-200 bg-white px-4 text-sm outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10"
-          >
-            <option value="all">All Statuses</option>
-            <option value="optimal">Optimal</option>
-            <option value="low">Low Stock</option>
-            <option value="critical">Critical</option>
-            <option value="out">Out of Stock</option>
-          </select>
+            onChange={setStatusFilter}
+            size="lg"
+            allowEmpty={false}
+            options={[
+              { value: 'all', label: 'All Statuses' },
+              { value: 'optimal', label: 'Optimal' },
+              { value: 'low', label: 'Low Stock' },
+              { value: 'critical', label: 'Critical' },
+              { value: 'out', label: 'Out of Stock' },
+            ]}
+          />
         )}
         {activeTab === 'transactions' && (
-          <select
+          <Select
             value={typeFilter}
-            onChange={(e) => setTypeFilter(e.target.value)}
-            className="h-11 rounded-xl border border-slate-200 bg-white px-4 text-sm outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10"
-          >
-            <option value="all">All Transactions</option>
-            <option value="in">Stock In</option>
-            <option value="out">Stock Out</option>
-          </select>
+            onChange={setTypeFilter}
+            size="lg"
+            allowEmpty={false}
+            options={[
+              { value: 'all', label: 'All Transactions' },
+              { value: 'in', label: 'Stock In' },
+              { value: 'out', label: 'Stock Out' },
+            ]}
+          />
         )}
       </div>
 
@@ -381,32 +386,37 @@ export default function InventoryPage() {
                   </td>
                   <td className="px-5 py-4 text-xs text-slate-500">{item.lastUpdated}</td>
                   <td className="px-5 py-4 text-right">
-                    <div className="relative inline-block">
+                    <RowActionsMenu
+                      open={dropdownOpen === item.id}
+                      onOpenChange={(open) =>
+                        setDropdownOpen(open ? item.id : null)
+                      }
+                    >
                       <button
-                        onClick={() => setDropdownOpen(dropdownOpen === item.id ? null : item.id)}
-                        className="rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
+                        type="button"
+                        onClick={() => {
+                          setDropdownOpen(null);
+                          setTransactionType('in');
+                          setShowTransactionForm(true);
+                        }}
+                        className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-slate-700 transition hover:bg-slate-50"
                       >
-                        <ChevronDown className="h-4 w-4" />
+                        <ArrowDownLeft className="h-4 w-4 text-emerald-600" />
+                        Stock In
                       </button>
-                      {dropdownOpen === item.id && (
-                        <div className="absolute right-0 z-20 mt-1 w-44 rounded-xl border border-slate-200 bg-white py-1 shadow-lg">
-                          <button
-                            onClick={() => { setTransactionType('in'); setShowTransactionForm(true); setDropdownOpen(null); }}
-                            className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-slate-700 transition hover:bg-slate-50"
-                          >
-                            <ArrowDownLeft className="h-4 w-4 text-emerald-600" />
-                            Stock In
-                          </button>
-                          <button
-                            onClick={() => { setTransactionType('out'); setShowTransactionForm(true); setDropdownOpen(null); }}
-                            className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-slate-700 transition hover:bg-slate-50"
-                          >
-                            <ArrowUpRight className="h-4 w-4 text-amber-600" />
-                            Stock Out
-                          </button>
-                        </div>
-                      )}
-                    </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setDropdownOpen(null);
+                          setTransactionType('out');
+                          setShowTransactionForm(true);
+                        }}
+                        className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-slate-700 transition hover:bg-slate-50"
+                      >
+                        <ArrowUpRight className="h-4 w-4 text-amber-600" />
+                        Stock Out
+                      </button>
+                    </RowActionsMenu>
                   </td>
                 </tr>
               ))}

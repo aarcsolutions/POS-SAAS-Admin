@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { ArrowLeft, Save, Loader2, Truck, Mail, Phone, MapPin, FileText, User, Star } from 'lucide-react';
+import { Select } from '@/components/ui/Select';
 
 interface SupplierFormData {
   name: string;
@@ -134,14 +135,20 @@ export default function SupplierForm({ mode, initialData, onClose, onSubmit }: P
               <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500">
                 Supplier Type
               </label>
-              <select
-                value={data.type} onChange={(e) => update('type', e.target.value as SupplierFormData['type'])}
-                className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-800 outline-none transition focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10"
-              >
-                <option value="manufacturer">Manufacturer</option>
-                <option value="distributor">Distributor</option>
-                <option value="local">Local</option>
-              </select>
+              <Select
+                value={data.type}
+                onChange={(value) =>
+                  update('type', value as SupplierFormData['type'])
+                }
+                variant="form"
+                size="lg"
+                allowEmpty={false}
+                options={[
+                  { value: 'manufacturer', label: 'Manufacturer' },
+                  { value: 'distributor', label: 'Distributor' },
+                  { value: 'local', label: 'Local' },
+                ]}
+              />
             </div>
             <div>
               <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500">
@@ -205,18 +212,22 @@ export default function SupplierForm({ mode, initialData, onClose, onSubmit }: P
             <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500">
               Payment Terms
             </label>
-            <select
-              value={data.paymentTerms} onChange={(e) => update('paymentTerms', e.target.value)}
-              className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-800 outline-none transition focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10"
-            >
-              <option value="Cash on Delivery">Cash on Delivery</option>
-              <option value="Net 15 days">Net 15 days</option>
-              <option value="Net 30 days">Net 30 days</option>
-              <option value="Net 45 days">Net 45 days</option>
-              <option value="Net 60 days">Net 60 days</option>
-              <option value="Weekly settlement">Weekly settlement</option>
-              <option value="Monthly settlement">Monthly settlement</option>
-            </select>
+            <Select
+              value={data.paymentTerms}
+              onChange={(value) => update('paymentTerms', value)}
+              variant="form"
+              size="lg"
+              allowEmpty={false}
+              options={[
+                { value: 'Cash on Delivery', label: 'Cash on Delivery' },
+                { value: 'Net 15 days', label: 'Net 15 days' },
+                { value: 'Net 30 days', label: 'Net 30 days' },
+                { value: 'Net 45 days', label: 'Net 45 days' },
+                { value: 'Net 60 days', label: 'Net 60 days' },
+                { value: 'Weekly settlement', label: 'Weekly settlement' },
+                { value: 'Monthly settlement', label: 'Monthly settlement' },
+              ]}
+            />
           </div>
         </div>
 

@@ -1,6 +1,13 @@
+'use client';
+
+import { useState } from 'react';
 import { Building2, DollarSign, Languages, Receipt, Upload } from 'lucide-react';
+import { Select } from '@/components/ui/Select';
 
 export default function BusinessSettingsPage() {
+  const [currency, setCurrency] = useState('PKR');
+  const [language, setLanguage] = useState('en');
+
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       {/* Header */}
@@ -64,33 +71,43 @@ export default function BusinessSettingsPage() {
           <div>
             <label className="mb-2 block text-sm font-medium text-slate-700">Currency</label>
             <div className="relative">
-              <DollarSign className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-              <select className="h-11 w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 pl-10 pr-10 text-sm text-slate-800 outline-none transition focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10">
-                <option value="PKR">Pakistani Rupee (PKR)</option>
-                <option value="USD">US Dollar (USD)</option>
-                <option value="EUR">Euro (EUR)</option>
-                <option value="GBP">British Pound (GBP)</option>
-                <option value="AED">UAE Dirham (AED)</option>
-                <option value="SAR">Saudi Riyal (SAR)</option>
-              </select>
-              <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
-                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
-              </div>
+              <DollarSign className="pointer-events-none absolute left-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <Select
+                value={currency}
+                onChange={setCurrency}
+                variant="form"
+                size="lg"
+                allowEmpty={false}
+                triggerClassName="pl-10"
+                options={[
+                  { value: 'PKR', label: 'Pakistani Rupee (PKR)' },
+                  { value: 'USD', label: 'US Dollar (USD)' },
+                  { value: 'EUR', label: 'Euro (EUR)' },
+                  { value: 'GBP', label: 'British Pound (GBP)' },
+                  { value: 'AED', label: 'UAE Dirham (AED)' },
+                  { value: 'SAR', label: 'Saudi Riyal (SAR)' },
+                ]}
+              />
             </div>
           </div>
 
           <div>
             <label className="mb-2 block text-sm font-medium text-slate-700">Language</label>
             <div className="relative">
-              <Languages className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-              <select className="h-11 w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 pl-10 pr-10 text-sm text-slate-800 outline-none transition focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10">
-                <option value="en">English</option>
-                <option value="ur">Urdu</option>
-                <option value="ar">Arabic</option>
-              </select>
-              <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
-                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
-              </div>
+              <Languages className="pointer-events-none absolute left-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <Select
+                value={language}
+                onChange={setLanguage}
+                variant="form"
+                size="lg"
+                allowEmpty={false}
+                triggerClassName="pl-10"
+                options={[
+                  { value: 'en', label: 'English' },
+                  { value: 'ur', label: 'Urdu' },
+                  { value: 'ar', label: 'Arabic' },
+                ]}
+              />
             </div>
           </div>
         </div>

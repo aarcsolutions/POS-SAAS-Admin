@@ -1,8 +1,13 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { DashboardSalesPoint } from '@/types/dashboard.types';
 
-const SalesPerformanceChart = () => {
+interface Props {
+  series: DashboardSalesPoint[];
+}
+
+const SalesPerformanceChart = ({ series }: Props) => {
   const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
@@ -10,105 +15,129 @@ const SalesPerformanceChart = () => {
   }, []);
 
   if (!isClient) {
-    return <div className="h-72 bg-slate-50 rounded-2xl animate-pulse" />;
+    return <div className="h-72 animate-pulse rounded-2xl bg-slate-50" />;
   }
 
-  // Data for the chart
-  const data = [35, 58, 44, 72, 64, 88, 76, 92, 67, 83, 79, 96];
-  const maxValue = Math.max(...data);
-  const lineData = data.map((value) => (value / maxValue) * 100);
+  const data =
+    series.length > 0
+      ? series
+      : [{ label: '—', total: 0 }];
 
-  // Generate SVG path for line chart
+  const values = data.map((d) => d.total);
+  const maxValue = Math.max(...values, 1);
+  const lineData = values.map((value) => (value / maxValue) * 100);
+
   const width = 600;
   const height = 280;
   const padding = 30;
   const plotWidth = width - padding * 2;
   const plotHeight = height - padding * 2;
-  const pointSpacing = plotWidth / (data.length - 1);
+  const pointSpacing =
+    data.length > 1 ? plotWidth / (data.length - 1) : plotWidth;
 
   const points = lineData.map((value, index) => ({
     x: padding + index * pointSpacing,
     y: height - padding - (value / 100) * plotHeight,
   }));
 
-  const pathD = points.map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x} ${point.y}`).join(' ');
+  const pathD = points
+    .map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x} ${point.y}`)
+    .join(' ');
+
+  const yTicks = [0, 0.25, 0.5, 0.75, 1].map((t) => ({
+    ratio: t * 100,
+    label:
+      maxValue >= 1000
+        ? `${Math.round((maxValue * t) / 1000)}k`
+        : String(Math.round(maxValue * t)),
+  }));
+
+  const labelStep = Math.max(1, Math.ceil(data.length / 8));
 
   return (
     <div className="w-full">
-      <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-72">
-        <defs>
-          <linearGradient id="gradient" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#10b981" stopOpacity="0.3" />
-            <stop offset="100%" stopColor="#10b981" stopOpacity="0" />
-          </linearGradient>
-          <filter id="shadow">
-            <feGaussianBlur in="SourceGraphic" stdDeviation="1.5" />
-          </filter>
-        </defs>
+      {series.length === 0 ? (
+        <div className="flex h-72 items-center justify-center text-sm text-slate-400">
+          No sales data for this period
+        </div>
+      ) : (
+        <svg viewBox={`0 0 ${width} ${height}`} className="h-72 w-full">
+          <defs>
+            <linearGradient id="gradient" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#10b981" stopOpacity="0.3" />
+              <stop offset="100%" stopColor="#10b981" stopOpacity="0" />
+            </linearGradient>
+            <filter id="shadow">
+              <feGaussianBlur in="SourceGraphic" stdDeviation="1.5" />
+            </filter>
+          </defs>
 
-        {/* Grid lines */}
-        {[0, 25, 50, 75, 100].map((value) => (
-          <line
-            key={`grid-${value}`}
-            x1={padding}
-            y1={height - padding - (value / 100) * plotHeight}
-            x2={width - padding}
-            y2={height - padding - (value / 100) * plotHeight}
-            stroke="#e2e8f0"
-            strokeWidth="1"
+          {yTicks.map((tick) => (
+            <line
+              key={`grid-${tick.ratio}`}
+              x1={padding}
+              y1={height - padding - (tick.ratio / 100) * plotHeight}
+              x2={width - padding}
+              y2={height - padding - (tick.ratio / 100) * plotHeight}
+              stroke="#e2e8f0"
+              strokeWidth="1"
+            />
+          ))}
+
+          <path
+            d={pathD}
+            stroke="#10b981"
+            strokeWidth="3"
+            fill="none"
+            filter="url(#shadow)"
           />
-        ))}
 
-        {/* Main line */}
-        <path d={pathD} stroke="#10b981" strokeWidth="3" fill="none" filter="url(#shadow)" />
-
-        {/* Area under line */}
-        <path
-          d={`${pathD} L ${width - padding} ${height - padding} L ${padding} ${height - padding} Z`}
-          fill="url(#gradient)"
-        />
-
-        {/* Data points */}
-        {points.map((point, index) => (
-          <circle
-            key={`point-${index}`}
-            cx={point.x}
-            cy={point.y}
-            r="4"
-            fill="#10b981"
-            stroke="#ffffff"
-            strokeWidth="2"
+          <path
+            d={`${pathD} L ${points[points.length - 1]?.x ?? padding} ${height - padding} L ${padding} ${height - padding} Z`}
+            fill="url(#gradient)"
           />
-        ))}
 
-        {/* Y-axis labels */}
-        {[0, 25, 50, 75, 100].map((value) => (
-          <text
-            key={`label-${value}`}
-            x={padding - 10}
-            y={height - padding - (value / 100) * plotHeight + 4}
-            fontSize="12"
-            fill="#64748b"
-            textAnchor="end"
-          >
-            {value}%
-          </text>
-        ))}
+          {points.map((point, index) => (
+            <circle
+              key={`point-${index}`}
+              cx={point.x}
+              cy={point.y}
+              r="4"
+              fill="#10b981"
+              stroke="#ffffff"
+              strokeWidth="2"
+            />
+          ))}
 
-        {/* X-axis labels */}
-        {data.map((_, index) => (
-          <text
-            key={`x-label-${index}`}
-            x={padding + (index / (data.length - 1)) * plotWidth}
-            y={height - 10}
-            fontSize="12"
-            fill="#64748b"
-            textAnchor="middle"
-          >
-            Day {index + 1}
-          </text>
-        ))}
-      </svg>
+          {yTicks.map((tick) => (
+            <text
+              key={`label-${tick.ratio}`}
+              x={padding - 10}
+              y={height - padding - (tick.ratio / 100) * plotHeight + 4}
+              fontSize="11"
+              fill="#64748b"
+              textAnchor="end"
+            >
+              {tick.label}
+            </text>
+          ))}
+
+          {data.map((point, index) =>
+            index % labelStep === 0 || index === data.length - 1 ? (
+              <text
+                key={`x-label-${index}`}
+                x={padding + (data.length > 1 ? (index / (data.length - 1)) * plotWidth : 0)}
+                y={height - 8}
+                fontSize="10"
+                fill="#64748b"
+                textAnchor="middle"
+              >
+                {point.label}
+              </text>
+            ) : null
+          )}
+        </svg>
+      )}
     </div>
   );
 };

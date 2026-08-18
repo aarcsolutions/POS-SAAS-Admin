@@ -1,113 +1,174 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { ArrowLeft } from 'lucide-react';
-
-interface RawMaterial {
-  id: string;
-  name: string;
-  unit: string;
-  stock: number;
-  createdAt: string;
-}
+import { ArrowLeft, Loader2 } from 'lucide-react';
+import { RawMaterial, RawMaterialPayload } from '@/types/raw-material.types';
+import { Select } from '@/components/ui/Select';
 
 interface Props {
-  editing: RawMaterial | null;
-  onCreate: (payload: Partial<RawMaterial>) => void;
-  onUpdate: (id: string, payload: Partial<RawMaterial>) => void;
-  onCancel: () => void;
+  mode: 'create' | 'edit' | 'view';
+  initial?: RawMaterial | null;
+  saving?: boolean;
+  onClose: () => void;
+  onSubmit: (payload: RawMaterialPayload) => Promise<void> | void;
 }
 
-const UNITS = ['Kg', 'Gram', 'Liter', 'Ml', 'Piece', 'Box', 'Packet'];
+const UNITS = ['kg', 'g', 'liter', 'ml', 'pcs', 'box', 'packet'];
 
-export default function RawMaterialForm({ editing, onCreate, onUpdate, onCancel }: Props) {
+export default function RawMaterialForm({
+  mode,
+  initial,
+  saving = false,
+  onClose,
+  onSubmit,
+}: Props) {
+  const isReadOnly = mode === 'view';
   const [name, setName] = useState('');
   const [unit, setUnit] = useState(UNITS[0]);
   const [stock, setStock] = useState<number | ''>('');
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    if (editing) {
-      setName(editing.name);
-      setUnit(editing.unit);
-      setStock(editing.stock);
+    if (initial) {
+      setName(initial.name);
+      setUnit(initial.unit || UNITS[0]);
+      setStock(Number(initial.stock_quantity ?? 0));
     } else {
       setName('');
       setUnit(UNITS[0]);
       setStock('');
     }
-  }, [editing]);
+  }, [initial]);
 
-  const handleSubmit = () => {
-    if (!name.trim()) return alert('Material name is required');
-    if (editing) {
-      onUpdate(editing.id, { name, unit, stock: Number(stock || 0) });
-    } else {
-      onCreate({ name, unit, stock: Number(stock || 0) });
+  const title =
+    mode === 'create'
+      ? 'Add Raw Material'
+      : mode === 'edit'
+        ? 'Edit Raw Material'
+        : 'Raw Material Details';
+
+  const validate = () => {
+    const next: Record<string, string> = {};
+    if (!name.trim()) next.name = 'Material name is required';
+    if (!unit.trim()) next.unit = 'Unit is required';
+    if (stock !== '' && Number(stock) < 0) {
+      next.stock_quantity = 'Stock cannot be negative';
     }
+    setErrors(next);
+    return Object.keys(next).length === 0;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isReadOnly) return;
+    if (!validate()) return;
+    await onSubmit({
+      name: name.trim(),
+      unit: unit.trim(),
+      stock_quantity: Number(stock === '' ? 0 : stock),
+    });
   };
 
   return (
     <div className="space-y-6">
-      <button onClick={onCancel} className="flex items-center gap-2 text-sm font-medium text-emerald-600 hover:text-emerald-700 transition">
+      <button
+        type="button"
+        onClick={onClose}
+        className="flex items-center gap-2 text-sm font-medium text-emerald-600 transition hover:text-emerald-700"
+      >
         <ArrowLeft className="h-4 w-4" /> Back to Raw Materials
       </button>
 
       <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h1 className="text-2xl font-bold text-slate-900 mb-6">{editing ? 'Edit Raw Material' : 'Add Raw Material'}</h1>
+        <h1 className="mb-6 text-2xl font-bold text-slate-900">{title}</h1>
 
-        <div className="space-y-5 max-w-2xl">
+        <form onSubmit={handleSubmit} className="max-w-2xl space-y-5">
           <div>
-            <label className="mb-2 block text-sm font-medium text-slate-700">Material Name *</label>
+            <label className="mb-2 block text-sm font-medium text-slate-700">
+              Material Name {!isReadOnly && <span className="text-rose-500">*</span>}
+            </label>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
+              readOnly={isReadOnly}
               placeholder="e.g. Flour"
-              className="h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10"
+              className={`h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 ${
+                isReadOnly ? 'opacity-70' : ''
+              }`}
             />
+            {errors.name && (
+              <p className="mt-1 text-xs text-rose-600">{errors.name}</p>
+            )}
           </div>
 
           <div>
-            <label className="mb-2 block text-sm font-medium text-slate-700">Unit *</label>
-            <select
+            <label className="mb-2 block text-sm font-medium text-slate-700">
+              Unit {!isReadOnly && <span className="text-rose-500">*</span>}
+            </label>
+            <Select
               value={unit}
-              onChange={(e) => setUnit(e.target.value)}
-              className="h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10"
-            >
-              {UNITS.map((u) => (
-                <option key={u} value={u}>
-                  {u}
-                </option>
-              ))}
-            </select>
+              onChange={setUnit}
+              disabled={isReadOnly}
+              variant="form"
+              size="lg"
+              allowEmpty={false}
+              triggerClassName={isReadOnly ? 'opacity-70' : ''}
+              options={[
+                ...(!UNITS.includes(unit) && unit
+                  ? [{ value: unit, label: unit }]
+                  : []),
+                ...UNITS.map((u) => ({ value: u, label: u })),
+              ]}
+            />
+            {errors.unit && (
+              <p className="mt-1 text-xs text-rose-600">{errors.unit}</p>
+            )}
           </div>
 
           <div>
-            <label className="mb-2 block text-sm font-medium text-slate-700">Initial Stock Quantity</label>
+            <label className="mb-2 block text-sm font-medium text-slate-700">
+              {mode === 'create' ? 'Initial Stock Quantity' : 'Stock Quantity'}
+            </label>
             <input
               type="number"
-              value={stock as any}
-              onChange={(e) => setStock(e.target.value === '' ? '' : Number(e.target.value))}
+              min={0}
+              step="0.01"
+              value={stock}
+              onChange={(e) =>
+                setStock(e.target.value === '' ? '' : Number(e.target.value))
+              }
+              readOnly={isReadOnly}
               placeholder="0"
-              className="h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10"
+              className={`h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 ${
+                isReadOnly ? 'opacity-70' : ''
+              }`}
             />
+            {errors.stock_quantity && (
+              <p className="mt-1 text-xs text-rose-600">{errors.stock_quantity}</p>
+            )}
           </div>
-        </div>
 
-        <div className="mt-8 flex items-center justify-end gap-3">
-          <button
-            onClick={onCancel}
-            className="rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleSubmit}
-            className="rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-emerald-600/20 transition hover:bg-emerald-700"
-          >
-            {editing ? 'Update Material' : 'Create Material'}
-          </button>
-        </div>
+          {!isReadOnly && (
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={onClose}
+                className="rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={saving}
+                className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-emerald-600/20 transition hover:bg-emerald-700 disabled:opacity-60"
+              >
+                {saving && <Loader2 className="h-4 w-4 animate-spin" />}
+                {mode === 'create' ? 'Create Material' : 'Save Changes'}
+              </button>
+            </div>
+          )}
+        </form>
       </div>
     </div>
   );

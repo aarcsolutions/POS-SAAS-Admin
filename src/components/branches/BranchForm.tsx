@@ -2,6 +2,7 @@
 
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import { useState } from 'react';
+import { Select } from '@/components/ui/Select';
 
 interface Branch {
   id: string;
@@ -28,6 +29,7 @@ interface BranchFormProps {
 export default function BranchForm({ mode, initialData, onClose, onSubmit }: BranchFormProps) {
   const isReadOnly = mode === 'view';
   const [saving, setSaving] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const [formData, setFormData] = useState<Partial<Branch>>({
     name: initialData?.name || '',
@@ -43,9 +45,24 @@ export default function BranchForm({ mode, initialData, onClose, onSubmit }: Bra
   const title = mode === 'create' ? 'Add New Branch' : mode === 'edit' ? 'Edit Branch' : 'View Branch';
   const buttonText = mode === 'create' ? 'Create Branch' : 'Save Changes';
 
+  const updateField = <K extends keyof Branch>(key: K, value: Branch[K]) => {
+    setFormData((prev) => ({ ...prev, [key]: value }));
+    if (errors[key]) setErrors((prev) => ({ ...prev, [key]: '' }));
+  };
+
+  const validate = () => {
+    const next: Record<string, string> = {};
+    if (!formData.name?.trim()) next.name = 'Name is required';
+    if (!formData.location?.trim()) next.location = 'Location is required';
+    if (!formData.phone?.trim()) next.phone = 'Phone is required';
+    setErrors(next);
+    return Object.keys(next).length === 0;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isReadOnly) return;
+    if (!validate()) return;
     setSaving(true);
     await new Promise((resolve) => setTimeout(resolve, 600));
     onSubmit(formData);
@@ -86,13 +103,16 @@ export default function BranchForm({ mode, initialData, onClose, onSubmit }: Bra
               <input
                 type="text"
                 value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                onChange={(e) => updateField('name', e.target.value)}
                 readOnly={isReadOnly}
                 placeholder="e.g. Karachi Main Branch"
-                className={`h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-800 placeholder:text-slate-400 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 focus:outline-none transition-all ${
-                  isReadOnly ? 'cursor-default opacity-70' : ''
-                }`}
+                className={`h-12 w-full rounded-xl border bg-slate-50 px-4 text-sm text-slate-800 placeholder:text-slate-400 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 focus:outline-none transition-all ${
+                  errors.name ? 'border-rose-400' : 'border-slate-200'
+                } ${isReadOnly ? 'cursor-default opacity-70' : ''}`}
               />
+              {errors.name && (
+                <p className="mt-1 text-xs text-rose-600">{errors.name}</p>
+              )}
             </div>
 
             {/* Location */}
@@ -103,13 +123,16 @@ export default function BranchForm({ mode, initialData, onClose, onSubmit }: Bra
               <input
                 type="text"
                 value={formData.location}
-                onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                onChange={(e) => updateField('location', e.target.value)}
                 readOnly={isReadOnly}
                 placeholder="e.g. Karachi, Sindh"
-                className={`h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-800 placeholder:text-slate-400 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 focus:outline-none transition-all ${
-                  isReadOnly ? 'cursor-default opacity-70' : ''
-                }`}
+                className={`h-12 w-full rounded-xl border bg-slate-50 px-4 text-sm text-slate-800 placeholder:text-slate-400 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 focus:outline-none transition-all ${
+                  errors.location ? 'border-rose-400' : 'border-slate-200'
+                } ${isReadOnly ? 'cursor-default opacity-70' : ''}`}
               />
+              {errors.location && (
+                <p className="mt-1 text-xs text-rose-600">{errors.location}</p>
+              )}
             </div>
 
             {/* Phone */}
@@ -120,13 +143,16 @@ export default function BranchForm({ mode, initialData, onClose, onSubmit }: Bra
               <input
                 type="text"
                 value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                onChange={(e) => updateField('phone', e.target.value)}
                 readOnly={isReadOnly}
                 placeholder="+92 3XX XXXXXXX"
-                className={`h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-800 placeholder:text-slate-400 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 focus:outline-none transition-all ${
-                  isReadOnly ? 'cursor-default opacity-70' : ''
-                }`}
+                className={`h-12 w-full rounded-xl border bg-slate-50 px-4 text-sm text-slate-800 placeholder:text-slate-400 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 focus:outline-none transition-all ${
+                  errors.phone ? 'border-rose-400' : 'border-slate-200'
+                } ${isReadOnly ? 'cursor-default opacity-70' : ''}`}
               />
+              {errors.phone && (
+                <p className="mt-1 text-xs text-rose-600">{errors.phone}</p>
+              )}
             </div>
 
             {/* Manager */}
@@ -185,26 +211,24 @@ export default function BranchForm({ mode, initialData, onClose, onSubmit }: Bra
               <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500">
                 Status
               </label>
-              <div className="relative">
-                <select
-                  value={formData.status}
-                  onChange={(e) => setFormData({ ...formData, status: e.target.value as 'active' | 'inactive' })}
-                  disabled={isReadOnly}
-                  className={`h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-800 appearance-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 focus:outline-none transition-all ${
-                    isReadOnly ? 'cursor-default opacity-70' : ''
-                  }`}
-                >
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
-                </select>
-                {!isReadOnly && (
-                  <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
-                    <svg className="h-4 w-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </div>
-                )}
-              </div>
+              <Select
+                value={formData.status}
+                onChange={(value) =>
+                  setFormData({
+                    ...formData,
+                    status: value as 'active' | 'inactive',
+                  })
+                }
+                disabled={isReadOnly}
+                variant="form"
+                allowEmpty={false}
+                size="lg"
+                triggerClassName={isReadOnly ? 'cursor-default opacity-70' : ''}
+                options={[
+                  { value: 'active', label: 'Active' },
+                  { value: 'inactive', label: 'Inactive' },
+                ]}
+              />
             </div>
 
             {/* Address - full width */}

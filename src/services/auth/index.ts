@@ -1,14 +1,30 @@
 import api from '../lib/api';
 import { ROUTES } from '@/utils/constants';
+import { getTenantDomain } from '@/utils/env';
+
+export { getTenantDomain };
 
 export const authApi = {
-  login: async (credentials: any) => {
-    const { data } = await api.post(ROUTES.AUTH.LOGIN, credentials);
-    return data;
+  getTenantInfo: async () => {
+    const { data } = await api.get(ROUTES.AUTH.TENANT_INFO, {
+      headers: { domain: getTenantDomain() },
+    });
+    return data as {
+      status: boolean;
+      message: string;
+      data: {
+        id: string;
+        title: string;
+        slug: string;
+        description?: string | null;
+      };
+    };
   },
 
-  signup: async (payload: any) => {
-    const { data } = await api.post(ROUTES.AUTH.SIGNUP, payload);
+  login: async (credentials: { email: string; password: string }) => {
+    const { data } = await api.post(ROUTES.AUTH.LOGIN, credentials, {
+      headers: { domain: getTenantDomain() },
+    });
     return data;
   },
 
@@ -17,13 +33,8 @@ export const authApi = {
     return data;
   },
 
-  me: async () => {
-    const { data } = await api.get(ROUTES.AUTH.ME);
+  refresh: async (refresh_token: string) => {
+    const { data } = await api.post(ROUTES.AUTH.REFRESH, { refresh_token });
     return data;
   },
-
-  refresh: async (refresh_token: string) => {
-    const { data } = await api.post('/auth/refresh', { refresh_token });
-    return data;
-  }
 };

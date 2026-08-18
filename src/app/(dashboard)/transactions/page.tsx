@@ -15,6 +15,7 @@ import {
   ArrowLeft,
   Check,
 } from 'lucide-react';
+import { Select } from '@/components/ui/Select';
 
 interface Transaction {
   id: string;
@@ -191,27 +192,45 @@ export default function TransactionsPage() {
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
           <input type="text" value={searchQuery} onChange={(e)=>setSearchQuery(e.target.value)} placeholder="Search by transaction ID, order ID, or customer..." className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10" />
         </div>
-        <select value={dateFilter} onChange={(e)=>setDateFilter(e.target.value)} className="h-11 rounded-xl border border-slate-200 bg-white px-4 text-sm outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10">
-          <option value="all">All Dates</option>
-          <option value="today">Today</option>
-          <option value="week">This Week</option>
-          <option value="month">This Month</option>
-        </select>
-        <select value={methodFilter} onChange={(e)=>setMethodFilter(e.target.value)} className="h-11 rounded-xl border border-slate-200 bg-white px-4 text-sm outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10">
-          <option value="all">All Methods</option>
-          <option value="cash">Cash</option>
-          <option value="card">Card</option>
-          <option value="transfer">Bank Transfer</option>
-          <option value="jazzcash">JazzCash</option>
-          <option value="easypaisa">EasyPaisa</option>
-        </select>
-        <select value={statusFilter} onChange={(e)=>setStatusFilter(e.target.value)} className="h-11 rounded-xl border border-slate-200 bg-white px-4 text-sm outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10">
-          <option value="all">All Status</option>
-          <option value="success">Success</option>
-          <option value="pending">Pending</option>
-          <option value="failed">Failed</option>
-          <option value="refunded">Refunded</option>
-        </select>
+        <Select
+          value={dateFilter}
+          onChange={setDateFilter}
+          size="lg"
+          allowEmpty={false}
+          options={[
+            { value: 'all', label: 'All Dates' },
+            { value: 'today', label: 'Today' },
+            { value: 'week', label: 'This Week' },
+            { value: 'month', label: 'This Month' },
+          ]}
+        />
+        <Select
+          value={methodFilter}
+          onChange={setMethodFilter}
+          size="lg"
+          allowEmpty={false}
+          options={[
+            { value: 'all', label: 'All Methods' },
+            { value: 'cash', label: 'Cash' },
+            { value: 'card', label: 'Card' },
+            { value: 'transfer', label: 'Bank Transfer' },
+            { value: 'jazzcash', label: 'JazzCash' },
+            { value: 'easypaisa', label: 'EasyPaisa' },
+          ]}
+        />
+        <Select
+          value={statusFilter}
+          onChange={setStatusFilter}
+          size="lg"
+          allowEmpty={false}
+          options={[
+            { value: 'all', label: 'All Status' },
+            { value: 'success', label: 'Success' },
+            { value: 'pending', label: 'Pending' },
+            { value: 'failed', label: 'Failed' },
+            { value: 'refunded', label: 'Refunded' },
+          ]}
+        />
       </div>
 
       <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { ArrowLeft, ArrowDownLeft, ArrowUpRight, Loader2 } from 'lucide-react';
+import { Select } from '@/components/ui/Select';
 
 interface InventoryItem {
   id: string;
@@ -43,12 +44,22 @@ export default function StockTransactionForm({ type, inventory, reasons, onClose
   const [reference, setReference] = useState('');
   const [notes, setNotes] = useState('');
   const [supplier, setSupplier] = useState('');
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const selectedItem = inventory.find((item) => item.sku === selectedSku);
 
+  const validate = () => {
+    const next: Record<string, string> = {};
+    if (!selectedSku) next.selectedSku = 'Product is required';
+    if (!quantity.trim()) next.quantity = 'Quantity is required';
+    if (!reference.trim()) next.reference = 'Reference is required';
+    setErrors(next);
+    return Object.keys(next).length === 0;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedItem || !quantity || !reference) return;
+    if (!validate() || !selectedItem) return;
     setSaving(true);
     await new Promise((resolve) => setTimeout(resolve, 600));
     onSubmit({
@@ -102,25 +113,26 @@ export default function StockTransactionForm({ type, inventory, reasons, onClose
               <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500">
                 Select Product <span className="text-rose-500">*</span>
               </label>
-              <div className="relative">
-                <select
-                  value={selectedSku}
-                  onChange={(e) => {
-                    setSelectedSku(e.target.value);
-                    const item = inventory.find((i) => i.sku === e.target.value);
-                    if (item) setSupplier(item.supplier);
-                  }}
-                  required
-                  className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-800 outline-none transition focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10"
-                >
-                  <option value="">Choose a product...</option>
-                  {inventory.map((item) => (
-                    <option key={item.id} value={item.sku}>
-                      {item.productName} ({item.sku}) — Current: {item.currentStock} {item.unit}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <Select
+                value={selectedSku}
+                onChange={(value) => {
+                  setSelectedSku(value);
+                  if (errors.selectedSku) setErrors((prev) => ({ ...prev, selectedSku: '' }));
+                  const item = inventory.find((i) => i.sku === value);
+                  if (item) setSupplier(item.supplier);
+                }}
+                variant="form"
+                size="lg"
+                placeholder="Choose a product..."
+                triggerClassName={errors.selectedSku ? 'border-rose-400' : undefined}
+                options={inventory.map((item) => ({
+                  value: item.sku,
+                  label: `${item.productName} (${item.sku}) — Current: ${item.currentStock} ${item.unit}`,
+                }))}
+              />
+              {errors.selectedSku && (
+                <p className="mt-1 text-xs text-rose-600">{errors.selectedSku}</p>
+              )}
               {selectedItem && (
                 <div className="mt-2 flex items-center gap-4 rounded-xl bg-slate-50 p-3 text-xs text-slate-600">
                   <span>Current Stock: <strong className="text-slate-800">{selectedItem.currentStock} {selectedItem.unit}</strong></span>
@@ -138,12 +150,19 @@ export default function StockTransactionForm({ type, inventory, reasons, onClose
               <input
                 type="number"
                 value={quantity}
-                onChange={(e) => setQuantity(e.target.value)}
+                onChange={(e) => {
+                  setQuantity(e.target.value);
+                  if (errors.quantity) setErrors((prev) => ({ ...prev, quantity: '' }));
+                }}
                 min={1}
-                required
                 placeholder="Enter quantity"
-                className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10"
+                className={`h-12 w-full rounded-xl border bg-slate-50 px-4 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 ${
+                  errors.quantity ? 'border-rose-400' : 'border-slate-200'
+                }`}
               />
+              {errors.quantity && (
+                <p className="mt-1 text-xs text-rose-600">{errors.quantity}</p>
+              )}
             </div>
 
             {/* Reason */}
@@ -151,17 +170,14 @@ export default function StockTransactionForm({ type, inventory, reasons, onClose
               <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500">
                 Reason <span className="text-rose-500">*</span>
               </label>
-              <div className="relative">
-                <select
-                  value={reason}
-                  onChange={(e) => setReason(e.target.value)}
-                  className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-800 outline-none transition focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10"
-                >
-                  {reasons.map((r) => (
-                    <option key={r} value={r}>{r}</option>
-                  ))}
-                </select>
-              </div>
+              <Select
+                value={reason}
+                onChange={setReason}
+                variant="form"
+                size="lg"
+                allowEmpty={false}
+                options={reasons.map((r) => ({ value: r, label: r }))}
+              />
             </div>
 
             {/* Supplier (only for Stock In) */}
@@ -188,11 +204,18 @@ export default function StockTransactionForm({ type, inventory, reasons, onClose
               <input
                 type="text"
                 value={reference}
-                onChange={(e) => setReference(e.target.value)}
-                required
+                onChange={(e) => {
+                  setReference(e.target.value);
+                  if (errors.reference) setErrors((prev) => ({ ...prev, reference: '' }));
+                }}
                 placeholder="e.g. PO-2024-0012"
-                className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10"
+                className={`h-12 w-full rounded-xl border bg-slate-50 px-4 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 ${
+                  errors.reference ? 'border-rose-400' : 'border-slate-200'
+                }`}
               />
+              {errors.reference && (
+                <p className="mt-1 text-xs text-rose-600">{errors.reference}</p>
+              )}
             </div>
 
             {/* Notes */}
@@ -221,7 +244,7 @@ export default function StockTransactionForm({ type, inventory, reasons, onClose
             </button>
             <button
               type="submit"
-              disabled={saving || !selectedSku || !quantity || !reference}
+              disabled={saving}
               className={`inline-flex items-center justify-center gap-2 rounded-xl px-6 py-2.5 text-sm font-bold text-white shadow-lg transition disabled:opacity-60 disabled:cursor-not-allowed ${
                 type === 'in'
                   ? 'bg-emerald-600 shadow-emerald-600/20 hover:bg-emerald-700'

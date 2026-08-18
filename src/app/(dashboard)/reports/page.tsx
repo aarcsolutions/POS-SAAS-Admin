@@ -8,7 +8,6 @@ import {
   DollarSign,
   Package,
   Calendar,
-  ChevronDown,
   ArrowUpRight,
   ArrowDownRight,
   Award,
@@ -22,6 +21,7 @@ import {
 } from 'lucide-react';
 import ProductPerformanceTable from '@/components/reports/ProductPerformanceTable';
 import ProfitAnalysisView from '@/components/reports/ProfitAnalysisView';
+import { Select } from '@/components/ui/Select';
 
 interface DailySale {
   date: string;
@@ -109,16 +109,18 @@ export default function ReportsPage() {
           <p className="mt-1 text-sm text-slate-500">Analyze sales performance, product metrics, and profit insights.</p>
         </div>
         <div className="flex items-center gap-2">
-          <select
+          <Select
             value={period}
-            onChange={(e) => setPeriod(e.target.value as typeof period)}
-            className="h-11 rounded-xl border border-slate-200 bg-white px-4 text-sm outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10"
-          >
-            <option value="7d">Last 7 Days</option>
-            <option value="30d">Last 30 Days</option>
-            <option value="90d">Last 90 Days</option>
-            <option value="custom">Custom Range</option>
-          </select>
+            onChange={(value) => setPeriod(value as typeof period)}
+            size="lg"
+            allowEmpty={false}
+            options={[
+              { value: '7d', label: 'Last 7 Days' },
+              { value: '30d', label: 'Last 30 Days' },
+              { value: '90d', label: 'Last 90 Days' },
+              { value: 'custom', label: 'Custom Range' },
+            ]}
+          />
         </div>
       </div>
 

@@ -1,104 +1,157 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { Plus, Search, ArrowLeft } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Plus, Search } from 'lucide-react';
 import RawMaterialTable from '@/components/raw-materials/RawMaterialTable';
 import RawMaterialForm from '@/components/raw-materials/RawMaterialForm';
-import RawMaterialDetailView from '@/components/raw-materials/RawMaterialDetailView';
 import DeleteConfirm from '@/components/raw-materials/DeleteConfirm';
-import { notifySuccess } from '@/utils/notify';
+import ListPager from '@/components/ui/ListPager';
+import { usePermission } from '@/hooks/use-permission';
+import { ENTITY_PERMS } from '@/rbac/permissions-map';
+import {
+  useRawMaterialsQuery,
+  useCreateRawMaterialMutation,
+  useUpdateRawMaterialMutation,
+  useDeleteRawMaterialMutation,
+} from '@/hooks/raw-materials';
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
+import { extractListItems, extractPagination } from '@/utils/helpers';
+import { RawMaterial } from '@/types/raw-material.types';
 
-interface RawMaterial {
-  id: string;
-  name: string;
-  unit: string;
-  stock: number;
-  createdAt: string;
-}
-
-const mockData: RawMaterial[] = [
-  { id: 'RM-1', name: 'Flour', unit: 'Kg', stock: 120, createdAt: '2024-05-10' },
-  { id: 'RM-2', name: 'Sugar', unit: 'Kg', stock: 60, createdAt: '2024-05-12' },
-  { id: 'RM-3', name: 'Milk', unit: 'Liter', stock: 200, createdAt: '2024-06-01' },
-];
+const LIMIT = 10;
 
 export default function RawMaterialsPage() {
-  const [materials, setMaterials] = useState<RawMaterial[]>(mockData);
   const [search, setSearch] = useState('');
-  const [mode, setMode] = useState<'list' | 'create' | 'edit' | 'view'>('list');
-  const [editing, setEditing] = useState<RawMaterial | null>(null);
-  const [viewing, setViewing] = useState<RawMaterial | null>(null);
+  const [page, setPage] = useState(1);
+  const [formMode, setFormMode] = useState<'create' | 'edit' | 'view' | null>(
+    null
+  );
+  const [selected, setSelected] = useState<RawMaterial | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [dropdownOpen, setDropdownOpen] = useState<string | null>(null);
 
-  const onCreate = (payload: Partial<RawMaterial>) => {
-    const newItem: RawMaterial = {
-      id: `RM-${Math.random().toString(36).substr(2, 6)}`,
-      name: payload.name || 'Untitled',
-      unit: payload.unit || 'Kg',
-      stock: payload.stock || 0,
-      createdAt: new Date().toISOString().split('T')[0],
-    };
-    setMaterials((s) => [newItem, ...s]);
-    notifySuccess('Raw material created');
-    setMode('list');
+  const canCreate = usePermission(ENTITY_PERMS.raw_materials.create);
+  const canUpdate = usePermission(ENTITY_PERMS.raw_materials.update);
+  const canDelete = usePermission(ENTITY_PERMS.raw_materials.delete);
+
+  const debouncedSearch = useDebouncedValue(search.trim(), 300);
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch]);
+
+  const { data, isLoading, isFetching } = useRawMaterialsQuery({
+    page,
+    limit: LIMIT,
+    search: debouncedSearch || undefined,
+  });
+  const createMutation = useCreateRawMaterialMutation();
+  const updateMutation = useUpdateRawMaterialMutation();
+  const deleteMutation = useDeleteRawMaterialMutation();
+
+  const materials = extractListItems<RawMaterial>(data);
+  const pagination = extractPagination(data, LIMIT);
+
+  const handleOpen = (
+    mode: 'create' | 'edit' | 'view',
+    material?: RawMaterial
+  ) => {
+    setFormMode(mode);
+    setSelected(material || null);
+    setDropdownOpen(null);
   };
 
-  const onUpdate = (id: string, payload: Partial<RawMaterial>) => {
-    setMaterials((s) => s.map((m) => (m.id === id ? { ...m, ...payload } : m)));
-    notifySuccess('Raw material updated');
-    setEditing(null);
-    setMode('list');
+  const handleDeleteConfirm = () => {
+    if (!deletingId) return;
+    deleteMutation.mutate(deletingId, {
+      onSettled: () => setDeletingId(null),
+    });
   };
 
-  const onDelete = (id: string) => {
-    setMaterials((s) => s.filter((m) => m.id !== id));
-    notifySuccess('Raw material deleted');
-    setDeletingId(null);
-  };
-
-  const filtered = useMemo(() => materials.filter((m) => m.name.toLowerCase().includes(search.toLowerCase())), [materials, search]);
-
-  if (mode === 'create' || (mode === 'edit' && editing)) {
+  if (formMode) {
     return (
       <RawMaterialForm
-        editing={mode === 'edit' ? editing : null}
-        onCreate={onCreate}
-        onUpdate={onUpdate}
-        onCancel={() => { setMode('list'); setEditing(null); }}
+        mode={formMode}
+        initial={selected}
+        saving={createMutation.isPending || updateMutation.isPending}
+        onClose={() => setFormMode(null)}
+        onSubmit={async (payload) => {
+          if (formMode === 'create') {
+            await createMutation.mutateAsync(payload);
+          } else if (formMode === 'edit' && selected) {
+            await updateMutation.mutateAsync({
+              id: selected.id,
+              ...payload,
+            });
+          }
+          setFormMode(null);
+        }}
       />
     );
   }
 
-  if (mode === 'view' && viewing) {
-    return <RawMaterialDetailView material={viewing} onEdit={() => { setEditing(viewing); setMode('edit'); }} onClose={() => { setMode('list'); setViewing(null); }} />;
-  }
-
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Raw Materials</h1>
-          <p className="mt-1 text-sm text-slate-500">Manage inventory materials used in recipes and production.</p>
+          <p className="mt-1 text-sm text-slate-500">
+            Manage inventory materials used in recipes and production.
+          </p>
         </div>
         <div className="flex items-center gap-3">
           <div className="relative">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-            <input value={search} onChange={(e)=>setSearch(e.target.value)} placeholder="Search Raw Material" className="h-11 w-[320px] rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10" />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search raw materials..."
+              className="h-11 w-[280px] rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10"
+            />
           </div>
-          <button onClick={()=>setMode('create')} className="flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-emerald-600/20 transition hover:bg-emerald-700">
-            <Plus className="h-4 w-4" /> Add Raw Material
-          </button>
+          {canCreate && (
+            <button
+              type="button"
+              onClick={() => handleOpen('create')}
+              className="flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-emerald-600/20 transition hover:bg-emerald-700"
+            >
+              <Plus className="h-4 w-4" /> Add Raw Material
+            </button>
+          )}
         </div>
       </div>
 
       <RawMaterialTable
-        materials={filtered}
-        onView={(m)=>{ setViewing(m); setMode('view'); }}
-        onEdit={(m)=>{ setEditing(m); setMode('edit'); }}
-        onDelete={(id)=>setDeletingId(id)}
+        materials={materials}
+        loading={isLoading || isFetching}
+        canUpdate={canUpdate}
+        canDelete={canDelete}
+        dropdownOpen={dropdownOpen}
+        onDropdownChange={setDropdownOpen}
+        onView={(m) => handleOpen('view', m)}
+        onEdit={(m) => handleOpen('edit', m)}
+        onDelete={(id) => {
+          setDropdownOpen(null);
+          setDeletingId(id);
+        }}
       />
 
-      {deletingId && <DeleteConfirm id={deletingId} onCancel={()=>setDeletingId(null)} onConfirm={() => onDelete(deletingId)} />}
+      <ListPager
+        page={page}
+        totalPages={pagination.totalPages}
+        total={pagination.total}
+        limit={LIMIT}
+        onPageChange={setPage}
+        label="raw materials"
+        disabled={isLoading || isFetching}
+      />
+
+      {deletingId && (
+        <DeleteConfirm
+          id={deletingId}
+          onCancel={() => setDeletingId(null)}
+          onConfirm={handleDeleteConfirm}
+        />
+      )}
     </div>
   );
 }

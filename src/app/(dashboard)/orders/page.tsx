@@ -1,520 +1,418 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
-  ShoppingCart,
   Search,
   Plus,
-  Download,
   Eye,
-  MoreHorizontal,
-  ChevronDown,
-  Calendar,
-  Filter,
-  Clock,
-  Check,
-  X,
-  RefreshCw,
-  ArrowLeft,
-  Printer,
-  RotateCcw,
+  Loader2,
+  ChefHat,
   CheckCircle2,
+  XCircle,
+  Printer,
+  CreditCard,
+  Banknote,
 } from 'lucide-react';
+import OrderCreateWizard from '@/components/orders/OrderCreateWizard';
+import OrderSlip from '@/components/orders/OrderSlip';
+import RowActionsMenu from '@/components/ui/RowActionsMenu';
+import { Select } from '@/components/ui/Select';
+import { usePermission } from '@/hooks/use-permission';
+import { ENTITY_PERMS } from '@/rbac/permissions-map';
+import {
+  useOrdersQuery,
+  useOrderDetailQuery,
+  useUpdateOrderStatusMutation,
+  useRecordPaymentMutation,
+} from '@/hooks/orders';
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
+import { useAuthStore } from '@/store/authStore';
+import { confirmDialog } from '@/store/dialogStore';
+import {
+  OrderListItem,
+  OrderStatus,
+} from '@/types/order.types';
 
-interface OrderProduct {
-  id: string;
-  name: string;
-  qty: number;
-  price: number;
-}
-
-interface Order {
-  id: string;
-  orderNumber: string;
-  customerId: string;
-  customerName: string;
-  customerPhone: string;
-  customerEmail: string;
-  branch: string;
-  cashier: string;
-  products: OrderProduct[];
-  subtotal: number;
-  tax: number;
-  discount: number;
-  totalAmount: number;
-  paymentMethod: 'cash' | 'card' | 'transfer';
-  status: 'pending' | 'processing' | 'completed' | 'cancelled' | 'refunded';
-  orderDate: string;
-  completedDate?: string;
-}
-
-const mockOrders: Order[] = [
-  {
-    id: '1',
-    orderNumber: 'ORD-2024-001',
-    customerId: 'c1',
-    customerName: 'Ali Hassan',
-    customerPhone: '+92 300 1234 567',
-    customerEmail: 'ali.hassan@gmail.com',
-    branch: 'Karachi - Main',
-    cashier: 'Ahmed Khan',
-    products: [
-      { id: 'p1', name: 'Chicken Burger', qty: 2, price: 250 },
-      { id: 'p2', name: 'Latte Regular', qty: 2, price: 180 },
-    ],
-    subtotal: 860,
-    tax: 129,
-    discount: 0,
-    totalAmount: 989,
-    paymentMethod: 'cash',
-    status: 'completed',
-    orderDate: '2024-06-15 14:32',
-    completedDate: '2024-06-15 14:45',
-  },
-  {
-    id: '2',
-    orderNumber: 'ORD-2024-002',
-    customerId: 'c2',
-    customerName: 'Sana Malik',
-    customerPhone: '+92 301 8765 432',
-    customerEmail: 'sana.m@hotmail.com',
-    branch: 'Lahore - Mall',
-    cashier: 'Fatima',
-    products: [
-      { id: 'p3', name: 'Family Deal', qty: 1, price: 1200 },
-      { id: 'p4', name: 'Garlic Bread', qty: 2, price: 150 },
-    ],
-    subtotal: 1500,
-    tax: 225,
-    discount: 100,
-    totalAmount: 1625,
-    paymentMethod: 'card',
-    status: 'processing',
-    orderDate: '2024-06-15 15:20',
-  },
-  {
-    id: '3',
-    orderNumber: 'ORD-2024-003',
-    customerId: 'c3',
-    customerName: 'Bilal Traders Ltd.',
-    customerPhone: '+92 21 3456 7890',
-    customerEmail: 'accounts@bilaltraders.com',
-    branch: 'Karachi - Main',
-    cashier: 'Ahmed Khan',
-    products: [
-      { id: 'p1', name: 'Chicken Burger', qty: 5, price: 250 },
-      { id: 'p5', name: 'Thermal Receipt Rolls', qty: 2, price: 450 },
-    ],
-    subtotal: 1900,
-    tax: 285,
-    discount: 0,
-    totalAmount: 2185,
-    paymentMethod: 'transfer',
-    status: 'pending',
-    orderDate: '2024-06-15 16:10',
-  },
-  {
-    id: '4',
-    orderNumber: 'ORD-2024-004',
-    customerId: 'c4',
-    customerName: 'Fatima Zahra',
-    customerPhone: '+92 302 2345 678',
-    customerEmail: 'fatima.z@yahoo.com',
-    branch: 'Islamabad - F-8',
-    cashier: 'Sara Ali',
-    products: [
-      { id: 'p2', name: 'Latte Regular', qty: 1, price: 180 },
-      { id: 'p6', name: 'Chocolate Syrup', qty: 1, price: 350 },
-    ],
-    subtotal: 530,
-    tax: 79.5,
-    discount: 0,
-    totalAmount: 609.5,
-    paymentMethod: 'cash',
-    status: 'refunded',
-    orderDate: '2024-06-14 13:45',
-    completedDate: '2024-06-14 14:00',
-  },
-  {
-    id: '5',
-    orderNumber: 'ORD-2024-005',
-    customerId: 'c5',
-    customerName: 'Kashmir Foods',
-    customerPhone: '+92 42 5678 9012',
-    customerEmail: 'orders@kashmirfoods.pk',
-    branch: 'Lahore - Mall',
-    cashier: 'Fatima',
-    products: [
-      { id: 'p1', name: 'Chicken Burger', qty: 10, price: 250 },
-      { id: 'p3', name: 'Family Deal', qty: 3, price: 1200 },
-    ],
-    subtotal: 6100,
-    tax: 915,
-    discount: 500,
-    totalAmount: 6515,
-    paymentMethod: 'transfer',
-    status: 'completed',
-    orderDate: '2024-06-15 10:30',
-    completedDate: '2024-06-15 10:50',
-  },
-  {
-    id: '6',
-    orderNumber: 'ORD-2024-006',
-    customerId: 'c6',
-    customerName: 'Usman Ghani',
-    customerPhone: '+92 303 3456 789',
-    customerEmail: 'usman.g@gmail.com',
-    branch: 'Faisalabad - Downtown',
-    cashier: 'Ali',
-    products: [
-      { id: 'p2', name: 'Latte Regular', qty: 3, price: 180 },
-    ],
-    subtotal: 540,
-    tax: 81,
-    discount: 0,
-    totalAmount: 621,
-    paymentMethod: 'cash',
-    status: 'cancelled',
-    orderDate: '2024-06-13 11:00',
-  },
-];
-
-const statusConfig: Record<Order['status'], { bg: string; text: string; icon: React.ComponentType<{ className?: string }> }> = {
-  pending: { bg: 'bg-amber-50', text: 'text-amber-700', icon: Clock },
-  processing: { bg: 'bg-blue-50', text: 'text-blue-700', icon: RefreshCw },
-  completed: { bg: 'bg-emerald-50', text: 'text-emerald-700', icon: Check },
-  cancelled: { bg: 'bg-slate-50', text: 'text-slate-500', icon: X },
-  refunded: { bg: 'bg-orange-50', text: 'text-orange-700', icon: RotateCcw },
+const STATUS_LABEL: Record<string, string> = {
+  pending: 'Pending',
+  accepted: 'Accepted',
+  in_kitchen: 'In Kitchen',
+  ready: 'Ready',
+  completed: 'Completed',
+  cancelled: 'Cancelled',
 };
 
-function OrderDetail({ order, onClose }: { order: Order; onClose: () => void }) {
-  return (
-    <div className="space-y-6">
-      <button
-        onClick={onClose}
-        className="flex items-center gap-2 text-sm font-medium text-emerald-600 hover:text-emerald-700 transition"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        Back to Orders
-      </button>
+function nextStatus(status: OrderStatus): OrderStatus | null {
+  if (status === 'pending' || status === 'accepted') return 'in_kitchen';
+  if (status === 'in_kitchen' || status === 'ready') return 'completed';
+  return null;
+}
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* Order & Customer Info */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Order Information */}
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h3 className="text-lg font-bold text-slate-900 mb-4">Order Information</h3>
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <p className="text-slate-500">Order Number</p>
-                <p className="mt-1 font-semibold text-slate-900">{order.orderNumber}</p>
-              </div>
-              <div>
-                <p className="text-slate-500">Date & Time</p>
-                <p className="mt-1 font-semibold text-slate-900">{order.orderDate}</p>
-              </div>
-              <div>
-                <p className="text-slate-500">Branch</p>
-                <p className="mt-1 font-semibold text-slate-900">{order.branch}</p>
-              </div>
-              <div>
-                <p className="text-slate-500">Cashier</p>
-                <p className="mt-1 font-semibold text-slate-900">{order.cashier}</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Customer Information */}
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h3 className="text-lg font-bold text-slate-900 mb-4">Customer Information</h3>
-            <div className="space-y-3 text-sm">
-              <div>
-                <p className="text-slate-500">Customer Name</p>
-                <p className="mt-1 font-semibold text-slate-900">{order.customerName}</p>
-              </div>
-              <div>
-                <p className="text-slate-500">Phone</p>
-                <p className="mt-1 font-semibold text-slate-900">{order.customerPhone}</p>
-              </div>
-              <div>
-                <p className="text-slate-500">Email</p>
-                <p className="mt-1 font-semibold text-slate-900">{order.customerEmail}</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Ordered Products */}
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h3 className="text-lg font-bold text-slate-900 mb-4">Ordered Products</h3>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="border-b border-slate-200 bg-slate-50">
-                  <tr>
-                    <th className="px-4 py-3 text-left font-semibold text-slate-900">Product</th>
-                    <th className="px-4 py-3 text-center font-semibold text-slate-900">Qty</th>
-                    <th className="px-4 py-3 text-right font-semibold text-slate-900">Price</th>
-                    <th className="px-4 py-3 text-right font-semibold text-slate-900">Total</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-200">
-                  {order.products.map((p) => (
-                    <tr key={p.id}>
-                      <td className="px-4 py-3 text-slate-900">{p.name}</td>
-                      <td className="px-4 py-3 text-center text-slate-600">{p.qty}</td>
-                      <td className="px-4 py-3 text-right text-slate-600">PKR {p.price.toLocaleString()}</td>
-                      <td className="px-4 py-3 text-right font-semibold text-slate-900">PKR {(p.qty * p.price).toLocaleString()}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-
-        {/* Payment & Actions */}
-        <div className="space-y-6">
-          {/* Payment Information */}
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h3 className="text-lg font-bold text-slate-900 mb-4">Payment Information</h3>
-            <div className="space-y-3 text-sm border-b border-slate-200 pb-4 mb-4">
-              <div className="flex justify-between">
-                <span className="text-slate-500">Subtotal</span>
-                <span className="font-semibold text-slate-900">PKR {order.subtotal.toLocaleString()}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500">Tax (15%)</span>
-                <span className="font-semibold text-slate-900">PKR {order.tax.toLocaleString()}</span>
-              </div>
-              {order.discount > 0 && (
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Discount</span>
-                  <span className="font-semibold text-slate-900">-PKR {order.discount.toLocaleString()}</span>
-                </div>
-              )}
-              <div className="flex justify-between">
-                <span className="text-slate-500">Payment Method</span>
-                <span className="font-semibold text-slate-900 capitalize">{order.paymentMethod}</span>
-              </div>
-            </div>
-            <div className="flex justify-between text-base font-bold text-slate-900">
-              <span>Grand Total</span>
-              <span>PKR {order.totalAmount.toLocaleString()}</span>
-            </div>
-          </div>
-
-          {/* Status */}
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h3 className="text-lg font-bold text-slate-900 mb-4">Status</h3>
-            <div className="flex items-center gap-2 mb-4">
-              {(() => {
-                const config = statusConfig[order.status];
-                const Icon = config.icon;
-                return (
-                  <>
-                    <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${config.bg}`}>
-                      <Icon className={`h-5 w-5 ${config.text}`} />
-                    </div>
-                    <div>
-                      <p className={`text-sm font-bold uppercase tracking-wide ${config.text}`}>{order.status}</p>
-                    </div>
-                  </>
-                );
-              })()}
-            </div>
-          </div>
-
-          {/* Actions */}
-          <div className="space-y-2">
-            <button className="w-full flex items-center justify-center gap-2 rounded-xl bg-slate-100 px-4 py-2.5 text-sm font-bold text-slate-700 transition hover:bg-slate-200">
-              <Printer className="h-4 w-4" />
-              Print Invoice
-            </button>
-            {order.status !== 'refunded' && order.status !== 'cancelled' && (
-              <button className="w-full flex items-center justify-center gap-2 rounded-xl bg-orange-100 px-4 py-2.5 text-sm font-bold text-orange-700 transition hover:bg-orange-200">
-                <RotateCcw className="h-4 w-4" />
-                Refund Order
-              </button>
-            )}
-            {order.status === 'processing' && (
-              <button className="w-full flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-emerald-700">
-                <CheckCircle2 className="h-4 w-4" />
-                Mark Complete
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+function statusBadgeClass(status: OrderStatus) {
+  switch (status) {
+    case 'pending':
+      return 'bg-amber-100 text-amber-800';
+    case 'in_kitchen':
+      return 'bg-orange-100 text-orange-800';
+    case 'completed':
+      return 'bg-emerald-100 text-emerald-800';
+    case 'cancelled':
+      return 'bg-rose-100 text-rose-800';
+    default:
+      return 'bg-slate-100 text-slate-700';
+  }
 }
 
 export default function OrdersPage() {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [dateFilter, setDateFilter] = useState<string>('all');
-  const [showDetail, setShowDetail] = useState<string | null>(null);
-  const [dropdownOpen, setDropdownOpen] = useState<string | null>(null);
+  const { user } = useAuthStore();
+  const restaurantName = user?.tenantName || 'Restaurant';
 
-  const filtered = mockOrders.filter((order) => {
-    const searchMatch =
-      order.orderNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.customerPhone.includes(searchQuery);
-    const statusMatch = statusFilter === 'all' || order.status === statusFilter;
-    return searchMatch && statusMatch;
+  const canCreate = usePermission(ENTITY_PERMS.orders.create);
+  const canUpdateStatus = usePermission(
+    ENTITY_PERMS.orders.extras.updateStatus
+  );
+  const canRecordPayment = usePermission(
+    ENTITY_PERMS.orders.extras.recordPayment
+  );
+  const canUpdateOrder = usePermission(ENTITY_PERMS.orders.update);
+  const canPay = canRecordPayment || canUpdateOrder;
+
+  const [screen, setScreen] = useState<'list' | 'create'>('list');
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<OrderStatus | ''>('');
+  const [page, setPage] = useState(1);
+  const [detailId, setDetailId] = useState<string | null>(null);
+  const [slipOpen, setSlipOpen] = useState(false);
+  const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
+
+  const debouncedSearch = useDebouncedValue(search.trim(), 300);
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch]);
+
+  const ordersQuery = useOrdersQuery({
+    page,
+    limit: 20,
+    search: debouncedSearch || undefined,
+    status: statusFilter || undefined,
   });
+  const detailQuery = useOrderDetailQuery(detailId);
+  const statusMutation = useUpdateOrderStatusMutation();
+  const paymentMutation = useRecordPaymentMutation();
 
-  const selectedOrder = mockOrders.find((o) => o.id === showDetail);
+  const orders: OrderListItem[] = useMemo(() => {
+    const payload = ordersQuery.data?.data;
+    return payload?.data || [];
+  }, [ordersQuery.data]);
 
-  const stats = {
-    total: mockOrders.length,
-    pending: mockOrders.filter((o) => o.status === 'pending').length,
-    completed: mockOrders.filter((o) => o.status === 'completed').length,
-    totalRevenue: mockOrders.reduce((sum, o) => sum + o.totalAmount, 0),
+  const pagination = ordersQuery.data?.data?.pagination;
+  const detail = detailQuery.data?.data;
+
+  const handleCancelOrder = async (orderId: string) => {
+    const ok = await confirmDialog({
+      title: 'Cancel Order',
+      message:
+        'Cancel this order? Raw materials will be restored if already deducted.',
+      confirmLabel: 'Cancel Order',
+      variant: 'danger',
+    });
+    if (!ok) return;
+    statusMutation.mutate({ id: orderId, status: 'cancelled' });
   };
 
-  if (selectedOrder) {
+  if (screen === 'create') {
     return (
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <OrderDetail order={selectedOrder} onClose={() => setShowDetail(null)} />
-      </div>
+      <OrderCreateWizard
+        onClose={() => setScreen('list')}
+        onCreated={() => setScreen('list')}
+      />
     );
   }
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Orders</h1>
-          <p className="mt-1 text-sm text-slate-500">Manage and track customer orders</p>
+          <h1 className="text-2xl font-bold text-slate-900">Orders</h1>
+          <p className="mt-1 text-sm text-slate-500">
+            Create orders, update kitchen status, take payment, and print slips
+          </p>
         </div>
-        <button className="flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-emerald-600/20 transition hover:bg-emerald-700">
-          <Download className="h-4 w-4" />
-          Export Orders
-        </button>
+        {canCreate && (
+          <button
+            type="button"
+            onClick={() => setScreen('create')}
+            className="inline-flex items-center gap-2 rounded-md bg-amber-600 px-4 py-2 text-sm font-semibold text-white"
+          >
+            <Plus className="h-4 w-4" /> Create Order
+          </button>
+        )}
       </div>
 
-      {/* Stats */}
-      <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 text-blue-700">
-            <ShoppingCart className="h-5 w-5" />
-          </div>
-          <div className="text-sm font-medium text-slate-500">Total Orders</div>
-          <div className="mt-1 text-2xl font-bold text-slate-900">{stats.total}</div>
-        </div>
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-amber-50 text-amber-700">
-            <Clock className="h-5 w-5" />
-          </div>
-          <div className="text-sm font-medium text-slate-500">Pending</div>
-          <div className="mt-1 text-2xl font-bold text-amber-700">{stats.pending}</div>
-        </div>
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
-            <Check className="h-5 w-5" />
-          </div>
-          <div className="text-sm font-medium text-slate-500">Completed</div>
-          <div className="mt-1 text-2xl font-bold text-emerald-700">{stats.completed}</div>
-        </div>
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
-            <ShoppingCart className="h-5 w-5" />
-          </div>
-          <div className="text-sm font-medium text-slate-500">Total Revenue</div>
-          <div className="mt-1 text-2xl font-bold text-slate-900">PKR {Math.round(stats.totalRevenue).toLocaleString()}</div>
-        </div>
-      </div>
-
-      {/* Filters */}
-      <div className="flex flex-col gap-3 sm:flex-row">
-        <div className="relative flex-1">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+      <div className="flex flex-wrap gap-3">
+        <div className="relative min-w-[240px] flex-1">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
           <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search by order ID, customer name, or phone..."
-            className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search order #, customer, phone..."
+            className="h-11 w-full rounded-lg border border-slate-200 bg-white pl-10 pr-3 text-sm"
           />
         </div>
-        <select
+        <Select
           value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className="h-11 rounded-xl border border-slate-200 bg-white px-4 text-sm outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10"
-        >
-          <option value="all">All Status</option>
-          <option value="pending">Pending</option>
-          <option value="processing">Processing</option>
-          <option value="completed">Completed</option>
-          <option value="cancelled">Cancelled</option>
-          <option value="refunded">Refunded</option>
-        </select>
-        <select
-          value={dateFilter}
-          onChange={(e) => setDateFilter(e.target.value)}
-          className="h-11 rounded-xl border border-slate-200 bg-white px-4 text-sm outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10"
-        >
-          <option value="all">All Dates</option>
-          <option value="today">Today</option>
-          <option value="week">This Week</option>
-          <option value="month">This Month</option>
-        </select>
+          onChange={(value) => {
+            setStatusFilter(value as OrderStatus | '');
+            setPage(1);
+          }}
+          size="lg"
+          placeholder="All statuses"
+          options={[
+            { value: 'pending', label: 'Pending' },
+            { value: 'in_kitchen', label: 'In Kitchen' },
+            { value: 'completed', label: 'Completed' },
+            { value: 'cancelled', label: 'Cancelled' },
+          ]}
+        />
       </div>
 
-      {/* Table */}
-      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="border-b border-slate-200 bg-slate-50">
+          <table className="min-w-full text-left text-sm">
+            <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
               <tr>
-                <th className="px-6 py-4 text-left font-semibold text-slate-900">Order ID</th>
-                <th className="px-6 py-4 text-left font-semibold text-slate-900">Customer</th>
-                <th className="px-6 py-4 text-left font-semibold text-slate-900">Branch</th>
-                <th className="px-6 py-4 text-right font-semibold text-slate-900">Total Amount</th>
-                <th className="px-6 py-4 text-center font-semibold text-slate-900">Items</th>
-                <th className="px-6 py-4 text-left font-semibold text-slate-900">Payment</th>
-                <th className="px-6 py-4 text-center font-semibold text-slate-900">Status</th>
-                <th className="px-6 py-4 text-left font-semibold text-slate-900">Date</th>
-                <th className="px-6 py-4 text-center font-semibold text-slate-900">Actions</th>
+                <th className="px-4 py-3">Order</th>
+                <th className="px-4 py-3">Customer</th>
+                <th className="px-4 py-3">Type</th>
+                <th className="px-4 py-3">Amount</th>
+                <th className="px-4 py-3">Payment</th>
+                <th className="px-4 py-3">Status</th>
+                <th className="px-4 py-3">Date</th>
+                <th className="px-4 py-3 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-200">
-              {filtered.map((order) => {
-                const config = statusConfig[order.status];
-                const StatusIcon = config.icon;
-                return (
-                  <tr key={order.id} className="hover:bg-slate-50 transition">
-                    <td className="px-6 py-4 font-semibold text-slate-900">{order.orderNumber}</td>
-                    <td className="px-6 py-4 text-slate-600">{order.customerName}</td>
-                    <td className="px-6 py-4 text-slate-600">{order.branch}</td>
-                    <td className="px-6 py-4 text-right font-semibold text-slate-900">PKR {order.totalAmount.toLocaleString()}</td>
-                    <td className="px-6 py-4 text-center text-slate-600">{order.products.reduce((sum, p) => sum + p.qty, 0)}</td>
-                    <td className="px-6 py-4 capitalize text-slate-600">{order.paymentMethod}</td>
-                    <td className="px-6 py-4 text-center">
-                      <div className={`inline-flex items-center gap-2 rounded-lg ${config.bg} px-3 py-1`}>
-                        <StatusIcon className={`h-4 w-4 ${config.text}`} />
-                        <span className={`text-xs font-bold uppercase ${config.text}`}>{order.status}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-slate-600">{order.orderDate}</td>
-                    <td className="px-6 py-4 text-center">
-                      <button
-                        onClick={() => setShowDetail(order.id)}
-                        className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-3 py-1 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100"
-                      >
-                        <Eye className="h-4 w-4" />
-                        View
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
+            <tbody>
+              {ordersQuery.isLoading ? (
+                <tr>
+                  <td colSpan={8} className="px-4 py-16 text-center text-slate-400">
+                    <Loader2 className="mx-auto h-6 w-6 animate-spin" />
+                  </td>
+                </tr>
+              ) : orders.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="px-4 py-16 text-center text-slate-400">
+                    No orders yet
+                  </td>
+                </tr>
+              ) : (
+                orders.map((order) => {
+                  const nxt = nextStatus(order.status);
+                  const canCancel =
+                    order.status === 'pending' ||
+                    order.status === 'in_kitchen' ||
+                    order.status === 'accepted' ||
+                    order.status === 'ready';
+
+                  return (
+                    <tr key={order.id} className="border-t border-slate-100">
+                      <td className="px-4 py-3 font-semibold text-slate-800">
+                        {order.order_number}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="font-medium text-slate-800">
+                          {order.customer?.name || '-'}
+                        </div>
+                        <div className="text-xs text-slate-500">
+                          {order.customer?.phone}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 capitalize text-slate-600">
+                        {order.order_type?.replace('_', '-')}
+                        {order.table_name ? ` · ${order.table_name}` : ''}
+                      </td>
+                      <td className="px-4 py-3 font-semibold">
+                        PKR {Number(order.final_total).toFixed(2)}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span
+                          className={`rounded-full px-2 py-0.5 text-xs font-bold ${
+                            order.payment_status === 'paid'
+                              ? 'bg-emerald-50 text-emerald-700'
+                              : 'bg-slate-100 text-slate-600'
+                          }`}
+                        >
+                          {order.payment_status}
+                          {order.payment_method
+                            ? ` · ${order.payment_method}`
+                            : ''}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span
+                          className={`rounded-full px-2.5 py-1 text-xs font-bold ${statusBadgeClass(order.status)}`}
+                        >
+                          {STATUS_LABEL[order.status] || order.status}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-slate-500">
+                        {order.created_at
+                          ? new Date(order.created_at).toLocaleString()
+                          : '-'}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <RowActionsMenu
+                          open={menuOpenId === order.id}
+                          onOpenChange={(open) =>
+                            setMenuOpenId(open ? order.id : null)
+                          }
+                        >
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setDetailId(order.id);
+                              setSlipOpen(true);
+                              setMenuOpenId(null);
+                            }}
+                            className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
+                          >
+                            <Eye className="h-4 w-4" /> View / Slip
+                          </button>
+                          {canUpdateStatus && nxt && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                statusMutation.mutate({
+                                  id: order.id,
+                                  status: nxt,
+                                });
+                                setMenuOpenId(null);
+                              }}
+                              className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
+                            >
+                              {nxt === 'in_kitchen' ? (
+                                <ChefHat className="h-4 w-4" />
+                              ) : (
+                                <CheckCircle2 className="h-4 w-4" />
+                              )}
+                              {nxt === 'in_kitchen'
+                                ? 'Send to Kitchen'
+                                : 'Mark Completed'}
+                            </button>
+                          )}
+                          {canUpdateStatus && canCancel && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                void handleCancelOrder(order.id);
+                                setMenuOpenId(null);
+                              }}
+                              className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-rose-600 hover:bg-rose-50"
+                            >
+                              <XCircle className="h-4 w-4" /> Cancel order
+                            </button>
+                          )}
+                          {canPay && order.payment_status !== 'paid' && (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  paymentMutation.mutate({
+                                    order_id: order.id,
+                                    method: 'cash',
+                                  });
+                                  setMenuOpenId(null);
+                                }}
+                                className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
+                              >
+                                <Banknote className="h-4 w-4" /> Pay Cash
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  paymentMutation.mutate({
+                                    order_id: order.id,
+                                    method: 'card',
+                                  });
+                                  setMenuOpenId(null);
+                                }}
+                                className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
+                              >
+                                <CreditCard className="h-4 w-4" /> Pay Card
+                              </button>
+                            </>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setDetailId(order.id);
+                              setSlipOpen(true);
+                              setMenuOpenId(null);
+                            }}
+                            className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
+                          >
+                            <Printer className="h-4 w-4" /> Print slip
+                          </button>
+                        </RowActionsMenu>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
         </div>
+
+        {pagination && pagination.totalPages > 1 && (
+          <div className="flex items-center justify-between border-t border-slate-100 px-4 py-3 text-sm">
+            <span className="text-slate-500">
+              Page {pagination.page} of {pagination.totalPages}
+            </span>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                disabled={page <= 1}
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                className="rounded-md border px-3 py-1 disabled:opacity-40"
+              >
+                Prev
+              </button>
+              <button
+                type="button"
+                disabled={page >= pagination.totalPages}
+                onClick={() => setPage((p) => p + 1)}
+                className="rounded-md border px-3 py-1 disabled:opacity-40"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )}
       </div>
+
+      {slipOpen && detail && (
+        <OrderSlip
+          order={{
+            ...detail,
+            payment_status:
+              detail.payments?.some((p) => p.status === 'completed')
+                ? 'paid'
+                : detail.payment_status || 'unpaid',
+            payment_method:
+              detail.payments?.[0]?.method || detail.payment_method || null,
+          }}
+          restaurantName={restaurantName}
+          onClose={() => {
+            setSlipOpen(false);
+            setDetailId(null);
+          }}
+        />
+      )}
+
+      {slipOpen && detailId && detailQuery.isLoading && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+          <Loader2 className="h-8 w-8 animate-spin text-white" />
+        </div>
+      )}
     </div>
   );
 }

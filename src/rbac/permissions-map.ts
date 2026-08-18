@@ -1,6 +1,6 @@
 export const ENTITY_PERMS = {
   dashboard: {
-    overview: 'dashboard/view',
+    overview: 'dashboard/getAll',
   },
   roles: {
     list:   'roles/getAll',
@@ -48,12 +48,29 @@ export const ENTITY_PERMS = {
     update: 'users/update',
     delete: 'users/delete',
   },
+  categories: {
+    list:   'categories/getAll',
+    create: 'categories/create',
+    read:   'categories/getById',
+    update: 'categories/update',
+    delete: 'categories/delete',
+  },
   products: {
     list:   'products/getAll',
     create: 'products/create',
     read:   'products/getById',
     update: 'products/update',
     delete: 'products/delete',
+  },
+  recipes: {
+    list:   'recipes/getAll',
+    create: 'recipes/create',
+    read:   'recipes/getByVariantId',
+    update: 'recipes/update',
+    delete: 'recipes/delete',
+    extras: {
+      withoutRecipes: 'recipes/getProductsWithoutRecipes',
+    },
   },
   inventory: {
     list:   'inventory/getAll',
@@ -75,6 +92,24 @@ export const ENTITY_PERMS = {
     read:   'customers/getById',
     update: 'customers/update',
     delete: 'customers/delete',
+  },
+  raw_materials: {
+    list:   'raw-materials/getAll',
+    create: 'raw-materials/create',
+    read:   'raw-materials/getById',
+    update: 'raw-materials/update',
+    delete: 'raw-materials/delete',
+  },
+  orders: {
+    list:   'orders/getAll',
+    create: 'orders/create',
+    read:   'orders/getById',
+    update: 'orders/update',
+    delete: 'orders/delete',
+    extras: {
+      updateStatus: 'orders/updateStatus',
+      recordPayment: 'orders/recordPayment',
+    },
   },
   suppliers: {
     list:   'suppliers/getAll',

@@ -5,7 +5,6 @@ import {
   Building2,
   Plus,
   Search,
-  MoreHorizontal,
   Pencil,
   Trash2,
   Eye,
@@ -17,6 +16,7 @@ import {
 } from 'lucide-react';
 import BranchForm from '@/components/branches/BranchForm';
 import BranchDetail from '@/components/branches/BranchDetail';
+import RowActionsMenu from '@/components/ui/RowActionsMenu';
 
 interface Branch {
   id: string;
@@ -396,41 +396,46 @@ export default function BranchesPage() {
                   </div>
                 </td>
                 <td className="px-5 py-4 text-right">
-                  <div className="relative inline-block">
+                  <RowActionsMenu
+                    open={dropdownOpen === branch.id}
+                    onOpenChange={(open) =>
+                      setDropdownOpen(open ? branch.id : null)
+                    }
+                  >
                     <button
-                      onClick={() =>
-                        setDropdownOpen(dropdownOpen === branch.id ? null : branch.id)
-                      }
-                      className="rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
+                      type="button"
+                      onClick={() => {
+                        setDropdownOpen(null);
+                        handleOpenDetail(branch);
+                      }}
+                      className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-slate-700 transition hover:bg-slate-50"
                     >
-                      <MoreHorizontal className="h-4 w-4" />
+                      <Eye className="h-4 w-4" />
+                      View Details
                     </button>
-                    {dropdownOpen === branch.id && (
-                      <div className="absolute right-0 z-20 mt-1 w-44 rounded-xl border border-slate-200 bg-white py-1 shadow-lg">
-                        <button
-                          onClick={() => handleOpenDetail(branch)}
-                          className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-slate-700 transition hover:bg-slate-50"
-                        >
-                          <Eye className="h-4 w-4" />
-                          View Details
-                        </button>
-                        <button
-                          onClick={() => handleOpenEdit(branch)}
-                          className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-slate-700 transition hover:bg-slate-50"
-                        >
-                          <Pencil className="h-4 w-4" />
-                          Edit Branch
-                        </button>
-                        <button
-                          onClick={() => handleDelete(branch.id)}
-                          className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-rose-600 transition hover:bg-rose-50"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                          Delete Branch
-                        </button>
-                      </div>
-                    )}
-                  </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDropdownOpen(null);
+                        handleOpenEdit(branch);
+                      }}
+                      className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-slate-700 transition hover:bg-slate-50"
+                    >
+                      <Pencil className="h-4 w-4" />
+                      Edit Branch
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDropdownOpen(null);
+                        handleDelete(branch.id);
+                      }}
+                      className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-rose-600 transition hover:bg-rose-50"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      Delete Branch
+                    </button>
+                  </RowActionsMenu>
                 </td>
               </tr>
             ))}
