@@ -20,6 +20,8 @@ export interface Product {
   description?: string | null;
   has_variant: boolean;
   is_active: boolean;
+  branch_id?: string | null;
+  branch_name?: string | null;
   price?: number;
   cost_price?: number;
   variants?: ProductVariant[];

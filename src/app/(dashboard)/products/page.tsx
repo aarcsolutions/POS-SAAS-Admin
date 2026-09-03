@@ -13,10 +13,13 @@ import {
   ArrowLeft,
   Tags,
   ChevronRight,
+  Power,
+  PowerOff,
 } from 'lucide-react';
 import ProductForm from '@/components/products/ProductForm';
 import RowActionsMenu from '@/components/ui/RowActionsMenu';
 import ListPager from '@/components/ui/ListPager';
+import { Select } from '@/components/ui/Select';
 import { usePermission } from '@/hooks/use-permission';
 import { ENTITY_PERMS } from '@/rbac/permissions-map';
 import {
@@ -24,9 +27,12 @@ import {
   useCreateProductMutation,
   useUpdateProductMutation,
   useDeleteProductMutation,
+  useSetProductActiveMutation,
 } from '@/hooks/products';
 import { useCategoriesQuery } from '@/hooks/categories';
+import { useBranchesQuery } from '@/hooks/branches';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
+import { useAuthStore } from '@/store/authStore';
 import { extractListItems, extractPagination } from '@/utils/helpers';
 import { Product } from '@/types/product.types';
 import { Category } from '@/types/category.types';
@@ -88,9 +94,9 @@ function CategoryCard({
     <button
       type="button"
       onClick={onClick}
-      className="group flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white text-left shadow-sm transition hover:border-emerald-200 hover:shadow-md"
+      className="group flex h-full w-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white text-left shadow-sm transition hover:border-emerald-200 hover:shadow-md"
     >
-      <div className="relative aspect-[4/3] bg-slate-100">
+      <div className="relative aspect-square w-full shrink-0 overflow-hidden bg-slate-100">
         {category.image_url ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -104,23 +110,23 @@ function CategoryCard({
           </div>
         )}
       </div>
-      <div className="flex flex-1 flex-col p-4">
-        <h3 className="line-clamp-1 text-base font-bold text-slate-900">
+      <div className="flex h-[5.5rem] flex-col p-3">
+        <h3 className="line-clamp-1 text-sm font-bold text-slate-900">
           {category.name}
         </h3>
-        {category.description && (
-          <p className="mt-1 line-clamp-2 text-xs text-slate-500">
+        {category.description ? (
+          <p className="mt-0.5 line-clamp-1 text-xs text-slate-500">
             {category.description}
           </p>
+        ) : (
+          <span className="mt-0.5 block h-4" aria-hidden />
         )}
-        <div className="mt-auto flex items-center justify-between pt-3 text-[11px] font-semibold text-slate-400">
+        <div className="mt-auto flex items-center justify-between text-[11px] font-semibold text-slate-400">
           <span>
             {productCount} product{productCount === 1 ? '' : 's'}
-            {subcategoryCount > 0
-              ? ` · ${subcategoryCount} sub`
-              : ''}
+            {subcategoryCount > 0 ? ` · ${subcategoryCount} sub` : ''}
           </span>
-          <ChevronRight className="h-4 w-4 text-emerald-600 opacity-0 transition group-hover:opacity-100" />
+          <ChevronRight className="h-4 w-4 shrink-0 text-emerald-600 opacity-0 transition group-hover:opacity-100" />
         </div>
       </div>
     </button>
@@ -128,7 +134,11 @@ function CategoryCard({
 }
 
 export default function ProductsPage() {
+  const user = useAuthStore((s) => s.user);
+  const isTenantAdmin = !user?.branchId;
+
   const [searchTerm, setSearchTerm] = useState('');
+  const [branchFilter, setBranchFilter] = useState('');
   const [minPrice, setMinPrice] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(
@@ -152,10 +162,34 @@ export default function ProductsPage() {
 
   useEffect(() => {
     setPage(1);
-  }, [debouncedSearch, debouncedMinPrice, debouncedMaxPrice, selectedCategoryId]);
+  }, [debouncedSearch, debouncedMinPrice, debouncedMaxPrice, selectedCategoryId, branchFilter]);
+
+  const branchQueryParams = useMemo(
+    () => ({
+      branch_id: isTenantAdmin && branchFilter ? branchFilter : undefined,
+    }),
+    [isTenantAdmin, branchFilter],
+  );
+
+  const { data: branchesRes } = useBranchesQuery(
+    { page: 1, limit: 100 },
+    isTenantAdmin,
+  );
+
+  const branchOptions = useMemo(() => {
+    const rows =
+      branchesRes?.data?.data ||
+      branchesRes?.data?.branches ||
+      (Array.isArray(branchesRes?.data) ? branchesRes.data : []) ||
+      [];
+    return (rows as { id: string; name: string; code?: string }[]).map((b) => ({
+      value: b.id,
+      label: b.name || b.code || b.id,
+    }));
+  }, [branchesRes]);
 
   // Unfiltered fetch (capped) used only to badge each category card with a product count.
-  const { data: countsData } = useProductsQuery({ page: 1, limit: 100 });
+  const { data: countsData } = useProductsQuery({ page: 1, limit: 100, ...branchQueryParams });
   const { data, isLoading, isFetching } = useProductsQuery(
     {
       page,
@@ -164,6 +198,7 @@ export default function ProductsPage() {
       category_id: selectedCategoryId || undefined,
       min_price: debouncedMinPrice ? Number(debouncedMinPrice) : undefined,
       max_price: debouncedMaxPrice ? Number(debouncedMaxPrice) : undefined,
+      ...branchQueryParams,
     },
     !!selectedCategoryId
   );
@@ -171,11 +206,13 @@ export default function ProductsPage() {
     useCategoriesQuery({
       page: 1,
       limit: 100,
+      ...branchQueryParams,
     });
 
   const createMutation = useCreateProductMutation();
   const updateMutation = useUpdateProductMutation();
   const deleteMutation = useDeleteProductMutation();
+  const setActiveMutation = useSetProductActiveMutation();
 
   const allProductsForCounts = useMemo(
     () => extractListItems<Product>(countsData, 'products'),
@@ -281,12 +318,20 @@ export default function ProductsPage() {
     const ok = await confirmDialog({
       title: 'Delete Product',
       message:
-        'Permanently delete this product, its variants and images? This cannot be undone if it is not used in orders.',
+        'Delete this product from your catalog? Products used in past orders will be archived instead of permanently removed.',
       confirmLabel: 'Delete',
       variant: 'danger',
     });
     if (!ok) return;
     deleteMutation.mutate(id);
+  };
+
+  const handleToggleActive = (product: Product) => {
+    setDropdownOpen(null);
+    setActiveMutation.mutate({
+      id: product.id,
+      is_active: !product.is_active,
+    });
   };
 
   const goToCategory = (id: string | null) => {
@@ -295,6 +340,12 @@ export default function ProductsPage() {
     setMinPrice('');
     setMaxPrice('');
     setDropdownOpen(null);
+  };
+
+  const handleBranchFilterChange = (value: string) => {
+    setBranchFilter(value);
+    setSelectedCategoryId(null);
+    setPage(1);
   };
 
   if (formLoading) {
@@ -401,6 +452,23 @@ export default function ProductsPage() {
             className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10"
           />
         </div>
+        {isTenantAdmin && (
+          <div className="w-full lg:w-56">
+            <Select
+              value={branchFilter}
+              onChange={handleBranchFilterChange}
+              variant="filter"
+              size="lg"
+              allowEmpty
+              placeholder="All branches"
+              aria-label="Filter by branch"
+              options={[
+                { value: 'tenant', label: 'Tenant-level' },
+                ...branchOptions,
+              ]}
+            />
+          </div>
+        )}
         {selectedCategoryId && (
           <>
             <div className="flex items-center gap-2">
@@ -451,7 +519,7 @@ export default function ProductsPage() {
               <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400">
                 {selectedCategoryId ? 'Subcategories' : 'Categories'}
               </h2>
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              <div className="grid auto-rows-fr gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {visibleCategories.map((category) => (
                   <CategoryCard
                     key={category.id}
@@ -481,7 +549,7 @@ export default function ProductsPage() {
                   No products in this category.
                 </div>
               ) : (
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                <div className="grid auto-rows-fr gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                   {products.map((product) => {
                     const imageUrl = getProductImage(product);
                     const priceLabel = getPriceLabel(product);
@@ -489,9 +557,9 @@ export default function ProductsPage() {
                     return (
                       <div
                         key={product.id}
-                        className="group relative flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:border-emerald-200 hover:shadow-md"
+                        className="group relative flex h-full w-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:border-emerald-200 hover:shadow-md"
                       >
-                        <div className="relative aspect-[4/3] bg-slate-100">
+                        <div className="relative aspect-square w-full shrink-0 overflow-hidden bg-slate-100">
                           {imageUrl ? (
                             // eslint-disable-next-line @next/next/no-img-element
                             <img
@@ -517,6 +585,12 @@ export default function ProductsPage() {
                             <span className="rounded-full bg-white/90 px-2.5 py-1 text-[11px] font-bold text-slate-700 backdrop-blur">
                               {product.has_variant ? 'Variable' : 'Simple'}
                             </span>
+                            {isTenantAdmin && !branchFilter && (
+                              <span className="rounded-full bg-slate-900/80 px-2.5 py-1 text-[11px] font-bold text-white backdrop-blur">
+                                {product.branch_name ||
+                                  (product.branch_id ? 'Branch' : 'Tenant')}
+                              </span>
+                            )}
                           </div>
                           <div className="absolute right-2 top-2">
                             <RowActionsMenu
@@ -532,6 +606,25 @@ export default function ProductsPage() {
                               >
                                 <Eye className="h-4 w-4" /> View
                               </button>
+                              {canUpdate && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleToggleActive(product)}
+                                  disabled={setActiveMutation.isPending}
+                                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                                >
+                                  {product.is_active ? (
+                                    <>
+                                      <PowerOff className="h-4 w-4" /> Mark
+                                      Inactive
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Power className="h-4 w-4" /> Mark Active
+                                    </>
+                                  )}
+                                </button>
+                              )}
                               {canUpdate && (
                                 <button
                                   type="button"
@@ -554,32 +647,36 @@ export default function ProductsPage() {
                           </div>
                         </div>
 
-                        <div className="flex flex-1 flex-col p-4">
-                          <h3 className="line-clamp-1 text-base font-bold text-slate-900">
+                        <div className="flex h-[7.5rem] flex-col p-3">
+                          <h3 className="line-clamp-1 text-sm font-bold text-slate-900">
                             {product.name}
                           </h3>
-                          {product.description && (
-                            <p className="mt-1 line-clamp-2 text-xs text-slate-500">
+                          {product.description ? (
+                            <p className="mt-0.5 line-clamp-1 text-xs text-slate-500">
                               {product.description}
                             </p>
+                          ) : (
+                            <span className="mt-0.5 block h-4" aria-hidden />
                           )}
-                          <div className="mt-auto flex items-end justify-between gap-2 pt-4">
-                            <div>
-                              <p className="text-sm font-bold text-slate-900">
+                          <div className="mt-auto flex items-end justify-between gap-2">
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-bold text-slate-900">
                                 {priceLabel}
                               </p>
-                              {product.has_variant && (
+                              {product.has_variant ? (
                                 <p className="mt-0.5 flex items-center gap-1 text-[11px] text-slate-400">
-                                  <Layers className="h-3 w-3" />
+                                  <Layers className="h-3 w-3 shrink-0" />
                                   {product.variants?.length || 0} variants
                                 </p>
+                              ) : (
+                                <span className="mt-0.5 block h-4" aria-hidden />
                               )}
                             </div>
                             {canUpdate && (
                               <button
                                 type="button"
                                 onClick={() => handleOpen('edit', product)}
-                                className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700"
+                                className="shrink-0 rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700"
                               >
                                 Edit
                               </button>

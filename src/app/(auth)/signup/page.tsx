@@ -19,13 +19,13 @@ export default function SignupPage() {
           Tenant accounts are created by the platform administrator. Use the login
           page with credentials provided for your organization.
         </p>
-        <Link
-          href="/login"
+              <Link 
+                href="/login" 
           className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white hover:bg-slate-800 transition-colors"
-        >
+              >
           Back to login
           <ArrowRight className="h-4 w-4" />
-        </Link>
+              </Link>
       </div>
     </div>
   );

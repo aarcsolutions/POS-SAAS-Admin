@@ -19,11 +19,16 @@ import {
   TENANT_DISABLED_STORAGE_KEY,
   isTenantDisabledError,
   getTenantDisabledMessage,
+  isBranchNotFoundError,
+  getBranchNotFoundMessage,
 } from '@/services/lib/api';
 
 const LOCK_MESSAGE = TENANT_DISABLED_MESSAGE;
 
 function getErrorMessage(err: unknown): string {
+  if (isBranchNotFoundError(err)) {
+    return getBranchNotFoundMessage(err);
+  }
   if (isTenantDisabledError(err)) {
     return getTenantDisabledMessage(err);
   }
@@ -91,7 +96,10 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (!loginMutation.error) return;
-    if (isTenantDisabledError(loginMutation.error)) {
+    if (
+      isTenantDisabledError(loginMutation.error) ||
+      isBranchNotFoundError(loginMutation.error)
+    ) {
       setLockMessage(getErrorMessage(loginMutation.error) || LOCK_MESSAGE);
       setLockModalOpen(true);
     }

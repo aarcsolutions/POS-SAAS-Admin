@@ -7,7 +7,15 @@ import {
 } from '@/types/rbac.types';
 
 export const rolesApi = {
-  getAll: async (params: { page?: number; limit?: number; search?: string } = {}) => {
+  getAll: async (
+    params: {
+      page?: number;
+      limit?: number;
+      search?: string;
+      /** Tenant Admin: branch uuid | 'tenant' | omit for all */
+      branch_id?: string;
+    } = {}
+  ) => {
     const { data } = await api.get<RolesListResponse>('/roles/getAll', { params });
     return data;
   },

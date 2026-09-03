@@ -3,12 +3,17 @@ export type OrderStatus =
   | 'accepted'
   | 'in_kitchen'
   | 'ready'
+  | 'out_for_delivery'
   | 'completed'
   | 'cancelled';
 
-export type OrderType = 'dine_in' | 'takeaway';
+export type OrderType = 'dine_in' | 'takeaway' | 'delivery';
 
+/** Collected payment methods on Payment rows. */
 export type PaymentMethod = 'cash' | 'card' | 'wallet' | 'other';
+
+/** Order-level payment intent (COD is not a Payment until collected). */
+export type OrderPaymentMethod = 'cod' | 'cash' | 'card';
 
 export interface OrderCustomer {
   id: string;
@@ -36,11 +41,22 @@ export interface OrderPayment {
   created_at?: string;
 }
 
+export interface OrderDriver {
+  id: string;
+  name: string;
+  phone: string;
+}
+
 export interface OrderListItem {
   id: string;
   order_number: string;
   order_type: OrderType;
+  branch_id?: string | null;
   table_name?: string | null;
+  delivery_address?: string | null;
+  delivery_city?: string | null;
+  delivery_phone?: string | null;
+  delivery_fee?: number;
   status: OrderStatus;
   customer: OrderCustomer | null;
   subtotal: number;
@@ -48,7 +64,10 @@ export interface OrderListItem {
   tax_amount: number;
   final_total: number;
   payment_status: 'paid' | 'unpaid';
-  payment_method?: PaymentMethod | null;
+  payment_method?: OrderPaymentMethod | PaymentMethod | null;
+  driver_id?: string | null;
+  tracking_token?: string | null;
+  driver?: OrderDriver | null;
   created_at: string;
 }
 
@@ -102,6 +121,11 @@ export interface CreateOrderPayload {
   customer_id: string;
   order_type: OrderType;
   table_name?: string;
+  delivery_address?: string;
+  delivery_city?: string;
+  delivery_phone?: string;
+  delivery_fee?: number;
+  payment_method?: OrderPaymentMethod;
   items: Array<{
     product_id: string;
     variant_id: string;

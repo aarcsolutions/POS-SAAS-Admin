@@ -4,6 +4,7 @@ import {
   OrderDetailResponse,
   OrdersListResponse,
   OrderStatus,
+  OrderType,
   PaymentMethod,
 } from '@/types/order.types';
 
@@ -14,6 +15,7 @@ export const ordersApi = {
       limit?: number;
       search?: string;
       status?: OrderStatus | '';
+      order_type?: OrderType;
     } = {}
   ) => {
     const { data } = await api.get<OrdersListResponse>('/orders/getAll', {
@@ -41,6 +43,23 @@ export const ordersApi = {
 
   updateStatus: async (id: string, status: OrderStatus) => {
     const { data } = await api.patch('/orders/updateStatus', { id, status });
+    return data;
+  },
+
+  dispatch: async (id: string, driver_id: string) => {
+    const { data } = await api.post('/orders/dispatch', { id, driver_id });
+    return data;
+  },
+
+  trackPublic: async (tenantSlug: string, token: string) => {
+    const { data } = await api.get(`/orders/track/${tenantSlug}/${token}`);
+    return data;
+  },
+
+  deliverByToken: async (tenantSlug: string, token: string) => {
+    const { data } = await api.post(
+      `/orders/track/${tenantSlug}/${token}/deliver`
+    );
     return data;
   },
 

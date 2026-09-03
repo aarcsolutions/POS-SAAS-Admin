@@ -3,6 +3,7 @@ import { ordersApi } from '@/services/orders';
 import {
   CreateOrderPayload,
   OrderStatus,
+  OrderType,
   PaymentMethod,
 } from '@/types/order.types';
 import { toast } from 'sonner';
@@ -13,11 +14,14 @@ export const useOrdersQuery = (
     limit?: number;
     search?: string;
     status?: OrderStatus | '';
-  } = {}
+    order_type?: OrderType;
+  } = {},
+  options?: { pollMs?: number }
 ) =>
   useQuery({
     queryKey: ['orders', params],
     queryFn: () => ordersApi.getAll(params),
+    refetchInterval: options?.pollMs,
     placeholderData: (previousData) => previousData,
   });
 
@@ -53,11 +57,37 @@ export const useUpdateOrderStatusMutation = () => {
       if (response.status) {
         toast.success(response.message || 'Status updated');
         queryClient.invalidateQueries({ queryKey: ['orders'] });
+        queryClient.invalidateQueries({ queryKey: ['kds'] });
       }
     },
     onError: (error: any) => {
       toast.error(
         error?.response?.data?.message || 'Failed to update order status'
+      );
+    },
+  });
+};
+
+export const useDispatchOrderMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      driver_id,
+    }: {
+      id: string;
+      driver_id: string;
+    }) => ordersApi.dispatch(id, driver_id),
+    onSuccess: (response) => {
+      if (response.status) {
+        toast.success(response.message || 'Order dispatched');
+        queryClient.invalidateQueries({ queryKey: ['orders'] });
+        queryClient.invalidateQueries({ queryKey: ['kds'] });
+      }
+    },
+    onError: (error: any) => {
+      toast.error(
+        error?.response?.data?.message || 'Failed to dispatch order'
       );
     },
   });

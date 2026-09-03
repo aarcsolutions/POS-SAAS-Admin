@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Users,
   Plus,
@@ -13,9 +13,11 @@ import {
   Mail,
   MapPin,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import CustomerForm from '@/components/customers/CustomerForm';
 import RowActionsMenu from '@/components/ui/RowActionsMenu';
 import ListPager from '@/components/ui/ListPager';
+import { Select } from '@/components/ui/Select';
 import { usePermission } from '@/hooks/use-permission';
 import { ENTITY_PERMS } from '@/rbac/permissions-map';
 import {
@@ -24,15 +26,39 @@ import {
   useUpdateCustomerMutation,
   useDeleteCustomerMutation,
 } from '@/hooks/customers';
+import { useBranchesQuery } from '@/hooks/branches';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
-import { extractListItems, extractPagination } from '@/utils/helpers';
+import { useAuthStore } from '@/store/authStore';
+import { extractListItems, extractPagination, formatDate } from '@/utils/helpers';
 import { Customer } from '@/types/customer.types';
 import { confirmDialog } from '@/store/dialogStore';
+import { customersApi } from '@/services/customers';
 
 const LIMIT = 10;
 
+function mapCustomerToFormData(customer: Customer) {
+  return {
+    name: customer.name,
+    email: customer.email || '',
+    phone: customer.phone,
+    address: customer.address || '',
+    city: customer.city || '',
+    notes: customer.notes || '',
+    gender_id: customer.gender_id || '',
+    date_of_birth: customer.date_of_birth
+      ? customer.date_of_birth.slice(0, 10)
+      : '',
+    marketing_subscribed: customer.marketing_subscribed ?? false,
+    is_active: customer.is_active,
+  };
+}
+
 export default function CustomersPage() {
+  const user = useAuthStore((s) => s.user);
+  const isTenantAdmin = !user?.branchId;
+
   const [searchTerm, setSearchTerm] = useState('');
+  const [branchFilter, setBranchFilter] = useState('');
   const [page, setPage] = useState(1);
   const [formMode, setFormMode] = useState<'create' | 'edit' | 'view' | null>(
     null
@@ -40,6 +66,7 @@ export default function CustomersPage() {
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(
     null
   );
+  const [formLoading, setFormLoading] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState<string | null>(null);
 
   const canCreate = usePermission(ENTITY_PERMS.customers.create);
@@ -49,12 +76,30 @@ export default function CustomersPage() {
   const debouncedSearch = useDebouncedValue(searchTerm.trim(), 300);
   useEffect(() => {
     setPage(1);
-  }, [debouncedSearch]);
+  }, [debouncedSearch, branchFilter]);
+
+  const { data: branchesRes } = useBranchesQuery(
+    { page: 1, limit: 100 },
+    isTenantAdmin
+  );
+
+  const branchOptions = useMemo(() => {
+    const rows =
+      branchesRes?.data?.data ||
+      branchesRes?.data?.branches ||
+      (Array.isArray(branchesRes?.data) ? branchesRes.data : []) ||
+      [];
+    return (rows as { id: string; name: string; code?: string }[]).map((b) => ({
+      value: b.id,
+      label: b.name || b.code || b.id,
+    }));
+  }, [branchesRes]);
 
   const { data, isLoading, isFetching } = useCustomersQuery({
     page,
     limit: LIMIT,
     search: debouncedSearch || undefined,
+    branch_id: isTenantAdmin && branchFilter ? branchFilter : undefined,
   });
   const createMutation = useCreateCustomerMutation();
   const updateMutation = useUpdateCustomerMutation();
@@ -62,14 +107,37 @@ export default function CustomersPage() {
 
   const customers = extractListItems<Customer>(data, 'customers');
   const pagination = extractPagination(data, LIMIT);
+  const colSpan = isTenantAdmin ? 9 : 8;
 
-  const handleOpenForm = (
+  const handleOpenForm = async (
     mode: 'create' | 'edit' | 'view',
     customer?: Customer
   ) => {
-    setFormMode(mode);
-    setSelectedCustomer(customer || null);
     setDropdownOpen(null);
+    if (mode === 'create') {
+      setSelectedCustomer(null);
+      setFormMode('create');
+      return;
+    }
+    if (!customer) return;
+
+    setFormLoading(true);
+    try {
+      const res = await customersApi.getById(customer.id);
+      const raw = (res?.data ?? res) as Customer;
+      if (!raw?.id) {
+        toast.error('Failed to load customer details');
+        return;
+      }
+      setSelectedCustomer(raw);
+      setFormMode(mode);
+    } catch (err: any) {
+      toast.error(
+        err?.response?.data?.message || 'Failed to load customer details'
+      );
+    } finally {
+      setFormLoading(false);
+    }
   };
 
   const handleDelete = async (id: string) => {
@@ -84,21 +152,22 @@ export default function CustomersPage() {
     deleteMutation.mutate(id);
   };
 
+  if (formLoading) {
+    return (
+      <div className="flex justify-center py-24">
+        <Loader2 className="h-8 w-8 animate-spin text-emerald-600" />
+      </div>
+    );
+  }
+
   if (formMode) {
     return (
       <CustomerForm
+        key={selectedCustomer?.id || 'create'}
         mode={formMode}
         initialData={
           selectedCustomer
-            ? {
-                name: selectedCustomer.name,
-                email: selectedCustomer.email || '',
-                phone: selectedCustomer.phone,
-                address: selectedCustomer.address || '',
-                city: selectedCustomer.city || '',
-                notes: selectedCustomer.notes || '',
-                is_active: selectedCustomer.is_active,
-              }
+            ? mapCustomerToFormData(selectedCustomer)
             : undefined
         }
         saving={createMutation.isPending || updateMutation.isPending}
@@ -139,14 +208,33 @@ export default function CustomersPage() {
         )}
       </div>
 
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-        <input
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          placeholder="Search by name, phone, email, or city..."
-          className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10"
-        />
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          <input
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Search by name, phone, email, or city..."
+            className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10"
+          />
+        </div>
+        {isTenantAdmin && (
+          <div className="w-full sm:w-56">
+            <Select
+              value={branchFilter}
+              onChange={setBranchFilter}
+              variant="filter"
+              size="lg"
+              allowEmpty
+              placeholder="All branches"
+              aria-label="Filter by branch"
+              options={[
+                { value: 'tenant', label: 'Tenant-level' },
+                ...branchOptions,
+              ]}
+            />
+          </div>
+        )}
       </div>
 
       <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
@@ -155,7 +243,13 @@ export default function CustomersPage() {
             <tr>
               <th className="px-5 py-3 font-bold">Customer</th>
               <th className="px-5 py-3 font-bold">Phone</th>
+              <th className="px-5 py-3 font-bold">Gender</th>
+              <th className="px-5 py-3 font-bold">DOB</th>
+              <th className="px-5 py-3 font-bold">Marketing</th>
               <th className="px-5 py-3 font-bold">Location</th>
+              {isTenantAdmin && (
+                <th className="px-5 py-3 font-bold">Branch</th>
+              )}
               <th className="px-5 py-3 font-bold">Status</th>
               <th className="px-5 py-3 font-bold text-right">Actions</th>
             </tr>
@@ -163,13 +257,13 @@ export default function CustomersPage() {
           <tbody className="divide-y divide-slate-100">
             {isLoading || isFetching ? (
               <tr>
-                <td colSpan={5} className="py-12 text-center text-slate-400">
+                <td colSpan={colSpan} className="py-12 text-center text-slate-400">
                   <Loader2 className="mx-auto h-5 w-5 animate-spin" />
                 </td>
               </tr>
             ) : customers.length === 0 ? (
               <tr>
-                <td colSpan={5} className="py-12 text-center text-slate-400">
+                <td colSpan={colSpan} className="py-12 text-center text-slate-400">
                   <Users className="mx-auto mb-2 h-8 w-8 opacity-40" />
                   No customers found
                 </td>
@@ -204,6 +298,23 @@ export default function CustomersPage() {
                     </div>
                   </td>
                   <td className="px-5 py-4 text-slate-600">
+                    {c.gender_title || '—'}
+                  </td>
+                  <td className="px-5 py-4 text-slate-600">
+                    {c.date_of_birth ? formatDate(c.date_of_birth) : '—'}
+                  </td>
+                  <td className="px-5 py-4">
+                    <span
+                      className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+                        c.marketing_subscribed
+                          ? 'bg-emerald-100 text-emerald-700'
+                          : 'bg-slate-100 text-slate-500'
+                      }`}
+                    >
+                      {c.marketing_subscribed ? 'Yes' : 'No'}
+                    </span>
+                  </td>
+                  <td className="px-5 py-4 text-slate-600">
                     {c.city || c.address ? (
                       <div className="flex items-center gap-1.5">
                         <MapPin className="h-3.5 w-3.5 text-slate-400" />
@@ -215,6 +326,19 @@ export default function CustomersPage() {
                       <span className="text-slate-300">—</span>
                     )}
                   </td>
+                  {isTenantAdmin && (
+                    <td className="px-5 py-4">
+                      <span
+                        className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
+                          c.branch_id
+                            ? 'bg-sky-50 text-sky-700'
+                            : 'bg-slate-100 text-slate-600'
+                        }`}
+                      >
+                        {c.branch_name || (c.branch_id ? 'Branch' : 'Tenant')}
+                      </span>
+                    </td>
+                  )}
                   <td className="px-5 py-4">
                     <span
                       className={`rounded-full px-3 py-1 text-xs font-bold ${

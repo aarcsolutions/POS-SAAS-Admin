@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Users,
   Plus,
@@ -13,6 +13,7 @@ import {
 import UserForm from '@/components/users/UserForm';
 import RowActionsMenu from '@/components/ui/RowActionsMenu';
 import ListPager from '@/components/ui/ListPager';
+import { Select } from '@/components/ui/Select';
 import { usePermission } from '@/hooks/use-permission';
 import { ENTITY_PERMS } from '@/rbac/permissions-map';
 import {
@@ -22,7 +23,9 @@ import {
   useDeleteUserMutation,
 } from '@/hooks/users';
 import { useRolesQuery } from '@/hooks/roles';
+import { useBranchesQuery } from '@/hooks/branches';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
+import { useAuthStore } from '@/store/authStore';
 import { extractListItems, extractPagination } from '@/utils/helpers';
 import { ApiUser } from '@/types/rbac.types';
 import { confirmDialog } from '@/store/dialogStore';
@@ -30,7 +33,11 @@ import { confirmDialog } from '@/store/dialogStore';
 const LIMIT = 10;
 
 export default function UsersPage() {
+  const authUser = useAuthStore((s) => s.user);
+  const isTenantAdmin = !authUser?.branchId;
+
   const [searchTerm, setSearchTerm] = useState('');
+  const [branchFilter, setBranchFilter] = useState('');
   const [page, setPage] = useState(1);
   const [formMode, setFormMode] = useState<'create' | 'edit' | 'view' | null>(null);
   const [selectedUser, setSelectedUser] = useState<ApiUser | null>(null);
@@ -43,12 +50,30 @@ export default function UsersPage() {
   const debouncedSearch = useDebouncedValue(searchTerm.trim(), 300);
   useEffect(() => {
     setPage(1);
-  }, [debouncedSearch]);
+  }, [debouncedSearch, branchFilter]);
+
+  const { data: branchesRes } = useBranchesQuery(
+    { page: 1, limit: 100 },
+    isTenantAdmin
+  );
+
+  const branchOptions = useMemo(() => {
+    const rows =
+      branchesRes?.data?.data ||
+      branchesRes?.data?.branches ||
+      (Array.isArray(branchesRes?.data) ? branchesRes.data : []) ||
+      [];
+    return (rows as { id: string; name: string; code?: string }[]).map((b) => ({
+      value: b.id,
+      label: b.name || b.code || b.id,
+    }));
+  }, [branchesRes]);
 
   const { data, isLoading, isFetching } = useUsersQuery({
     page,
     limit: LIMIT,
     search: debouncedSearch || undefined,
+    branch_id: isTenantAdmin && branchFilter ? branchFilter : undefined,
   });
   // Keep at limit 100 for the role dropdown in the user form.
   const { data: rolesData } = useRolesQuery({ page: 1, limit: 100 });
@@ -58,6 +83,7 @@ export default function UsersPage() {
 
   const users = extractListItems<ApiUser>(data, 'users');
   const pagination = extractPagination(data, LIMIT);
+  const colSpan = isTenantAdmin ? 6 : 5;
 
   const roles = rolesData?.data?.roles ?? [];
 
@@ -139,14 +165,33 @@ export default function UsersPage() {
         )}
       </div>
 
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-        <input
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          placeholder="Search users by name or email..."
-          className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10"
-        />
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          <input
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Search users by name or email..."
+            className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10"
+          />
+        </div>
+        {isTenantAdmin && (
+          <div className="w-full sm:w-56">
+            <Select
+              value={branchFilter}
+              onChange={setBranchFilter}
+              variant="filter"
+              size="lg"
+              allowEmpty
+              placeholder="All branches"
+              aria-label="Filter by branch"
+              options={[
+                { value: 'tenant', label: 'Tenant-level' },
+                ...branchOptions,
+              ]}
+            />
+          </div>
+        )}
       </div>
 
       <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
@@ -155,6 +200,9 @@ export default function UsersPage() {
             <tr>
               <th className="px-5 py-3 font-bold">User</th>
               <th className="px-5 py-3 font-bold">Role</th>
+              {isTenantAdmin && (
+                <th className="px-5 py-3 font-bold">Branch</th>
+              )}
               <th className="px-5 py-3 font-bold">Created</th>
               <th className="px-5 py-3 font-bold">Status</th>
               <th className="px-5 py-3 font-bold text-right">Actions</th>
@@ -163,13 +211,13 @@ export default function UsersPage() {
           <tbody className="divide-y divide-slate-100">
             {isLoading || isFetching ? (
               <tr>
-                <td colSpan={5} className="py-12 text-center text-slate-400">
+                <td colSpan={colSpan} className="py-12 text-center text-slate-400">
                   <Loader2 className="mx-auto h-5 w-5 animate-spin" />
                 </td>
               </tr>
             ) : users.length === 0 ? (
               <tr>
-                <td colSpan={5} className="py-12 text-center text-sm text-slate-400">
+                <td colSpan={colSpan} className="py-12 text-center text-sm text-slate-400">
                   No users found.
                 </td>
               </tr>
@@ -190,6 +238,19 @@ export default function UsersPage() {
                   <td className="px-5 py-4 text-slate-600">
                     {user.role?.title || '—'}
                   </td>
+                  {isTenantAdmin && (
+                    <td className="px-5 py-4">
+                      <span
+                        className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
+                          user.branch_id
+                            ? 'bg-sky-50 text-sky-700'
+                            : 'bg-slate-100 text-slate-600'
+                        }`}
+                      >
+                        {user.branch_name || (user.branch_id ? 'Branch' : 'Tenant')}
+                      </span>
+                    </td>
+                  )}
                   <td className="px-5 py-4 text-xs text-slate-500">
                     {user.created_at
                       ? new Date(user.created_at).toLocaleDateString()

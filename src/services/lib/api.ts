@@ -25,6 +25,8 @@ export const TENANT_DISABLED_STORAGE_KEY = 'tenant_disabled_lock';
 export const TENANT_DISABLED_MESSAGE =
   'Your account has been temporarily locked due to some reason. Kindly contact administrator for further details.';
 
+export const BRANCH_NOT_FOUND_MESSAGE = 'This branch does not exist';
+
 function getResponseData(error: unknown): {
   errorCode?: string;
   message?: string | { message?: string; errorCode?: string };
@@ -32,15 +34,25 @@ function getResponseData(error: unknown): {
   return (error as AxiosError<{ errorCode?: string; message?: any }>)?.response?.data;
 }
 
-export function isTenantDisabledError(error: unknown): boolean {
+function hasErrorCode(error: unknown, code: string): boolean {
   const data = getResponseData(error);
   if (!data) return false;
-  if (data.errorCode === 'TENANT_DISABLED') return true;
+  if (data.errorCode === code) return true;
   const nested =
     typeof data.message === 'object' && data.message
       ? data.message
       : null;
-  if (nested?.errorCode === 'TENANT_DISABLED') return true;
+  return nested?.errorCode === code;
+}
+
+export function isTenantDisabledError(error: unknown): boolean {
+  if (hasErrorCode(error, 'TENANT_DISABLED')) return true;
+  const data = getResponseData(error);
+  if (!data) return false;
+  const nested =
+    typeof data.message === 'object' && data.message
+      ? data.message
+      : null;
   const msg =
     typeof data.message === 'string'
       ? data.message
@@ -48,6 +60,23 @@ export function isTenantDisabledError(error: unknown): boolean {
         ? nested.message
         : '';
   return msg.toLowerCase().includes('temporarily locked');
+}
+
+export function isBranchNotFoundError(error: unknown): boolean {
+  if (hasErrorCode(error, 'BRANCH_NOT_FOUND')) return true;
+  const data = getResponseData(error);
+  if (!data) return false;
+  const nested =
+    typeof data.message === 'object' && data.message
+      ? data.message
+      : null;
+  const msg =
+    typeof data.message === 'string'
+      ? data.message
+      : typeof nested?.message === 'string'
+        ? nested.message
+        : '';
+  return msg.toLowerCase().includes('branch does not exist');
 }
 
 export function getTenantDisabledMessage(error: unknown): string {
@@ -64,13 +93,24 @@ export function getTenantDisabledMessage(error: unknown): string {
   return TENANT_DISABLED_MESSAGE;
 }
 
-function kickToLoginForTenantDisabled(error?: unknown) {
+export function getBranchNotFoundMessage(error: unknown): string {
+  const data = getResponseData(error);
+  if (!data) return BRANCH_NOT_FOUND_MESSAGE;
+  if (typeof data.message === 'string' && data.message) return data.message;
+  if (
+    typeof data.message === 'object' &&
+    data.message &&
+    typeof data.message.message === 'string'
+  ) {
+    return data.message.message;
+  }
+  return BRANCH_NOT_FOUND_MESSAGE;
+}
+
+function kickToLoginWithMessage(message: string) {
   if (typeof window === 'undefined') return;
   try {
-    sessionStorage.setItem(
-      TENANT_DISABLED_STORAGE_KEY,
-      getTenantDisabledMessage(error)
-    );
+    sessionStorage.setItem(TENANT_DISABLED_STORAGE_KEY, message);
   } catch {
     // ignore storage failures
   }
@@ -80,6 +120,14 @@ function kickToLoginForTenantDisabled(error?: unknown) {
   if (!window.location.pathname.startsWith('/login')) {
     window.location.replace('/login');
   }
+}
+
+function kickToLoginForTenantDisabled(error?: unknown) {
+  kickToLoginWithMessage(getTenantDisabledMessage(error));
+}
+
+function kickToLoginForBranchNotFound(error?: unknown) {
+  kickToLoginWithMessage(getBranchNotFoundMessage(error));
 }
 
 const processQueue = (error: any, token: string | null = null) => {
@@ -106,13 +154,31 @@ function applySessionFromRefreshPayload(payload: any) {
   }
 }
 
-// Request Interceptor: Attach access_token from cookies
+function getTenantIdFromAccessToken(): string | undefined {
+  const token = Cookies.get('access_token');
+  if (!token) return undefined;
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    return payload.tenantId || payload.tenant_id;
+  } catch {
+    return undefined;
+  }
+}
+
+// Request Interceptor: Attach access_token and tenant_id for tenant-scoped APIs
 api.interceptors.request.use(
   (config) => {
     const token = Cookies.get('access_token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+
+    const tenantId =
+      useAuthStore.getState().user?.tenantId || getTenantIdFromAccessToken();
+    if (tenantId) {
+      config.headers.tenant_id = tenantId;
+    }
+
     return config;
   },
   (error) => Promise.reject(error)
@@ -127,6 +193,11 @@ api.interceptors.response.use(
 
     if (status === 403 && isTenantDisabledError(error)) {
       kickToLoginForTenantDisabled(error);
+      return Promise.reject(error);
+    }
+
+    if (status === 403 && isBranchNotFoundError(error)) {
+      kickToLoginForBranchNotFound(error);
       return Promise.reject(error);
     }
 
@@ -186,6 +257,8 @@ api.interceptors.response.use(
         isRefreshing = false;
         if (isTenantDisabledError(refreshError)) {
           kickToLoginForTenantDisabled(refreshError);
+        } else if (isBranchNotFoundError(refreshError)) {
+          kickToLoginForBranchNotFound(refreshError);
         } else {
           Cookies.remove('access_token', { path: '/' });
           Cookies.remove('refresh_token', { path: '/' });

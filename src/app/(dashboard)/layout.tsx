@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -15,7 +15,7 @@ import {
   X,
 } from 'lucide-react';
 import Cookies from 'js-cookie';
-import { SIDEBAR_MODULES, MODULE_ICON_MAP } from '@/data/sidebar';
+import { MODULE_ICON_MAP, MODULE_HREF_BY_SLUG } from '@/data/sidebar';
 import { useAuthStore } from '@/store/authStore';
 import { useLogoutMutation } from '@/hooks/auth';
 import { PermissionBoundary } from '@/components/rbac/PermissionBoundary';
@@ -26,13 +26,6 @@ import { AuthGuard } from '@/components/auth/AuthGuard';
 const SECTIONED_MODULES = new Set(['roles', 'permissions', 'modules']);
 
 /** Map API module_slug → Next.js page path (never use permission.route as href) */
-const MODULE_HREF_BY_SLUG: Record<string, string> = Object.fromEntries(
-  SIDEBAR_MODULES.map((item) => {
-    const slug = item.permission.split('/')[0];
-    return [slug, item.href];
-  })
-);
-
 function resolveModuleHref(moduleSlug: string): string {
   return (
     MODULE_HREF_BY_SLUG[moduleSlug] || `/${moduleSlug.replace(/_/g, '-')}`
@@ -257,30 +250,31 @@ export default function DashboardLayout({
     document.title = portalName;
   }, [portalName]);
 
-  const visibleModules: NavItem[] = modulesWithPermisssions.reduce<NavItem[]>(
-    (acc, module) => {
-      const menuPermission = module.permissions.find(
-        (permission) =>
-          permission.is_Show_in_menu &&
-          permission.is_allowed &&
-          permission.route
-      );
+  const visibleModules: NavItem[] = useMemo(
+    () =>
+      modulesWithPermisssions.reduce<NavItem[]>((acc, module) => {
+        const menuPermission = module.permissions.find(
+          (permission) =>
+            permission.is_Show_in_menu &&
+            permission.is_allowed &&
+            permission.route
+        );
 
-      if (!menuPermission) {
+        if (!menuPermission) {
+          return acc;
+        }
+
+        acc.push({
+          label: module.module_name,
+          href: resolveModuleHref(module.module_slug),
+          icon: MODULE_ICON_MAP[module.module_slug] ?? LayoutDashboard,
+          section: SECTIONED_MODULES.has(module.module_slug)
+            ? 'Access Control'
+            : undefined,
+        });
         return acc;
-      }
-
-      acc.push({
-        label: module.module_name,
-        href: resolveModuleHref(module.module_slug),
-        icon: MODULE_ICON_MAP[module.module_slug] ?? LayoutDashboard,
-        section: SECTIONED_MODULES.has(module.module_slug)
-          ? 'Access Control'
-          : undefined,
-      });
-      return acc;
-    },
-    []
+      }, []),
+    [modulesWithPermisssions]
   );
 
   return (

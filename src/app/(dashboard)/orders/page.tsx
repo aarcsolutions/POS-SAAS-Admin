@@ -12,9 +12,11 @@ import {
   Printer,
   CreditCard,
   Banknote,
+  Truck,
 } from 'lucide-react';
 import OrderCreateWizard from '@/components/orders/OrderCreateWizard';
 import OrderSlip from '@/components/orders/OrderSlip';
+import DispatchModal from '@/components/orders/DispatchModal';
 import RowActionsMenu from '@/components/ui/RowActionsMenu';
 import { Select } from '@/components/ui/Select';
 import { usePermission } from '@/hooks/use-permission';
@@ -31,6 +33,7 @@ import { confirmDialog } from '@/store/dialogStore';
 import {
   OrderListItem,
   OrderStatus,
+  OrderType,
 } from '@/types/order.types';
 
 const STATUS_LABEL: Record<string, string> = {
@@ -38,13 +41,33 @@ const STATUS_LABEL: Record<string, string> = {
   accepted: 'Accepted',
   in_kitchen: 'In Kitchen',
   ready: 'Ready',
+  out_for_delivery: 'Out for Delivery',
   completed: 'Completed',
   cancelled: 'Cancelled',
 };
 
-function nextStatus(status: OrderStatus): OrderStatus | null {
-  if (status === 'pending' || status === 'accepted') return 'in_kitchen';
-  if (status === 'in_kitchen' || status === 'ready') return 'completed';
+function canCancelOrder(status: OrderStatus): boolean {
+  return (
+    status === 'pending' ||
+    status === 'accepted' ||
+    status === 'in_kitchen' ||
+    status === 'ready' ||
+    status === 'out_for_delivery'
+  );
+}
+
+function nextStatus(
+  status: OrderStatus,
+  orderType?: OrderType
+): OrderStatus | null {
+  if (status === 'pending') return 'accepted';
+  if (status === 'accepted') return 'in_kitchen';
+  if (status === 'in_kitchen') return 'ready';
+  if (status === 'ready') {
+    if (orderType === 'delivery') return null;
+    return 'completed';
+  }
+  if (status === 'out_for_delivery') return 'completed';
   return null;
 }
 
@@ -52,8 +75,14 @@ function statusBadgeClass(status: OrderStatus) {
   switch (status) {
     case 'pending':
       return 'bg-amber-100 text-amber-800';
+    case 'accepted':
+      return 'bg-sky-100 text-sky-800';
     case 'in_kitchen':
       return 'bg-orange-100 text-orange-800';
+    case 'ready':
+      return 'bg-violet-100 text-violet-800';
+    case 'out_for_delivery':
+      return 'bg-indigo-100 text-indigo-800';
     case 'completed':
       return 'bg-emerald-100 text-emerald-800';
     case 'cancelled':
@@ -71,6 +100,7 @@ export default function OrdersPage() {
   const canUpdateStatus = usePermission(
     ENTITY_PERMS.orders.extras.updateStatus
   );
+  const canDispatch = usePermission(ENTITY_PERMS.orders.extras.dispatch);
   const canRecordPayment = usePermission(
     ENTITY_PERMS.orders.extras.recordPayment
   );
@@ -79,23 +109,29 @@ export default function OrdersPage() {
 
   const [screen, setScreen] = useState<'list' | 'create'>('list');
   const [search, setSearch] = useState('');
+  const [typeFilter, setTypeFilter] = useState<OrderType | ''>('');
   const [statusFilter, setStatusFilter] = useState<OrderStatus | ''>('');
   const [page, setPage] = useState(1);
   const [detailId, setDetailId] = useState<string | null>(null);
   const [slipOpen, setSlipOpen] = useState(false);
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
+  const [dispatchOrder, setDispatchOrder] = useState<OrderListItem | null>(null);
 
   const debouncedSearch = useDebouncedValue(search.trim(), 300);
   useEffect(() => {
     setPage(1);
-  }, [debouncedSearch]);
+  }, [debouncedSearch, typeFilter, statusFilter]);
 
-  const ordersQuery = useOrdersQuery({
-    page,
-    limit: 20,
-    search: debouncedSearch || undefined,
-    status: statusFilter || undefined,
-  });
+  const ordersQuery = useOrdersQuery(
+    {
+      page,
+      limit: 20,
+      search: debouncedSearch || undefined,
+      status: statusFilter || undefined,
+      order_type: typeFilter || undefined,
+    },
+    { pollMs: statusFilter === 'pending' ? 8000 : undefined }
+  );
   const detailQuery = useOrderDetailQuery(detailId);
   const statusMutation = useUpdateOrderStatusMutation();
   const paymentMutation = useRecordPaymentMutation();
@@ -107,6 +143,10 @@ export default function OrdersPage() {
 
   const pagination = ordersQuery.data?.data?.pagination;
   const detail = detailQuery.data?.data;
+
+  const handleAccept = (orderId: string) => {
+    statusMutation.mutate({ id: orderId, status: 'accepted' });
+  };
 
   const handleCancelOrder = async (orderId: string) => {
     const ok = await confirmDialog({
@@ -136,8 +176,15 @@ export default function OrdersPage() {
           <h1 className="text-2xl font-bold text-slate-900">Orders</h1>
           <p className="mt-1 text-sm text-slate-500">
             Create orders, update kitchen status, take payment, and print slips
+            {statusFilter === 'pending' && (
+              <span className="text-amber-700"> · pending queue auto-refreshes</span>
+            )}
           </p>
         </div>
+        <div className="flex items-center gap-2">
+          {statusFilter === 'pending' && ordersQuery.isFetching && !ordersQuery.isLoading && (
+            <Loader2 className="h-5 w-5 animate-spin text-amber-600" aria-label="Refreshing" />
+          )}
         {canCreate && (
           <button
             type="button"
@@ -145,8 +192,9 @@ export default function OrdersPage() {
             className="inline-flex items-center gap-2 rounded-md bg-amber-600 px-4 py-2 text-sm font-semibold text-white"
           >
             <Plus className="h-4 w-4" /> Create Order
-          </button>
+        </button>
         )}
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-3">
@@ -160,6 +208,20 @@ export default function OrdersPage() {
           />
         </div>
         <Select
+          value={typeFilter}
+          onChange={(value) => {
+            setTypeFilter(value as OrderType | '');
+            setPage(1);
+          }}
+          size="lg"
+          placeholder="All types"
+          options={[
+            { value: 'dine_in', label: 'Dine-in' },
+            { value: 'takeaway', label: 'Pickup / Takeaway' },
+            { value: 'delivery', label: 'Delivery' },
+          ]}
+        />
+        <Select
           value={statusFilter}
           onChange={(value) => {
             setStatusFilter(value as OrderStatus | '');
@@ -169,7 +231,10 @@ export default function OrdersPage() {
           placeholder="All statuses"
           options={[
             { value: 'pending', label: 'Pending' },
+            { value: 'accepted', label: 'Accepted' },
             { value: 'in_kitchen', label: 'In Kitchen' },
+            { value: 'ready', label: 'Ready' },
+            { value: 'out_for_delivery', label: 'Out for Delivery' },
             { value: 'completed', label: 'Completed' },
             { value: 'cancelled', label: 'Cancelled' },
           ]}
@@ -206,14 +271,15 @@ export default function OrdersPage() {
                 </tr>
               ) : (
                 orders.map((order) => {
-                  const nxt = nextStatus(order.status);
-                  const canCancel =
-                    order.status === 'pending' ||
-                    order.status === 'in_kitchen' ||
-                    order.status === 'accepted' ||
-                    order.status === 'ready';
+                  const nxt = nextStatus(order.status, order.order_type);
+                  const showCancel =
+                    canUpdateStatus && canCancelOrder(order.status);
+                  const showDispatch =
+                    (canDispatch || canUpdateStatus) &&
+                    order.status === 'ready' &&
+                    order.order_type === 'delivery';
 
-                  return (
+                return (
                     <tr key={order.id} className="border-t border-slate-100">
                       <td className="px-4 py-3 font-semibold text-slate-800">
                         {order.order_number}
@@ -224,11 +290,34 @@ export default function OrdersPage() {
                         </div>
                         <div className="text-xs text-slate-500">
                           {order.customer?.phone}
-                        </div>
-                      </td>
+                      </div>
+                    </td>
                       <td className="px-4 py-3 capitalize text-slate-600">
-                        {order.order_type?.replace('_', '-')}
-                        {order.table_name ? ` · ${order.table_name}` : ''}
+                        <div>{order.order_type?.replace('_', ' ')}</div>
+                        {order.table_name && (
+                          <div className="text-xs text-slate-500">
+                            Table {order.table_name}
+                          </div>
+                        )}
+                        {order.order_type === 'delivery' && (
+                          <div className="mt-0.5 text-xs text-slate-500">
+                            {order.delivery_address || '-'}
+                            {order.delivery_phone
+                              ? ` · ${order.delivery_phone}`
+                              : ''}
+                            {order.payment_method
+                              ? ` · ${order.payment_method.toUpperCase()}`
+                              : ''}
+                            {Number(order.delivery_fee) > 0
+                              ? ` · fee ${Number(order.delivery_fee).toFixed(2)}`
+                              : ''}
+                            {order.driver && (
+                              <div className="mt-0.5 text-indigo-600">
+                                Driver: {order.driver.name} ({order.driver.phone})
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </td>
                       <td className="px-4 py-3 font-semibold">
                         PKR {Number(order.final_total).toFixed(2)}
@@ -260,12 +349,42 @@ export default function OrdersPage() {
                           : '-'}
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <RowActionsMenu
-                          open={menuOpenId === order.id}
-                          onOpenChange={(open) =>
-                            setMenuOpenId(open ? order.id : null)
-                          }
-                        >
+                        <div className="flex items-center justify-end gap-2">
+                          {canUpdateStatus && order.status === 'pending' && (
+                            <button
+                              type="button"
+                              disabled={statusMutation.isPending}
+                              onClick={() => handleAccept(order.id)}
+                              className="inline-flex items-center gap-1 rounded-md bg-emerald-600 px-2.5 py-1.5 text-xs font-semibold text-white disabled:opacity-60"
+                            >
+                              <CheckCircle2 className="h-3.5 w-3.5" /> Accept
+                            </button>
+                          )}
+                          {showDispatch && (
+                            <button
+                              type="button"
+                              onClick={() => setDispatchOrder(order)}
+                              className="inline-flex items-center gap-1 rounded-md bg-indigo-600 px-2.5 py-1.5 text-xs font-semibold text-white disabled:opacity-60"
+                            >
+                              <Truck className="h-3.5 w-3.5" /> Dispatch
+                            </button>
+                          )}
+                          {showCancel && (
+                            <button
+                              type="button"
+                              disabled={statusMutation.isPending}
+                              onClick={() => void handleCancelOrder(order.id)}
+                              className="inline-flex items-center gap-1 rounded-md bg-rose-50 px-2.5 py-1.5 text-xs font-semibold text-rose-700 ring-1 ring-rose-200 disabled:opacity-60"
+                            >
+                              <XCircle className="h-3.5 w-3.5" /> Cancel
+                            </button>
+                          )}
+                          <RowActionsMenu
+                            open={menuOpenId === order.id}
+                            onOpenChange={(open) =>
+                              setMenuOpenId(open ? order.id : null)
+                            }
+                          >
                           <button
                             type="button"
                             onClick={() => {
@@ -277,7 +396,7 @@ export default function OrdersPage() {
                           >
                             <Eye className="h-4 w-4" /> View / Slip
                           </button>
-                          {canUpdateStatus && nxt && (
+                          {canUpdateStatus && nxt && nxt !== 'accepted' && (
                             <button
                               type="button"
                               onClick={() => {
@@ -296,19 +415,11 @@ export default function OrdersPage() {
                               )}
                               {nxt === 'in_kitchen'
                                 ? 'Send to Kitchen'
-                                : 'Mark Completed'}
-                            </button>
-                          )}
-                          {canUpdateStatus && canCancel && (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                void handleCancelOrder(order.id);
-                                setMenuOpenId(null);
-                              }}
-                              className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-rose-600 hover:bg-rose-50"
-                            >
-                              <XCircle className="h-4 w-4" /> Cancel order
+                                : nxt === 'ready'
+                                  ? 'Mark Ready'
+                                  : nxt === 'completed'
+                                    ? 'Mark Completed'
+                                    : 'Update Status'}
                             </button>
                           )}
                           {canPay && order.payment_status !== 'paid' && (
@@ -341,7 +452,7 @@ export default function OrdersPage() {
                               </button>
                             </>
                           )}
-                          <button
+                      <button
                             type="button"
                             onClick={() => {
                               setDetailId(order.id);
@@ -351,11 +462,12 @@ export default function OrdersPage() {
                             className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
                           >
                             <Printer className="h-4 w-4" /> Print slip
-                          </button>
+                      </button>
                         </RowActionsMenu>
-                      </td>
-                    </tr>
-                  );
+                        </div>
+                    </td>
+                  </tr>
+                );
                 })
               )}
             </tbody>
@@ -398,7 +510,9 @@ export default function OrdersPage() {
                 ? 'paid'
                 : detail.payment_status || 'unpaid',
             payment_method:
-              detail.payments?.[0]?.method || detail.payment_method || null,
+              detail.payment_method ||
+              detail.payments?.[0]?.method ||
+              null,
           }}
           restaurantName={restaurantName}
           onClose={() => {
@@ -412,6 +526,13 @@ export default function OrdersPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
           <Loader2 className="h-8 w-8 animate-spin text-white" />
         </div>
+      )}
+
+      {dispatchOrder && (
+        <DispatchModal
+          order={dispatchOrder}
+          onClose={() => setDispatchOrder(null)}
+        />
       )}
     </div>
   );

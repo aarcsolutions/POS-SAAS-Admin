@@ -3,7 +3,12 @@ import { usersApi } from '@/services/users';
 import { toast } from 'sonner';
 
 export const useUsersQuery = (
-  params: { page?: number; limit?: number; search?: string } = {}
+  params: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    branch_id?: string;
+  } = {}
 ) => {
   return useQuery({
     queryKey: ['users', params],

@@ -4,7 +4,12 @@ import { CustomerPayload } from '@/types/customer.types';
 import { toast } from 'sonner';
 
 export const useCustomersQuery = (
-  params: { page?: number; limit?: number; search?: string } = {}
+  params: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    branch_id?: string;
+  } = {}
 ) => {
   return useQuery({
     queryKey: ['customers', params],

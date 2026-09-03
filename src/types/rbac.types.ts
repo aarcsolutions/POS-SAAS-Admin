@@ -12,6 +12,8 @@ export interface Role {
   updated_at: string;
   title: string;
   slug: string;
+  branch_id?: string | null;
+  branch_name?: string | null;
 }
 
 export interface RolesListResponse {
@@ -66,6 +68,8 @@ export interface ApiUser {
   updated_at: string;
   role?: Role | null;
   role_id?: string;
+  branch_id?: string | null;
+  branch_name?: string | null;
 }
 
 export interface UsersListResponse {

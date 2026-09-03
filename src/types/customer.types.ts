@@ -6,9 +6,15 @@ export interface Customer {
   address?: string | null;
   city?: string | null;
   notes?: string | null;
+  gender_id?: string | null;
+  gender_title?: string | null;
+  date_of_birth?: string | null;
+  marketing_subscribed?: boolean;
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  branch_id?: string | null;
+  branch_name?: string | null;
 }
 
 export interface CustomersListResponse {
@@ -43,5 +49,8 @@ export type CustomerPayload = {
   address?: string | null;
   city?: string | null;
   notes?: string | null;
+  gender_id?: string | null;
+  date_of_birth?: string | null;
+  marketing_subscribed?: boolean;
   is_active?: boolean;
 };

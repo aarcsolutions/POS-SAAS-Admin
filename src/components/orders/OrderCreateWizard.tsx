@@ -9,6 +9,7 @@ import {
   Plus,
   ShoppingBag,
   Store,
+  Truck,
   UtensilsCrossed,
 } from 'lucide-react';
 import { useCustomersQuery } from '@/hooks/customers';
@@ -21,7 +22,7 @@ import { Product } from '@/types/product.types';
 import { Category } from '@/types/category.types';
 import { toast } from 'sonner';
 
-type Step = 'type' | 'customer' | 'table' | 'browse' | 'confirm';
+type Step = 'type' | 'customer' | 'table' | 'delivery' | 'browse' | 'confirm';
 
 interface Props {
   onClose: () => void;
@@ -65,6 +66,11 @@ export default function OrderCreateWizard({ onClose, onCreated }: Props) {
   const [customerLabel, setCustomerLabel] = useState('');
   const [tableName, setTableName] = useState('');
   const [tableNameError, setTableNameError] = useState('');
+  const [deliveryAddress, setDeliveryAddress] = useState('');
+  const [deliveryCity, setDeliveryCity] = useState('');
+  const [deliveryPhone, setDeliveryPhone] = useState('');
+  const [deliveryFee, setDeliveryFee] = useState('0');
+  const [deliveryError, setDeliveryError] = useState('');
   const [stepError, setStepError] = useState('');
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(
     null
@@ -254,7 +260,17 @@ export default function OrderCreateWizard({ onClose, onCreated }: Props) {
         setSelectedCategoryId(current?.parent_id ?? null);
         return;
       }
-      setStep(orderType === 'dine_in' ? 'table' : 'customer');
+      if (orderType === 'dine_in') {
+        setStep('table');
+      } else if (orderType === 'delivery') {
+        setStep('delivery');
+      } else {
+        setStep('customer');
+      }
+      return;
+    }
+    if (step === 'delivery') {
+      setStep('customer');
       return;
     }
     if (step === 'table') {
@@ -289,10 +305,24 @@ export default function OrderCreateWizard({ onClose, onCreated }: Props) {
       setStep('table');
       return;
     }
+    if (orderType === 'delivery') {
+      if (!deliveryAddress.trim()) {
+        setDeliveryError('Delivery address is required');
+        setStep('delivery');
+        return;
+      }
+      if (!deliveryPhone.trim()) {
+        setDeliveryError('Delivery phone is required');
+        setStep('delivery');
+        return;
+      }
+    }
     if (cartLines.some((l) => !l.variant_id)) {
       toast.error('Some items are missing variants. Re-add them.');
       return;
     }
+
+    const feeNum = Math.max(0, Number(deliveryFee) || 0);
 
     try {
       const res = await createMutation.mutateAsync({
@@ -300,6 +330,16 @@ export default function OrderCreateWizard({ onClose, onCreated }: Props) {
         order_type: orderType,
         table_name:
           orderType === 'dine_in' ? tableName.trim() : undefined,
+        delivery_address:
+          orderType === 'delivery' ? deliveryAddress.trim() : undefined,
+        delivery_city:
+          orderType === 'delivery'
+            ? deliveryCity.trim() || undefined
+            : undefined,
+        delivery_phone:
+          orderType === 'delivery' ? deliveryPhone.trim() : undefined,
+        delivery_fee: orderType === 'delivery' ? feeNum : undefined,
+        payment_method: orderType === 'delivery' ? 'cod' : undefined,
         items: cartLines.map((line) => ({
           product_id: line.product_id,
           variant_id: line.variant_id,
@@ -383,7 +423,7 @@ export default function OrderCreateWizard({ onClose, onCreated }: Props) {
 
       {step === 'type' && (
         <div className="space-y-3">
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-4 sm:grid-cols-3">
             {[
               {
                 id: 'dine_in' as const,
@@ -396,6 +436,12 @@ export default function OrderCreateWizard({ onClose, onCreated }: Props) {
                 title: 'Takeaway',
                 desc: 'Pack and go',
                 icon: Store,
+              },
+              {
+                id: 'delivery' as const,
+                title: 'Delivery',
+                desc: 'Deliver to customer address',
+                icon: Truck,
               },
             ].map((option) => (
               <button
@@ -443,8 +489,17 @@ export default function OrderCreateWizard({ onClose, onCreated }: Props) {
                     setCustomerLabel(
                       `${customer.name}${customer.phone ? ` · ${customer.phone}` : ''}`
                     );
+                    if (orderType === 'delivery' && customer.phone) {
+                      setDeliveryPhone((prev) => prev || customer.phone);
+                    }
                     setStepError('');
-                    setStep(orderType === 'dine_in' ? 'table' : 'browse');
+                    if (orderType === 'dine_in') {
+                      setStep('table');
+                    } else if (orderType === 'delivery') {
+                      setStep('delivery');
+                    } else {
+                      setStep('browse');
+                    }
                   }}
                   className="flex w-full items-center justify-between rounded-xl border border-slate-100 px-4 py-3 text-left hover:bg-amber-50"
                 >
@@ -490,6 +545,89 @@ export default function OrderCreateWizard({ onClose, onCreated }: Props) {
                 return;
               }
               setTableNameError('');
+              setStepError('');
+              setStep('browse');
+            }}
+            className="rounded-md bg-amber-600 px-4 py-2 text-sm font-semibold text-white"
+          >
+            Continue
+          </button>
+        </div>
+      )}
+
+      {step === 'delivery' && (
+        <div className="max-w-lg space-y-4 rounded-2xl border border-slate-200 bg-white p-5">
+          <div>
+            <label className="text-xs font-bold uppercase tracking-wide text-slate-500">
+              Delivery address
+            </label>
+            <textarea
+              value={deliveryAddress}
+              onChange={(e) => {
+                setDeliveryAddress(e.target.value);
+                if (deliveryError) setDeliveryError('');
+              }}
+              rows={3}
+              placeholder="Street, building, landmark"
+              className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm"
+            />
+          </div>
+          <div>
+            <label className="text-xs font-bold uppercase tracking-wide text-slate-500">
+              City (optional)
+            </label>
+            <input
+              value={deliveryCity}
+              onChange={(e) => setDeliveryCity(e.target.value)}
+              placeholder="City"
+              className="mt-1 h-11 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm"
+            />
+          </div>
+          <div>
+            <label className="text-xs font-bold uppercase tracking-wide text-slate-500">
+              Phone
+            </label>
+            <input
+              value={deliveryPhone}
+              onChange={(e) => {
+                setDeliveryPhone(e.target.value);
+                if (deliveryError) setDeliveryError('');
+              }}
+              placeholder="Delivery contact phone"
+              className="mt-1 h-11 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm"
+            />
+          </div>
+          <div>
+            <label className="text-xs font-bold uppercase tracking-wide text-slate-500">
+              Delivery fee
+            </label>
+            <input
+              type="number"
+              min={0}
+              step="0.01"
+              value={deliveryFee}
+              onChange={(e) => setDeliveryFee(e.target.value)}
+              className="mt-1 h-11 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm"
+            />
+          </div>
+          <p className="text-xs text-slate-500">
+            Payment method defaults to COD (collect on delivery).
+          </p>
+          {deliveryError && (
+            <p className="text-[12px] font-medium text-rose-600">{deliveryError}</p>
+          )}
+          <button
+            type="button"
+            onClick={() => {
+              if (!deliveryAddress.trim()) {
+                setDeliveryError('Delivery address is required');
+                return;
+              }
+              if (!deliveryPhone.trim()) {
+                setDeliveryError('Delivery phone is required');
+                return;
+              }
+              setDeliveryError('');
               setStepError('');
               setStep('browse');
             }}
@@ -730,6 +868,31 @@ export default function OrderCreateWizard({ onClose, onCreated }: Props) {
                 <dd className="font-semibold">{tableName}</dd>
               </div>
             )}
+            {orderType === 'delivery' && (
+              <>
+                <div className="flex justify-between gap-4">
+                  <dt className="text-slate-500">Address</dt>
+                  <dd className="max-w-[60%] text-right font-semibold">
+                    {deliveryAddress}
+                    {deliveryCity ? `, ${deliveryCity}` : ''}
+                  </dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt className="text-slate-500">Phone</dt>
+                  <dd className="font-semibold">{deliveryPhone}</dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt className="text-slate-500">Delivery fee</dt>
+                  <dd className="font-semibold">
+                    PKR {Math.max(0, Number(deliveryFee) || 0).toFixed(2)}
+                  </dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt className="text-slate-500">Payment</dt>
+                  <dd className="font-semibold uppercase">COD</dd>
+                </div>
+              </>
+            )}
           </dl>
           <div className="divide-y rounded-xl border border-slate-100">
             {cartLines.map((line) => (
@@ -759,7 +922,15 @@ export default function OrderCreateWizard({ onClose, onCreated }: Props) {
           </div>
           <div className="flex items-center justify-between text-base font-bold">
             <span>Estimated total</span>
-            <span>PKR {cartTotal.toFixed(2)}</span>
+            <span>
+              PKR{' '}
+              {(
+                cartTotal +
+                (orderType === 'delivery'
+                  ? Math.max(0, Number(deliveryFee) || 0)
+                  : 0)
+              ).toFixed(2)}
+            </span>
           </div>
           <button
             type="button"

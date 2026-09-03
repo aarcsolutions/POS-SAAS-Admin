@@ -7,6 +7,8 @@ export interface Category {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  branch_id?: string | null;
+  branch_name?: string | null;
 }
 
 export interface CategoryTreeNode extends Category {
@@ -45,4 +47,21 @@ export interface CategoriesByParentResponse {
   message: string;
   heading: string;
   data: Category[];
+}
+
+export interface CategoryDeleteImpact {
+  category_id: string;
+  category_name: string;
+  subcategory_count: number;
+  product_count: number;
+  has_running_orders: boolean;
+  running_order_count: number;
+}
+
+export interface CategoryDeleteImpactResponse {
+  statusCode: number;
+  status: boolean;
+  message: string;
+  heading: string;
+  data: CategoryDeleteImpact;
 }

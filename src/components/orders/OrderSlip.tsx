@@ -30,6 +30,9 @@ export default function OrderSlip({ order, restaurantName, onClose }: Props) {
     win.print();
   };
 
+  const deliveryFee = Number(order.delivery_fee) || 0;
+  const isDelivery = order.order_type === 'delivery';
+
   const downloadPdf = () => {
     printSlip();
     const lines = [
@@ -37,6 +40,12 @@ export default function OrderSlip({ order, restaurantName, onClose }: Props) {
       `Order ${order.order_number}`,
       `Type: ${order.order_type}`,
       order.table_name ? `Table: ${order.table_name}` : '',
+      isDelivery && order.delivery_address
+        ? `Address: ${order.delivery_address}${order.delivery_city ? `, ${order.delivery_city}` : ''}`
+        : '',
+      isDelivery && order.delivery_phone
+        ? `Delivery phone: ${order.delivery_phone}`
+        : '',
       `Customer: ${order.customer?.name || '-'}`,
       '',
       ...(order.items || []).map(
@@ -47,6 +56,9 @@ export default function OrderSlip({ order, restaurantName, onClose }: Props) {
       `Subtotal: ${Number(order.subtotal).toFixed(2)}`,
       `Discount: ${Number(order.discount).toFixed(2)}`,
       `Tax: ${Number(order.tax_amount).toFixed(2)}`,
+      deliveryFee > 0 || isDelivery
+        ? `Delivery fee: ${deliveryFee.toFixed(2)}`
+        : '',
       `Total: ${Number(order.final_total).toFixed(2)}`,
       `Payment: ${order.payment_status}${order.payment_method ? ` (${order.payment_method})` : ''}`,
     ]
@@ -76,6 +88,13 @@ export default function OrderSlip({ order, restaurantName, onClose }: Props) {
             Customer: {order.customer?.name || '-'}
             {order.customer?.phone ? ` (${order.customer.phone})` : ''}
           </p>
+          {isDelivery && (
+            <p style={{ fontSize: 13, marginBottom: 8 }}>
+              Deliver to: {order.delivery_address || '-'}
+              {order.delivery_city ? `, ${order.delivery_city}` : ''}
+              {order.delivery_phone ? ` · ${order.delivery_phone}` : ''}
+            </p>
+          )}
           <table>
             <thead>
               <tr>
@@ -115,6 +134,12 @@ export default function OrderSlip({ order, restaurantName, onClose }: Props) {
                 <td>Tax</td>
                 <td className="right">{Number(order.tax_amount).toFixed(2)}</td>
               </tr>
+              {(isDelivery || deliveryFee > 0) && (
+                <tr>
+                  <td>Delivery fee</td>
+                  <td className="right">{deliveryFee.toFixed(2)}</td>
+                </tr>
+              )}
               <tr className="grand">
                 <td>Total</td>
                 <td className="right">{Number(order.final_total).toFixed(2)}</td>

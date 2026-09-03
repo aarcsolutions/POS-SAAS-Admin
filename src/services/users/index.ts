@@ -2,7 +2,14 @@ import api from '../lib/api';
 import { UsersListResponse } from '@/types/rbac.types';
 
 export const usersApi = {
-  getAll: async (params: { page?: number; limit?: number; search?: string } = {}) => {
+  getAll: async (
+    params: {
+      page?: number;
+      limit?: number;
+      search?: string;
+      branch_id?: string;
+    } = {}
+  ) => {
     const { data } = await api.get<UsersListResponse>('/users/getAll', { params });
     return data;
   },

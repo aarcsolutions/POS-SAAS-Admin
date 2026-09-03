@@ -1,38 +1,67 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-import {
-  Plus,
-  Search,
-  Pencil,
-  Trash2,
-  Eye,
-  Loader2,
-  Tags,
-} from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Plus, Search } from 'lucide-react';
 import CategoryForm from '@/components/categories/CategoryForm';
-import RowActionsMenu from '@/components/ui/RowActionsMenu';
-import ListPager from '@/components/ui/ListPager';
+import CategoryTreeTable from '@/components/categories/CategoryTreeTable';
+import { Select } from '@/components/ui/Select';
 import { usePermission } from '@/hooks/use-permission';
 import { ENTITY_PERMS } from '@/rbac/permissions-map';
 import {
-  useCategoriesQuery,
   useCreateCategoryMutation,
   useUpdateCategoryMutation,
   useDeleteCategoryMutation,
 } from '@/hooks/categories';
+import { useBranchesQuery } from '@/hooks/branches';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
+import { useAuthStore } from '@/store/authStore';
+import { categoriesApi } from '@/services/categories';
 import { extractListItems, extractPagination } from '@/utils/helpers';
 import { Category } from '@/types/category.types';
-import { confirmDialog } from '@/store/dialogStore';
+import { confirmDialog, alertDialog } from '@/store/dialogStore';
+import {
+  buildCategoryTree,
+  collectExpandableIds,
+  filterTree,
+  getVisibleTreeRows,
+  toTreeRows,
+  type VisibleTreeRow,
+} from '@/utils/categoryTree';
 
-const LIMIT = 10;
+async function loadAllCategories(params: {
+  branch_id?: string;
+}): Promise<Category[]> {
+  const limit = 100;
+  let page = 1;
+  const collected: Category[] = [];
+
+  for (;;) {
+    const response = await categoriesApi.getAll({ page, limit, ...params });
+    const list = extractListItems<Category>(response, 'categories');
+    const pagination = extractPagination(response, limit);
+    collected.push(...list);
+    if (page >= pagination.totalPages || list.length < limit) break;
+    page += 1;
+  }
+
+  return collected;
+}
 
 export default function CategoriesPage() {
+  const user = useAuthStore((s) => s.user);
+  const isTenantAdmin = !user?.branchId;
+
   const [searchTerm, setSearchTerm] = useState('');
-  const [page, setPage] = useState(1);
-  const [formMode, setFormMode] = useState<'create' | 'edit' | 'view' | null>(null);
-  const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
+  const [branchFilter, setBranchFilter] = useState('');
+  const [allCategories, setAllCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [formMode, setFormMode] = useState<'create' | 'edit' | 'view' | null>(
+    null,
+  );
+  const [selectedCategory, setSelectedCategory] = useState<Category | null>(
+    null,
+  );
   const [dropdownOpen, setDropdownOpen] = useState<string | null>(null);
 
   const canCreate = usePermission(ENTITY_PERMS.categories.create);
@@ -40,38 +69,88 @@ export default function CategoriesPage() {
   const canDelete = usePermission(ENTITY_PERMS.categories.delete);
 
   const debouncedSearch = useDebouncedValue(searchTerm.trim(), 300);
-  useEffect(() => {
-    setPage(1);
-  }, [debouncedSearch]);
-
-  const { data, isLoading, isFetching } = useCategoriesQuery({
-    page,
-    limit: LIMIT,
-    search: debouncedSearch || undefined,
-  });
-  // Full unpaginated list, used by the create/edit form's parent picker and
-  // for resolving parent names in the table regardless of which page they're on.
-  const { data: allCategoriesData, isLoading: allCategoriesLoading } =
-    useCategoriesQuery({ page: 1, limit: 100 });
 
   const createMutation = useCreateCategoryMutation();
   const updateMutation = useUpdateCategoryMutation();
   const deleteMutation = useDeleteCategoryMutation();
 
-  const categories = extractListItems<Category>(data, 'categories');
-  const pagination = extractPagination(data, LIMIT);
-  const allCategories = extractListItems<Category>(allCategoriesData, 'categories');
+  const { data: branchesRes } = useBranchesQuery(
+    { page: 1, limit: 100 },
+    isTenantAdmin,
+  );
+
+  const branchOptions = useMemo(() => {
+    const rows =
+      branchesRes?.data?.data ||
+      branchesRes?.data?.branches ||
+      (Array.isArray(branchesRes?.data) ? branchesRes.data : []) ||
+      [];
+    return (rows as { id: string; name: string; code?: string }[]).map((b) => ({
+      value: b.id,
+      label: b.name || b.code || b.id,
+    }));
+  }, [branchesRes]);
+
+  const listParams = useMemo(
+    () => ({
+      branch_id:
+        isTenantAdmin && branchFilter ? branchFilter : undefined,
+    }),
+    [isTenantAdmin, branchFilter],
+  );
+
+  const refetchCategories = useCallback(async () => {
+    setLoading(true);
+    try {
+      const rows = await loadAllCategories(listParams);
+      setAllCategories(rows);
+    } finally {
+      setLoading(false);
+    }
+  }, [listParams]);
+
+  useEffect(() => {
+    refetchCategories();
+  }, [refetchCategories]);
 
   const parentNameById = useMemo(() => {
     const map = new Map<string, string>();
-    const source = allCategories.length ? allCategories : categories;
-    for (const c of source) map.set(c.id, c.name);
+    for (const category of allCategories) map.set(category.id, category.name);
     return map;
-  }, [allCategories, categories]);
+  }, [allCategories]);
+
+  const tree = useMemo(
+    () => toTreeRows(buildCategoryTree(allCategories)),
+    [allCategories],
+  );
+
+  const filteredTree = useMemo(
+    () => filterTree(tree, debouncedSearch),
+    [tree, debouncedSearch],
+  );
+
+  useEffect(() => {
+    if (!debouncedSearch.trim()) return;
+    setExpanded(collectExpandableIds(filteredTree));
+  }, [debouncedSearch, filteredTree]);
+
+  const visibleRows = useMemo(
+    () => getVisibleTreeRows(filteredTree, expanded),
+    [filteredTree, expanded],
+  );
+
+  const toggleExpand = (id: string) => {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
 
   const handleOpenForm = (
     mode: 'create' | 'edit' | 'view',
-    category?: Category
+    category?: Category,
   ) => {
     setFormMode(mode);
     setSelectedCategory(category || null);
@@ -80,15 +159,64 @@ export default function CategoriesPage() {
 
   const handleDelete = async (id: string) => {
     setDropdownOpen(null);
-    const ok = await confirmDialog({
-      title: 'Delete Category',
-      message:
-        'Delete this category? All subcategories under it will also be deleted.',
-      confirmLabel: 'Delete',
-      variant: 'danger',
-    });
-    if (!ok) return;
-    deleteMutation.mutate(id);
+
+    try {
+      const impactRes = await categoriesApi.getDeleteImpact(id);
+      const impact = impactRes.data;
+
+      if (impact.has_running_orders) {
+        await alertDialog({
+          title: 'Cannot delete category',
+          message:
+            'Sorry, we cannot delete this category because products related to it have running orders. Please complete or cancel those orders first.',
+          variant: 'danger',
+        });
+        return;
+      }
+
+      const subLabel =
+        impact.subcategory_count === 1
+          ? '1 subcategory'
+          : `${impact.subcategory_count} subcategories`;
+
+      let cascadeProducts = false;
+      let confirmed = false;
+
+      if (impact.product_count > 0) {
+        confirmed = await confirmDialog({
+          title: `Delete "${impact.category_name}"?`,
+          message: `This category has ${impact.product_count} related product${impact.product_count === 1 ? '' : 's'}. Products without order history will be permanently removed. Products used in past orders will be archived instead.${impact.subcategory_count > 0 ? ` ${subLabel} will also be removed.` : ''} Do you still want to delete?`,
+          confirmLabel: 'Yes, delete',
+          cancelLabel: 'No',
+          variant: 'danger',
+        });
+        cascadeProducts = true;
+      } else {
+        confirmed = await confirmDialog({
+          title: `Delete "${impact.category_name}"?`,
+          message:
+            impact.subcategory_count > 0
+              ? `This will delete the category and ${subLabel}.`
+              : 'This will permanently delete the category.',
+          confirmLabel: 'Delete',
+          cancelLabel: 'Cancel',
+          variant: 'danger',
+        });
+      }
+
+      if (!confirmed) return;
+
+      await deleteMutation.mutateAsync({ id, cascadeProducts });
+      await refetchCategories();
+    } catch (error: any) {
+      const message =
+        error?.response?.data?.message || 'Failed to delete category';
+      await alertDialog({
+        title: 'Delete failed',
+        message,
+        variant: 'danger',
+      });
+    }
   };
 
   if (formMode) {
@@ -96,7 +224,7 @@ export default function CategoriesPage() {
       <CategoryForm
         mode={formMode}
         allCategories={allCategories}
-        categoriesLoading={allCategoriesLoading}
+        categoriesLoading={loading}
         editingCategoryId={selectedCategory?.id}
         initialData={
           selectedCategory
@@ -120,6 +248,7 @@ export default function CategoriesPage() {
             });
           }
           setFormMode(null);
+          await refetchCategories();
         }}
       />
     );
@@ -127,148 +256,83 @@ export default function CategoriesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900">
             Categories
           </h1>
           <p className="mt-1 text-sm text-slate-500">
-            Nested product categories for this tenant
+            Manage product categories as a hierarchy
           </p>
         </div>
-        {canCreate && (
+        {canCreate ? (
           <button
+            type="button"
             onClick={() => handleOpenForm('create')}
             className="flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-emerald-600/20 transition hover:bg-emerald-700"
           >
             <Plus className="h-4 w-4" /> Add Category
           </button>
-        )}
+        ) : null}
       </div>
 
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-        <input
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          placeholder="Search categories..."
-          className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10"
+      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+        <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <h2 className="text-lg font-bold text-slate-900">Category Tree</h2>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div className="relative w-full sm:w-72">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <input
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Search categories..."
+                className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10"
+              />
+            </div>
+            {isTenantAdmin ? (
+              <div className="w-full sm:w-56">
+                <Select
+                  value={branchFilter}
+                  onChange={setBranchFilter}
+                  variant="filter"
+                  size="lg"
+                  allowEmpty
+                  placeholder="All branches"
+                  aria-label="Filter by branch"
+                  options={[
+                    { value: 'tenant', label: 'Tenant-level' },
+                    ...branchOptions,
+                  ]}
+                />
+              </div>
+            ) : null}
+          </div>
+        </div>
+
+        <CategoryTreeTable
+          rows={visibleRows}
+          loading={loading}
+          expanded={expanded}
+          parentNameById={parentNameById}
+          isTenantAdmin={isTenantAdmin}
+          dropdownOpen={dropdownOpen}
+          canUpdate={canUpdate}
+          canDelete={canDelete}
+          onToggleExpand={toggleExpand}
+          onView={(row: VisibleTreeRow) => handleOpenForm('view', row)}
+          onEdit={(row: VisibleTreeRow) => handleOpenForm('edit', row)}
+          onDelete={handleDelete}
+          onDropdownOpenChange={setDropdownOpen}
         />
-      </div>
 
-      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <table className="w-full text-left text-sm">
-          <thead className="border-b border-slate-100 bg-slate-50 text-xs uppercase tracking-wider text-slate-500">
-            <tr>
-              <th className="px-5 py-3 font-bold">Category</th>
-              <th className="px-5 py-3 font-bold">Parent</th>
-              <th className="px-5 py-3 font-bold">Description</th>
-              <th className="px-5 py-3 font-bold">Created</th>
-              <th className="px-5 py-3 font-bold">Status</th>
-              <th className="px-5 py-3 font-bold text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {isLoading || isFetching ? (
-              <tr>
-                <td colSpan={6} className="py-12 text-center text-slate-400">
-                  <Loader2 className="mx-auto h-5 w-5 animate-spin" />
-                </td>
-              </tr>
-            ) : categories.length === 0 ? (
-              <tr>
-                <td colSpan={6} className="py-12 text-center text-sm text-slate-400">
-                  No categories found.
-                </td>
-              </tr>
-            ) : (
-              categories.map((category) => (
-                <tr key={category.id} className="hover:bg-slate-50/80">
-                  <td className="px-5 py-4">
-                    <div className="flex items-center gap-2">
-                      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-50 text-emerald-700">
-                        <Tags className="h-4 w-4" />
-                      </div>
-                      <div className="font-semibold text-slate-800">
-                        {category.name}
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-5 py-4 text-slate-600">
-                    {category.parent_id
-                      ? parentNameById.get(category.parent_id) ||
-                        category.parent_id
-                      : '—'}
-                  </td>
-                  <td className="max-w-xs truncate px-5 py-4 text-slate-600">
-                    {category.description || '—'}
-                  </td>
-                  <td className="px-5 py-4 text-xs text-slate-500">
-                    {category.created_at
-                      ? new Date(category.created_at).toLocaleDateString()
-                      : '—'}
-                  </td>
-                  <td className="px-5 py-4">
-                    <span
-                      className={`rounded-full px-2.5 py-1 text-xs font-bold ${
-                        category.is_active
-                          ? 'bg-emerald-50 text-emerald-700'
-                          : 'bg-slate-100 text-slate-500'
-                      }`}
-                    >
-                      {category.is_active ? 'Active' : 'Inactive'}
-                    </span>
-                  </td>
-                  <td className="px-5 py-4 text-right">
-                    <RowActionsMenu
-                      open={dropdownOpen === category.id}
-                      onOpenChange={(open) =>
-                        setDropdownOpen(open ? category.id : null)
-                      }
-                    >
-                      <button
-                        type="button"
-                        onClick={() => handleOpenForm('view', category)}
-                        className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
-                      >
-                        <Eye className="h-4 w-4" /> View
-                      </button>
-                      {canUpdate && (
-                        <button
-                          type="button"
-                          onClick={() => handleOpenForm('edit', category)}
-                          className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
-                        >
-                          <Pencil className="h-4 w-4" /> Edit
-                        </button>
-                      )}
-                      {canDelete && (
-                        <button
-                          type="button"
-                          onClick={() => handleDelete(category.id)}
-                          className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-rose-600 hover:bg-rose-50"
-                        >
-                          <Trash2 className="h-4 w-4" /> Delete
-                        </button>
-                      )}
-                    </RowActionsMenu>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+        <div className="mt-4 text-sm text-slate-500">
+          {allCategories.length} categor
+          {allCategories.length === 1 ? 'y' : 'ies'}
+          {debouncedSearch
+            ? ` · filtered to ${visibleRows.length} visible`
+            : ''}
+        </div>
       </div>
-
-      <ListPager
-        page={page}
-        totalPages={pagination.totalPages}
-        total={pagination.total}
-        limit={LIMIT}
-        onPageChange={setPage}
-        label="categories"
-        disabled={isLoading || isFetching}
-      />
     </div>
   );
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Plus,
   Search,
@@ -14,6 +14,7 @@ import RoleForm from '@/components/roles/RoleForm';
 import RolePermissions from '@/components/roles/RolePermissions';
 import RowActionsMenu from '@/components/ui/RowActionsMenu';
 import ListPager from '@/components/ui/ListPager';
+import { Select } from '@/components/ui/Select';
 import { usePermission } from '@/hooks/use-permission';
 import { ENTITY_PERMS } from '@/rbac/permissions-map';
 import {
@@ -22,7 +23,9 @@ import {
   useUpdateRoleMutation,
   useDeleteRoleMutation,
 } from '@/hooks/roles';
+import { useBranchesQuery } from '@/hooks/branches';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
+import { useAuthStore } from '@/store/authStore';
 import { extractListItems, extractPagination } from '@/utils/helpers';
 import { Role } from '@/types/rbac.types';
 import { confirmDialog } from '@/store/dialogStore';
@@ -30,7 +33,11 @@ import { confirmDialog } from '@/store/dialogStore';
 const LIMIT = 10;
 
 export default function RolesPage() {
+  const user = useAuthStore((s) => s.user);
+  const isTenantAdmin = !user?.branchId;
+
   const [searchTerm, setSearchTerm] = useState('');
+  const [branchFilter, setBranchFilter] = useState('');
   const [page, setPage] = useState(1);
   const [formMode, setFormMode] = useState<'create' | 'edit' | 'view' | null>(null);
   const [selectedRole, setSelectedRole] = useState<Role | null>(null);
@@ -45,12 +52,30 @@ export default function RolesPage() {
   const debouncedSearch = useDebouncedValue(searchTerm.trim(), 300);
   useEffect(() => {
     setPage(1);
-  }, [debouncedSearch]);
+  }, [debouncedSearch, branchFilter]);
+
+  const { data: branchesRes } = useBranchesQuery(
+    { page: 1, limit: 100 },
+    isTenantAdmin
+  );
+
+  const branchOptions = useMemo(() => {
+    const rows =
+      branchesRes?.data?.data ||
+      branchesRes?.data?.branches ||
+      (Array.isArray(branchesRes?.data) ? branchesRes.data : []) ||
+      [];
+    return (rows as { id: string; name: string; code?: string }[]).map((b) => ({
+      value: b.id,
+      label: b.name || b.code || b.id,
+    }));
+  }, [branchesRes]);
 
   const { data, isLoading, isFetching } = useRolesQuery({
     page,
     limit: LIMIT,
     search: debouncedSearch || undefined,
+    branch_id: isTenantAdmin && branchFilter ? branchFilter : undefined,
   });
   const createMutation = useCreateRoleMutation();
   const updateMutation = useUpdateRoleMutation();
@@ -58,6 +83,7 @@ export default function RolesPage() {
 
   const roles = extractListItems<Role>(data, 'roles');
   const pagination = extractPagination(data, LIMIT);
+  const colSpan = isTenantAdmin ? 6 : 5;
 
   const handleOpenForm = (mode: 'create' | 'edit' | 'view', role?: Role) => {
     setFormMode(mode);
@@ -148,7 +174,7 @@ export default function RolesPage() {
         )}
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
           <input
@@ -158,6 +184,23 @@ export default function RolesPage() {
             className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10"
           />
         </div>
+        {isTenantAdmin && (
+          <div className="w-full sm:w-56">
+            <Select
+              value={branchFilter}
+              onChange={setBranchFilter}
+              variant="filter"
+              size="lg"
+              allowEmpty
+              placeholder="All branches"
+              aria-label="Filter by branch"
+              options={[
+                { value: 'tenant', label: 'Tenant-level' },
+                ...branchOptions,
+              ]}
+            />
+          </div>
+        )}
       </div>
 
       <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
@@ -166,6 +209,9 @@ export default function RolesPage() {
             <tr>
               <th className="px-5 py-3 font-bold">Role</th>
               <th className="px-5 py-3 font-bold">Slug</th>
+              {isTenantAdmin && (
+                <th className="px-5 py-3 font-bold">Branch</th>
+              )}
               <th className="px-5 py-3 font-bold">Created</th>
               <th className="px-5 py-3 font-bold">Status</th>
               <th className="px-5 py-3 font-bold text-right">Actions</th>
@@ -174,13 +220,13 @@ export default function RolesPage() {
           <tbody className="divide-y divide-slate-100">
             {isLoading || isFetching ? (
               <tr>
-                <td colSpan={5} className="py-12 text-center text-slate-400">
+                <td colSpan={colSpan} className="py-12 text-center text-slate-400">
                   <Loader2 className="mx-auto h-5 w-5 animate-spin" />
                 </td>
               </tr>
             ) : roles.length === 0 ? (
               <tr>
-                <td colSpan={5} className="py-12 text-center text-sm text-slate-400">
+                <td colSpan={colSpan} className="py-12 text-center text-sm text-slate-400">
                   No roles found.
                 </td>
               </tr>
@@ -194,12 +240,31 @@ export default function RolesPage() {
                     </div>
                   </td>
                   <td className="px-5 py-4 text-slate-500">{role.slug}</td>
+                  {isTenantAdmin && (
+                    <td className="px-5 py-4">
+                      <span
+                        className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
+                          role.branch_id
+                            ? 'bg-sky-50 text-sky-700'
+                            : 'bg-slate-100 text-slate-600'
+                        }`}
+                      >
+                        {role.branch_name || (role.branch_id ? 'Branch' : 'Tenant')}
+                      </span>
+                    </td>
+                  )}
                   <td className="px-5 py-4 text-xs text-slate-500">
                     {new Date(role.created_at).toLocaleDateString()}
                   </td>
                   <td className="px-5 py-4">
-                    <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700">
-                      Active
+                    <span
+                      className={`rounded-full px-2.5 py-1 text-xs font-bold ${
+                        role.is_active
+                          ? 'bg-emerald-50 text-emerald-700'
+                          : 'bg-slate-100 text-slate-500'
+                      }`}
+                    >
+                      {role.is_active ? 'Active' : 'Inactive'}
                     </span>
                   </td>
                   <td className="px-5 py-4 text-right">

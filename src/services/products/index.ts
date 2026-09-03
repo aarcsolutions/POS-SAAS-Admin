@@ -12,6 +12,7 @@ export type ProductsQueryParams = {
   category_id?: string;
   min_price?: number;
   max_price?: number;
+  branch_id?: string;
 };
 
 export const productsApi = {
@@ -41,6 +42,11 @@ export const productsApi = {
 
   delete: async (id: string) => {
     const { data } = await api.delete('/products/delete', { data: { id } });
+    return data;
+  },
+
+  setActive: async (id: string, is_active: boolean) => {
+    const { data } = await api.put('/products/setActive', { id, is_active });
     return data;
   },
 };

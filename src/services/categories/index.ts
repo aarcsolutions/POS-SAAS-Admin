@@ -3,6 +3,7 @@ import {
   CategoriesByParentResponse,
   CategoriesListResponse,
   CategoryDetailResponse,
+  CategoryDeleteImpactResponse,
 } from '@/types/category.types';
 
 export type CategoryPayload = {
@@ -13,7 +14,14 @@ export type CategoryPayload = {
 };
 
 export const categoriesApi = {
-  getAll: async (params: { page?: number; limit?: number; search?: string } = {}) => {
+  getAll: async (
+    params: {
+      page?: number;
+      limit?: number;
+      search?: string;
+      branch_id?: string;
+    } = {}
+  ) => {
     const { data } = await api.get<CategoriesListResponse>('/categories/getAll', {
       params,
     });
@@ -46,8 +54,17 @@ export const categoriesApi = {
     return data;
   },
 
-  delete: async (id: string) => {
-    const { data } = await api.delete('/categories/delete', { data: { id } });
+  delete: async (id: string, cascadeProducts = false) => {
+    const { data } = await api.delete('/categories/delete', {
+      data: { id, cascade_products: cascadeProducts },
+    });
+    return data;
+  },
+
+  getDeleteImpact: async (id: string) => {
+    const { data } = await api.get<CategoryDeleteImpactResponse>(
+      `/categories/deleteImpact/${id}`,
+    );
     return data;
   },
 };

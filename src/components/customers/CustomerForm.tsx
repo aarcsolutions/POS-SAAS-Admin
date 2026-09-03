@@ -1,14 +1,17 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   ArrowLeft,
   Loader2,
   User,
   MapPin,
   FileText,
+  Heart,
 } from 'lucide-react';
+import { Select } from '@/components/ui/Select';
 import { CustomerPayload } from '@/types/customer.types';
+import { useGendersQuery } from '@/hooks/dropdowns';
 
 interface CustomerFormData {
   name: string;
@@ -17,6 +20,9 @@ interface CustomerFormData {
   address: string;
   city: string;
   notes: string;
+  gender_id: string;
+  date_of_birth: string;
+  marketing_subscribed: boolean;
   is_active: boolean;
 }
 
@@ -35,6 +41,9 @@ const emptyData: CustomerFormData = {
   address: '',
   city: '',
   notes: '',
+  gender_id: '',
+  date_of_birth: '',
+  marketing_subscribed: false,
   is_active: true,
 };
 
@@ -48,6 +57,19 @@ export default function CustomerForm({
   const [data, setData] = useState<CustomerFormData>(initialData || emptyData);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const readOnly = mode === 'view';
+  const { data: gendersRes } = useGendersQuery();
+
+  useEffect(() => {
+    if (initialData) {
+      setData(initialData);
+      setErrors({});
+    }
+  }, [initialData]);
+
+  const genderOptions = useMemo(() => {
+    const rows = gendersRes?.data?.gendersDropdown || [];
+    return rows.map((g) => ({ value: g.value, label: g.label }));
+  }, [gendersRes]);
 
   const update = <K extends keyof CustomerFormData>(
     key: K,
@@ -76,15 +98,20 @@ export default function CustomerForm({
     if (readOnly) return;
     if (!validate()) return;
 
-    await onSubmit({
+    const payload: CustomerPayload = {
       name: data.name.trim(),
       phone: data.phone.trim(),
       email: data.email.trim() || null,
       address: data.address.trim() || null,
       city: data.city.trim() || null,
       notes: data.notes.trim() || null,
+      gender_id: data.gender_id || null,
+      date_of_birth: data.date_of_birth || null,
+      marketing_subscribed: data.marketing_subscribed,
       is_active: data.is_active,
-    });
+    };
+
+    await onSubmit(payload);
   };
 
   const title =
@@ -104,6 +131,7 @@ export default function CustomerForm({
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
       <div className="mb-8">
         <button
+          type="button"
           onClick={onClose}
           className="mb-4 flex items-center gap-2 text-sm font-medium text-slate-500 transition hover:text-slate-700"
         >
@@ -199,6 +227,55 @@ export default function CustomerForm({
                   </span>
                 </label>
               </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="mb-5 flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-slate-400">
+            <Heart className="h-4 w-4" /> CRM Details
+          </div>
+          <div className="grid gap-5 md:grid-cols-2">
+            <div>
+              <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500">
+                Gender
+              </label>
+              <Select
+                value={data.gender_id}
+                onChange={(value) => update('gender_id', value)}
+                disabled={readOnly}
+                allowEmpty
+                placeholder="Select gender"
+                options={genderOptions}
+                variant="form"
+                size="lg"
+              />
+            </div>
+            <div>
+              <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500">
+                Date of Birth
+              </label>
+              <input
+                type="date"
+                value={data.date_of_birth}
+                onChange={(e) => update('date_of_birth', e.target.value)}
+                disabled={readOnly}
+                className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-800 outline-none transition focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 disabled:opacity-70"
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+                <input
+                  type="checkbox"
+                  checked={data.marketing_subscribed}
+                  onChange={(e) =>
+                    update('marketing_subscribed', e.target.checked)
+                  }
+                  disabled={readOnly}
+                  className="h-4 w-4 rounded border-slate-300 text-emerald-600"
+                />
+                Subscribe to marketing communications
+              </label>
             </div>
           </div>
         </div>

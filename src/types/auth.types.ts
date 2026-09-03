@@ -17,8 +17,11 @@ export interface User {
   email: string;
   name: string;
   role: string;
+  roleId?: string;
+  branchId?: string | null;
   tenantId?: string;
   tenantName?: string;
+  tenantSlug?: string;
 }
 
 export interface AuthResponse {

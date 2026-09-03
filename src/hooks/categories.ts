@@ -3,7 +3,12 @@ import { categoriesApi, CategoryPayload } from '@/services/categories';
 import { toast } from 'sonner';
 
 export const useCategoriesQuery = (
-  params: { page?: number; limit?: number; search?: string } = {}
+  params: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    branch_id?: string;
+  } = {}
 ) => {
   return useQuery({
     queryKey: ['categories', params],
@@ -70,17 +75,19 @@ export const useDeleteCategoryMutation = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (id: string) => categoriesApi.delete(id),
+    mutationFn: ({
+      id,
+      cascadeProducts = false,
+    }: {
+      id: string;
+      cascadeProducts?: boolean;
+    }) => categoriesApi.delete(id, cascadeProducts),
     onSuccess: (response) => {
       if (response.status) {
         toast.success(response.message || 'Category deleted successfully');
         queryClient.invalidateQueries({ queryKey: ['categories'] });
+        queryClient.invalidateQueries({ queryKey: ['products'] });
       }
-    },
-    onError: (error: any) => {
-      toast.error(
-        error?.response?.data?.message || 'Failed to delete category'
-      );
     },
   });
 };

@@ -3,6 +3,17 @@ import type { NextRequest } from 'next/server';
 
 const AUTH_PAGES = ['/login', '/signup'];
 
+function isPublicPath(pathname: string) {
+  return (
+    pathname === '/' ||
+    AUTH_PAGES.some(
+      (page) => pathname === page || pathname.startsWith(`${page}/`)
+    ) ||
+    pathname === '/track' ||
+    pathname.startsWith('/track/')
+  );
+}
+
 function hasAccessToken(request: NextRequest) {
   return Boolean(request.cookies.get('access_token')?.value);
 }
@@ -23,7 +34,7 @@ export function middleware(request: NextRequest) {
   const isAuthPage = AUTH_PAGES.some(
     (page) => pathname === page || pathname.startsWith(`${page}/`)
   );
-  const isProtected = !isAuthPage && pathname !== '/';
+  const isProtected = !isPublicPath(pathname);
 
   if (isProtected && !hasToken) {
     const loginUrl = new URL('/login', request.url);

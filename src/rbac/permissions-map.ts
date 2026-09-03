@@ -109,6 +109,30 @@ export const ENTITY_PERMS = {
     extras: {
       updateStatus: 'orders/updateStatus',
       recordPayment: 'orders/recordPayment',
+      dispatch: 'orders/dispatch',
+    },
+  },
+  kds: {
+    list: 'kds/getAll',
+    extras: {
+      markReady: 'kds/markReady',
+    },
+  },
+  drivers: {
+    list:   'drivers/getAll',
+    create: 'drivers/create',
+    read:   'drivers/getById',
+    update: 'drivers/update',
+    delete: 'drivers/delete',
+  },
+  promo_codes: {
+    list:   'promo-codes/getAll',
+    create: 'promo-codes/create',
+    read:   'promo-codes/getById',
+    update: 'promo-codes/update',
+    delete: 'promo-codes/delete',
+    extras: {
+      applyPromoCode: 'promo-codes/applyPromoCode',
     },
   },
   suppliers: {
@@ -118,11 +142,29 @@ export const ENTITY_PERMS = {
     update: 'suppliers/update',
     delete: 'suppliers/delete',
   },
-  transactions: {
-    list:   'transactions/getAll',
-    create: 'transactions/create',
-    read:   'transactions/getById',
-    update: 'transactions/update',
-    delete: 'transactions/delete',
+  payments: {
+    list: 'payments/getAll',
+    read: 'payments/getById',
+  },
+  reservations: {
+    list: 'reservations/getAll',
+    create: 'reservations/create',
+    read: 'reservations/getById',
+    update: 'reservations/update',
+    delete: 'reservations/delete',
+  },
+  reviews: {
+    list: 'reviews/getAll',
+    create: 'reviews/create',
+    read: 'reviews/getById',
+    update: 'reviews/update',
+    delete: 'reviews/delete',
+  },
+  catering: {
+    list: 'catering/getAll',
+    create: 'catering/create',
+    read: 'catering/getById',
+    update: 'catering/update',
+    delete: 'catering/delete',
   },
 } as const;

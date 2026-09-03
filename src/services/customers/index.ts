@@ -6,7 +6,15 @@ import {
 } from '@/types/customer.types';
 
 export const customersApi = {
-  getAll: async (params: { page?: number; limit?: number; search?: string } = {}) => {
+  getAll: async (
+    params: {
+      page?: number;
+      limit?: number;
+      search?: string;
+      /** Tenant Admin: branch uuid | 'tenant' | omit for all */
+      branch_id?: string;
+    } = {}
+  ) => {
     const { data } = await api.get<CustomersListResponse>('/customers/getAll', {
       params,
     });
