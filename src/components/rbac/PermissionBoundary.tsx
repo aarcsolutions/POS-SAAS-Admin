@@ -41,7 +41,7 @@ export const PermissionBoundary: React.FC<PermissionBoundaryProps> = ({
   if (!isHydrated) {
     return (
       <div className="flex items-center justify-center py-24">
-        <Loader2 className="h-8 w-8 animate-spin text-emerald-600" />
+        <Loader2 className="h-8 w-8 animate-spin text-[var(--brand-primary)]" />
       </div>
     );
   }
@@ -63,7 +63,7 @@ export const PermissionBoundary: React.FC<PermissionBoundaryProps> = ({
       </p>
       <button
         onClick={() => router.push('/dashboard')}
-        className="mt-6 inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-emerald-600/20 transition hover:bg-emerald-700"
+        className="mt-6 inline-flex items-center gap-2 rounded-xl bg-[var(--brand-primary)] px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-[color-mix(in_srgb,var(--brand-primary)_20%,transparent)] transition hover:brightness-95"
       >
         Return to Dashboard
       </button>

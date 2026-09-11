@@ -7,7 +7,6 @@ import {
   DollarSign,
   Loader2,
   Package,
-  PieChart,
   ShoppingCart,
   CreditCard,
   ArrowLeft,
@@ -34,7 +33,7 @@ function formatChange(percent: number): string {
 }
 
 export default function ReportsPage() {
-  const [activeTab, setActiveTab] = useState<'overview' | 'products' | 'profit'>(
+  const [activeTab, setActiveTab] = useState<'overview' | 'products'>(
     'overview'
   );
   const [period, setPeriod] = useState<DashboardPeriod>('30d');
@@ -101,7 +100,7 @@ export default function ReportsPage() {
 
       {isLoading && !report ? (
         <div className="flex items-center justify-center py-24">
-          <Loader2 className="h-8 w-8 animate-spin text-emerald-600" />
+          <Loader2 className="h-8 w-8 animate-spin text-[var(--brand-primary)]" />
         </div>
       ) : isError ? (
         <div className="rounded-2xl border border-rose-200 bg-rose-50 p-6 text-sm text-rose-700">
@@ -111,7 +110,7 @@ export default function ReportsPage() {
         <>
           <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
             <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-              <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
+              <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-[var(--brand-icon-soft)] text-[var(--brand-icon)]">
                 <DollarSign className="h-5 w-5" />
               </div>
               <div className="text-sm font-medium text-slate-500">
@@ -120,13 +119,13 @@ export default function ReportsPage() {
               <div className="mt-1 text-2xl font-bold text-slate-900">
                 {kpis?.period_revenue_formatted}
               </div>
-              <div className="mt-1 text-xs font-medium text-emerald-600">
+              <div className="mt-1 text-xs font-medium text-[var(--brand-primary)]">
                 {formatChange(kpis?.period_change_percent ?? 0)}
               </div>
             </div>
 
             <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-              <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 text-blue-700">
+              <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-[var(--brand-icon-soft)] text-[var(--brand-icon)]">
                 <ShoppingCart className="h-5 w-5" />
               </div>
               <div className="text-sm font-medium text-slate-500">
@@ -141,7 +140,7 @@ export default function ReportsPage() {
             </div>
 
             <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-              <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-amber-50 text-amber-700">
+              <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-[var(--brand-icon-soft)] text-[var(--brand-icon)]">
                 <CreditCard className="h-5 w-5" />
               </div>
               <div className="text-sm font-medium text-slate-500">
@@ -153,8 +152,8 @@ export default function ReportsPage() {
             </div>
 
             <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-              <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-violet-50 text-violet-700">
-                <PieChart className="h-5 w-5" />
+              <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-[var(--brand-icon-soft)] text-[var(--brand-icon)]">
+                <DollarSign className="h-5 w-5" />
               </div>
               <div className="text-sm font-medium text-slate-500">
                 All-time Sales
@@ -165,7 +164,7 @@ export default function ReportsPage() {
             </div>
 
             <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-              <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-amber-50 text-amber-700">
+              <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-[var(--brand-icon-soft)] text-[var(--brand-icon)]">
                 <Star className="h-5 w-5" />
               </div>
               <div className="text-sm font-medium text-slate-500">
@@ -180,7 +179,7 @@ export default function ReportsPage() {
             </div>
 
             <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-              <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-rose-50 text-rose-700">
+              <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-[var(--brand-icon-soft)] text-[var(--brand-icon)]">
                 <Star className="h-5 w-5" />
               </div>
               <div className="text-sm font-medium text-slate-500">
@@ -197,7 +196,6 @@ export default function ReportsPage() {
             {[
               { id: 'overview', label: 'Overview', icon: BarChart3 },
               { id: 'products', label: 'Product Performance', icon: Package },
-              { id: 'profit', label: 'Profit Analysis', icon: PieChart },
             ].map((tab) => {
               const TabIcon = tab.icon;
               return (
@@ -209,7 +207,7 @@ export default function ReportsPage() {
                   }
                   className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition ${
                     activeTab === tab.id
-                      ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20'
+                      ? 'bg-[var(--brand-primary)] text-white shadow-md shadow-[color-mix(in_srgb,var(--brand-primary)_20%,transparent)]'
                       : 'text-slate-600 hover:bg-slate-50'
                   }`}
                 >
@@ -262,7 +260,7 @@ export default function ReportsPage() {
                           <div className="flex-1">
                             <div className="h-6 overflow-hidden rounded-lg bg-slate-50">
                               <div
-                                className="flex h-full items-center justify-end rounded-lg bg-emerald-500 px-2 text-xs font-bold text-white"
+                                className="flex h-full items-center justify-end rounded-lg bg-[var(--brand-chart)] px-2 text-xs font-bold text-white"
                                 style={{
                                   width: `${(day.revenue / maxDowRevenue) * 100}%`,
                                   minWidth: day.revenue > 0 ? '2rem' : 0,
@@ -289,14 +287,7 @@ export default function ReportsPage() {
                     {(report?.sales_by_category || []).length === 0 ? (
                       <p className="text-sm text-slate-400">No data for period</p>
                     ) : (
-                      report?.sales_by_category.map((cat, i) => {
-                        const colors = [
-                          'bg-emerald-500',
-                          'bg-blue-500',
-                          'bg-amber-500',
-                          'bg-rose-400',
-                          'bg-purple-500',
-                        ];
+                      report?.sales_by_category.map((cat) => {
                         return (
                           <div
                             key={cat.id}
@@ -308,7 +299,7 @@ export default function ReportsPage() {
                             <div className="flex-1">
                               <div className="h-5 overflow-hidden rounded-full bg-slate-50">
                                 <div
-                                  className={`h-full rounded-full ${colors[i % colors.length]}`}
+                                  className="h-full rounded-full bg-[var(--brand-primary)]"
                                   style={{
                                     width: `${(cat.revenue / maxCategoryRevenue) * 100}%`,
                                   }}
@@ -337,13 +328,13 @@ export default function ReportsPage() {
                       (reviewsSummary?.rating_distribution || []).map((row) => (
                         <div key={row.rating} className="flex items-center gap-3">
                           <div className="flex w-16 items-center gap-1 text-xs font-medium text-slate-600">
-                            <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+                            <Star className="h-3 w-3 fill-[#f5c518] text-[#f5c518]" />
                             {row.rating}
                           </div>
                           <div className="flex-1">
                             <div className="h-6 overflow-hidden rounded-lg bg-slate-50">
                               <div
-                                className="flex h-full items-center justify-end rounded-lg bg-amber-500 px-2 text-xs font-bold text-white"
+                                className="flex h-full items-center justify-end rounded-lg bg-[var(--brand-primary)] px-2 text-xs font-bold text-white"
                                 style={{
                                   width: `${(row.count / maxRatingCount) * 100}%`,
                                   minWidth: row.count > 0 ? '2rem' : 0,
@@ -368,19 +359,6 @@ export default function ReportsPage() {
               searchQuery={searchQuery}
               onSearchChange={setSearchQuery}
             />
-          )}
-
-          {activeTab === 'profit' && (
-            <div className="rounded-2xl border border-slate-200 bg-white p-12 text-center shadow-sm">
-              <PieChart className="mx-auto mb-4 h-12 w-12 text-slate-300" />
-              <h3 className="text-lg font-bold text-slate-800">
-                Profit Analysis — Coming Soon
-              </h3>
-              <p className="mx-auto mt-2 max-w-md text-sm text-slate-500">
-                Margin and profit breakdown will be available in a future update
-                once cost data is integrated from recipes and variants.
-              </p>
-            </div>
           )}
         </>
       )}

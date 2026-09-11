@@ -3,6 +3,7 @@ export interface RawMaterial {
   name: string;
   unit: string;
   stock_quantity: number;
+  min_stock_level: number;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -36,4 +37,5 @@ export type RawMaterialPayload = {
   name: string;
   unit: string;
   stock_quantity?: number;
+  min_stock_level?: number;
 };

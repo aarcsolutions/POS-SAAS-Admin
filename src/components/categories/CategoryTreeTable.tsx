@@ -211,7 +211,7 @@ export default function CategoryTreeTable({
                           className={cn(
                             'inline-flex rounded-full px-2.5 py-1 text-xs font-semibold',
                             row.branch_id
-                              ? 'bg-sky-50 text-sky-700'
+                              ? 'bg-[var(--brand-icon-soft)] text-[var(--brand-icon)]'
                               : 'bg-slate-100 text-slate-600',
                           )}
                         >
@@ -238,7 +238,7 @@ export default function CategoryTreeTable({
                         className={cn(
                           'rounded-full px-2.5 py-1 text-xs font-bold',
                           row.is_active
-                            ? 'bg-emerald-50 text-emerald-700'
+                            ? 'bg-[var(--brand-icon-soft)] text-[var(--brand-icon)]'
                             : 'bg-slate-100 text-slate-500',
                         )}
                       >

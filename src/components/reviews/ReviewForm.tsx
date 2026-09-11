@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { ArrowLeft, Loader2, Star, MessageSquare } from 'lucide-react';
 import { Select } from '@/components/ui/Select';
-import { ReviewPayload, RATING_OPTIONS } from '@/types/review.types';
+import { ReviewPayload } from '@/types/review.types';
 
 interface ReviewFormData {
   branch_id: string;
@@ -179,6 +179,8 @@ export default function ReviewForm({
                   disabled={readOnly}
                   placeholder="Select order"
                   options={orderOptions}
+                  searchable
+                  searchPlaceholder="Search orders…"
                 />
                 {errors.order_id && (
                   <p className="mt-1 text-xs text-rose-600">{errors.order_id}</p>
@@ -201,12 +203,36 @@ export default function ReviewForm({
               <label className="mb-1.5 block text-sm font-semibold text-slate-700">
                 Rating
               </label>
-              <Select
-                value={data.rating}
-                onChange={(value) => update('rating', value)}
-                disabled={readOnly}
-                options={RATING_OPTIONS}
-              />
+              <div
+                className="flex h-11 items-center gap-1"
+                role="radiogroup"
+                aria-label="Rating"
+              >
+                {[1, 2, 3, 4, 5].map((n) => {
+                  const value = Number(data.rating) || 0;
+                  const filled = n <= value;
+                  return (
+                    <button
+                      key={n}
+                      type="button"
+                      disabled={readOnly}
+                      onClick={() => update('rating', String(n))}
+                      className="rounded p-0.5 transition hover:scale-110 disabled:cursor-default"
+                      aria-label={`${n} stars`}
+                      aria-checked={value === n}
+                      role="radio"
+                    >
+                      <Star
+                        className={`h-7 w-7 ${
+                          filled
+                            ? 'fill-[#f5c518] text-[#f5c518]'
+                            : 'fill-transparent text-[var(--brand-primary)]'
+                        }`}
+                      />
+                    </button>
+                  );
+                })}
+              </div>
               {errors.rating && (
                 <p className="mt-1 text-xs text-rose-600">{errors.rating}</p>
               )}
@@ -221,7 +247,7 @@ export default function ReviewForm({
                 value={data.reviewed_at}
                 onChange={(e) => update('reviewed_at', e.target.value)}
                 readOnly={readOnly}
-                className="h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 disabled:bg-slate-50"
+                className="h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-[var(--brand-primary)] focus:ring-4 focus:ring-[var(--brand-primary-soft)] disabled:bg-slate-50"
               />
             </div>
 
@@ -236,7 +262,7 @@ export default function ReviewForm({
                   onChange={(e) => update('comment', e.target.value)}
                   readOnly={readOnly}
                   rows={4}
-                  className="w-full rounded-xl border border-slate-200 py-2.5 pl-10 pr-3 text-sm outline-none focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 disabled:bg-slate-50"
+                  className="w-full rounded-xl border border-slate-200 py-2.5 pl-10 pr-3 text-sm outline-none focus:border-[var(--brand-primary)] focus:ring-4 focus:ring-[var(--brand-primary-soft)] disabled:bg-slate-50"
                 />
               </div>
             </div>
@@ -255,7 +281,7 @@ export default function ReviewForm({
             <button
               type="submit"
               disabled={saving}
-              className="inline-flex items-center gap-2 rounded-xl bg-amber-600 px-5 py-2.5 text-sm font-bold text-white disabled:opacity-60"
+              className="inline-flex items-center gap-2 rounded-xl bg-[var(--brand-primary)] px-5 py-2.5 text-sm font-bold text-white hover:brightness-95 disabled:opacity-60"
             >
               {saving && <Loader2 className="h-4 w-4 animate-spin" />}
               {mode === 'create' ? 'Create Review' : 'Save Changes'}

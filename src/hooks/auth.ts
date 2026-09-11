@@ -53,3 +53,31 @@ export const useLogoutMutation = () => {
     },
   });
 };
+
+export const useVerifyPasswordMutation = () => {
+  return useMutation({
+    mutationFn: (current_password: string) =>
+      authApi.verifyPassword(current_password),
+  });
+};
+
+export const useChangePasswordMutation = () => {
+  return useMutation({
+    mutationFn: (payload: {
+      current_password: string;
+      new_password: string;
+    }) => authApi.changePassword(payload),
+    onSuccess: () => {
+      toast.success('Password updated successfully');
+    },
+    onError: (error: any) => {
+      const message =
+        error?.response?.data?.message ||
+        error?.message ||
+        'Failed to update password';
+      toast.error(
+        Array.isArray(message) ? message.join(', ') : String(message),
+      );
+    },
+  });
+};

@@ -258,7 +258,7 @@ export default function CateringPage() {
         {canCreate && (
           <button
             onClick={() => handleOpenForm('create')}
-            className="flex items-center gap-2 rounded-xl bg-amber-600 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-amber-600/20 transition hover:bg-amber-700"
+            className="flex items-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-[color-mix(in_srgb,var(--brand-primary)_20%,transparent)] transition hover:brightness-95"
           >
             <Plus className="h-4 w-4" /> Add Event
           </button>
@@ -272,7 +272,7 @@ export default function CateringPage() {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="Search contact, event, or notes..."
-            className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm outline-none focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10"
+            className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm outline-none focus:border-[var(--brand-primary)] focus:ring-4 focus:ring-[var(--brand-primary-soft)]"
           />
         </div>
         <div className="w-full sm:w-44">
@@ -299,14 +299,14 @@ export default function CateringPage() {
           type="date"
           value={dateFrom}
           onChange={(e) => setDateFrom(e.target.value)}
-          className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-amber-500"
+          className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-[var(--brand-primary)]"
           aria-label="From date"
         />
         <input
           type="date"
           value={dateTo}
           onChange={(e) => setDateTo(e.target.value)}
-          className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-amber-500"
+          className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-[var(--brand-primary)]"
           aria-label="To date"
         />
         {isTenantAdmin && (
@@ -409,7 +409,7 @@ export default function CateringPage() {
                     </td>
                     {isTenantAdmin && (
                       <td className="px-5 py-4">
-                        <span className="inline-flex rounded-full bg-sky-50 px-2.5 py-1 text-xs font-semibold text-sky-700">
+                        <span className="inline-flex rounded-full bg-[var(--brand-primary-soft)] px-2.5 py-1 text-xs font-semibold text-[var(--brand-primary)]">
                           {ev.branch_name || 'Branch'}
                         </span>
                       </td>

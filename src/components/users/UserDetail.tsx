@@ -36,7 +36,7 @@ interface UserDetailProps {
 const roleConfig = {
   admin: { label: 'Admin', color: 'text-rose-700', bg: 'bg-rose-100', icon: Shield },
   manager: { label: 'Manager', color: 'text-amber-700', bg: 'bg-amber-100', icon: UserCog },
-  cashier: { label: 'Cashier', color: 'text-emerald-700', bg: 'bg-emerald-100', icon: UserCheck },
+  cashier: { label: 'Cashier', color: 'text-[var(--brand-icon)]', bg: 'bg-[var(--brand-icon-soft)]', icon: UserCheck },
 };
 
 export default function UserDetail({ user, onClose, onEdit }: UserDetailProps) {
@@ -56,7 +56,7 @@ export default function UserDetail({ user, onClose, onEdit }: UserDetailProps) {
         </button>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-100 text-xl font-bold text-emerald-700">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--brand-icon-soft)] text-xl font-bold text-[var(--brand-icon)]">
               {user.name.charAt(0)}
             </div>
             <div>
@@ -178,7 +178,7 @@ export default function UserDetail({ user, onClose, onEdit }: UserDetailProps) {
             <span
               className={`inline-flex rounded-full px-4 py-1.5 text-sm font-bold ${
                 user.status === 'active'
-                  ? 'bg-emerald-100 text-emerald-700'
+                  ? 'bg-[var(--brand-icon-soft)] text-[var(--brand-icon)]'
                   : 'bg-slate-100 text-slate-500'
               }`}
             >
@@ -199,7 +199,7 @@ export default function UserDetail({ user, onClose, onEdit }: UserDetailProps) {
         </button>
         <button
           onClick={onClose}
-          className="rounded-xl bg-emerald-600 px-6 py-2.5 text-sm font-bold text-white shadow-lg shadow-emerald-600/20 transition hover:bg-emerald-700"
+          className="rounded-xl bg-[var(--brand-primary)] px-6 py-2.5 text-sm font-bold text-white shadow-lg shadow-[color-mix(in_srgb,var(--brand-primary)_20%,transparent)] transition hover:brightness-95"
         >
           Close
         </button>

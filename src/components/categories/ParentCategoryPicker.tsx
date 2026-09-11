@@ -119,7 +119,7 @@ export default function ParentCategoryPicker({
           <div
             className={`group flex items-center gap-1 rounded-lg px-2 py-1.5 text-sm ${
               isSelected
-                ? 'bg-emerald-50 text-emerald-800'
+                ? 'bg-[var(--brand-icon-soft)] text-[var(--brand-icon)]'
                 : 'hover:bg-slate-50 text-slate-700'
             }`}
             style={{ paddingLeft: 8 + depth * 16 }}
@@ -169,7 +169,7 @@ export default function ParentCategoryPicker({
         type="button"
         disabled={disabled || loading}
         onClick={() => setOpen((v) => !v)}
-        className={`flex h-12 w-full items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-4 text-left text-sm outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 ${
+        className={`flex h-12 w-full items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-4 text-left text-sm outline-none transition focus:border-[var(--brand-primary)] focus:ring-4 focus:ring-[var(--brand-primary-soft)] ${
           disabled ? 'cursor-not-allowed opacity-70' : 'cursor-pointer hover:bg-white'
         }`}
       >
@@ -194,7 +194,7 @@ export default function ParentCategoryPicker({
             onClick={() => selectParent(null, 'None (top-level)')}
             className={`mb-1 w-full rounded-lg px-3 py-2 text-left text-sm font-semibold ${
               value === null
-                ? 'bg-emerald-50 text-emerald-800'
+                ? 'bg-[var(--brand-icon-soft)] text-[var(--brand-icon)]'
                 : 'text-slate-600 hover:bg-slate-50'
             }`}
           >

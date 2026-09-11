@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import { Plus, Search } from 'lucide-react';
 import RawMaterialTable from '@/components/raw-materials/RawMaterialTable';
 import RawMaterialForm from '@/components/raw-materials/RawMaterialForm';
-import DeleteConfirm from '@/components/raw-materials/DeleteConfirm';
 import ListPager from '@/components/ui/ListPager';
 import { usePermission } from '@/hooks/use-permission';
 import { ENTITY_PERMS } from '@/rbac/permissions-map';
@@ -17,6 +16,7 @@ import {
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { extractListItems, extractPagination } from '@/utils/helpers';
 import { RawMaterial } from '@/types/raw-material.types';
+import { confirmDialog } from '@/store/dialogStore';
 
 const LIMIT = 10;
 
@@ -27,7 +27,6 @@ export default function RawMaterialsPage() {
     null
   );
   const [selected, setSelected] = useState<RawMaterial | null>(null);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [dropdownOpen, setDropdownOpen] = useState<string | null>(null);
 
   const canCreate = usePermission(ENTITY_PERMS.raw_materials.create);
@@ -60,11 +59,16 @@ export default function RawMaterialsPage() {
     setDropdownOpen(null);
   };
 
-  const handleDeleteConfirm = () => {
-    if (!deletingId) return;
-    deleteMutation.mutate(deletingId, {
-      onSettled: () => setDeletingId(null),
+  const handleDelete = async (id: string) => {
+    setDropdownOpen(null);
+    const ok = await confirmDialog({
+      title: 'Delete Raw Material',
+      message: 'Delete this raw material? This cannot be undone.',
+      confirmLabel: 'Delete',
+      variant: 'danger',
     });
+    if (!ok) return;
+    deleteMutation.mutate(id);
   };
 
   if (formMode) {
@@ -105,14 +109,14 @@ export default function RawMaterialsPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search raw materials..."
-              className="h-11 w-[280px] rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10"
+              className="h-11 w-[280px] rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm outline-none transition focus:border-[var(--brand-primary)] focus:ring-4 focus:ring-[var(--brand-primary-soft)]"
             />
           </div>
           {canCreate && (
             <button
               type="button"
               onClick={() => handleOpen('create')}
-              className="flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-emerald-600/20 transition hover:bg-emerald-700"
+              className="flex items-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-[color-mix(in_srgb,var(--brand-primary)_20%,transparent)] transition hover:brightness-95"
             >
               <Plus className="h-4 w-4" /> Add Raw Material
             </button>
@@ -129,10 +133,7 @@ export default function RawMaterialsPage() {
         onDropdownChange={setDropdownOpen}
         onView={(m) => handleOpen('view', m)}
         onEdit={(m) => handleOpen('edit', m)}
-        onDelete={(id) => {
-          setDropdownOpen(null);
-          setDeletingId(id);
-        }}
+        onDelete={handleDelete}
       />
 
       <ListPager
@@ -144,14 +145,6 @@ export default function RawMaterialsPage() {
         label="raw materials"
         disabled={isLoading || isFetching}
       />
-
-      {deletingId && (
-        <DeleteConfirm
-          id={deletingId}
-          onCancel={() => setDeletingId(null)}
-          onConfirm={handleDeleteConfirm}
-        />
-      )}
     </div>
   );
 }

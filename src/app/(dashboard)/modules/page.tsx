@@ -143,7 +143,7 @@ export default function ModulesPage() {
           <button
             type="button"
             onClick={() => handleOpenForm('create')}
-            className="flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-emerald-600/20 transition hover:bg-emerald-700"
+            className="flex items-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-[color-mix(in_srgb,var(--brand-primary)_20%,transparent)] transition hover:brightness-95"
           >
             <Plus className="h-4 w-4" /> Add Module
           </button>
@@ -158,7 +158,7 @@ export default function ModulesPage() {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="Search by module title or slug..."
-            className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10"
+            className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm outline-none transition focus:border-[var(--brand-primary)] focus:ring-4 focus:ring-[var(--brand-primary-soft)]"
           />
         </div>
         <Select
@@ -213,7 +213,7 @@ export default function ModulesPage() {
                 <tr key={m.id} className="transition hover:bg-slate-50">
                   <td className="px-5 py-4">
                     <div className="flex items-center gap-3">
-                      <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-100 text-blue-700">
+                      <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-100 text-[var(--brand-icon)]">
                         <Package className="h-4 w-4" />
                       </div>
                       <span className="font-bold text-slate-800">{m.title}</span>
@@ -226,7 +226,7 @@ export default function ModulesPage() {
                     <span
                       className={`rounded-full px-2.5 py-1 text-xs font-bold ${
                         m.is_active
-                          ? 'bg-emerald-100 text-emerald-700'
+                          ? 'bg-[var(--brand-icon-soft)] text-[var(--brand-icon)]'
                           : 'bg-slate-100 text-slate-500'
                       }`}
                     >

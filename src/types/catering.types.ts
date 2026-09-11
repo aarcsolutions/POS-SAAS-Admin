@@ -97,15 +97,15 @@ export const STATUS_BADGE: Record<
   },
   quoted: {
     label: 'Quoted',
-    className: 'bg-amber-100 text-amber-800',
+    className: 'bg-[var(--brand-primary-soft)] text-[var(--brand-primary)]',
   },
   confirmed: {
     label: 'Confirmed',
-    className: 'bg-sky-100 text-sky-800',
+    className: 'bg-[var(--brand-primary-soft)] text-[var(--brand-primary)]',
   },
   completed: {
     label: 'Completed',
-    className: 'bg-emerald-100 text-emerald-700',
+    className: 'bg-[var(--brand-icon-soft)] text-[var(--brand-icon)]',
   },
   cancelled: {
     label: 'Cancelled',

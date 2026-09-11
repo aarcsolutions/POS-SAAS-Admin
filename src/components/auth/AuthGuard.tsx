@@ -22,8 +22,12 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     window.addEventListener('pagehide', blockBfCache);
 
     const kickToLogin = () => {
+      Cookies.remove('access_token', { path: '/' });
+      Cookies.remove('refresh_token', { path: '/' });
       useAuthStore.getState().logout();
-      window.location.replace('/login');
+      if (!window.location.pathname.startsWith('/login')) {
+        window.location.replace('/login');
+      }
     };
 
     if (!getAccessToken()) {

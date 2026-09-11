@@ -59,8 +59,8 @@ function TicketCard({
         <span
           className={`rounded-full px-2.5 py-1 text-xs font-bold ${
             ticket.status === 'in_kitchen'
-              ? 'bg-orange-100 text-orange-800'
-              : 'bg-sky-100 text-sky-800'
+              ? 'bg-[var(--brand-icon-soft)] text-[var(--brand-icon)]'
+              : 'bg-[var(--brand-primary-soft)] text-[var(--brand-primary-dark)]'
           }`}
         >
           {ticket.status === 'in_kitchen' ? 'Cooking' : 'Confirmed'}
@@ -80,7 +80,7 @@ function TicketCard({
       )}
 
       <div className="mb-4 flex items-center gap-2 text-sm font-semibold text-slate-800">
-        <Clock className="h-4 w-4 text-amber-600" />
+        <Clock className="h-4 w-4 text-[var(--brand-icon)]" />
         {formatElapsed(elapsed)}
       </div>
 
@@ -104,7 +104,7 @@ function TicketCard({
           type="button"
           disabled={isBusy}
           onClick={() => onStart(ticket.id)}
-          className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-orange-600 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
+          className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-semibold text-white hover:brightness-95 disabled:opacity-60"
         >
           {isBusy ? (
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -120,7 +120,7 @@ function TicketCard({
           type="button"
           disabled={isBusy}
           onClick={() => onReady(ticket.id)}
-          className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
+          className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-semibold text-white hover:brightness-95 disabled:opacity-60"
         >
           {isBusy ? (
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -170,7 +170,7 @@ function KdsPageInner() {
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <div className="rounded-xl bg-amber-100 p-3 text-amber-700">
+          <div className="rounded-xl bg-[var(--brand-primary-soft)] p-3 text-[var(--brand-icon)]">
             <ChefHat className="h-6 w-6" />
           </div>
           <div>
@@ -181,13 +181,13 @@ function KdsPageInner() {
           </div>
         </div>
         {queueQuery.isFetching && (
-          <Loader2 className="h-5 w-5 animate-spin text-amber-600" />
+          <Loader2 className="h-5 w-5 animate-spin text-[var(--brand-icon)]" />
         )}
       </div>
 
       {queueQuery.isLoading ? (
         <div className="flex justify-center py-20">
-          <Loader2 className="h-8 w-8 animate-spin text-amber-600" />
+          <Loader2 className="h-8 w-8 animate-spin text-[var(--brand-icon)]" />
         </div>
       ) : tickets.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-slate-200 bg-white px-6 py-16 text-center text-slate-400">
@@ -197,7 +197,7 @@ function KdsPageInner() {
         <div className="space-y-8">
           {accepted.length > 0 && (
             <section>
-              <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-sky-700">
+              <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-[var(--brand-primary)]">
                 Confirmed ({accepted.length})
               </h2>
               <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -217,7 +217,7 @@ function KdsPageInner() {
 
           {cooking.length > 0 && (
             <section>
-              <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-orange-700">
+              <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-[var(--brand-icon)]">
                 Cooking ({cooking.length})
               </h2>
               <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">

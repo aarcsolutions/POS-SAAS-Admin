@@ -112,7 +112,7 @@ export default function PermissionForm({
               onChange={(e) => update('title', e.target.value)}
               readOnly={isReadOnly}
               placeholder="e.g. Products Create"
-              className={`h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm outline-none focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 ${
+              className={`h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm outline-none focus:border-[var(--brand-primary)] focus:bg-white focus:ring-4 focus:ring-[var(--brand-primary-soft)] ${
                 isReadOnly ? 'cursor-default opacity-70' : ''
               }`}
             />
@@ -135,6 +135,8 @@ export default function PermissionForm({
                 placeholder="Select module..."
                 triggerClassName={isReadOnly ? 'cursor-default opacity-70' : ''}
                 options={modules.map((m) => ({ value: m.id, label: m.title }))}
+                searchable
+                searchPlaceholder="Search modules…"
               />
               {errors.moduleId && (
                 <p className="mt-1 text-xs text-rose-500">{errors.moduleId}</p>
@@ -150,7 +152,7 @@ export default function PermissionForm({
                 onChange={(e) => update('slug', e.target.value)}
                 readOnly={isReadOnly}
                 placeholder="e.g. create"
-                className={`h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 font-mono text-sm outline-none focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 ${
+                className={`h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 font-mono text-sm outline-none focus:border-[var(--brand-primary)] focus:bg-white focus:ring-4 focus:ring-[var(--brand-primary-soft)] ${
                   isReadOnly ? 'cursor-default opacity-70' : ''
                 }`}
               />
@@ -161,7 +163,7 @@ export default function PermissionForm({
                       key={slug}
                       type="button"
                       onClick={() => update('slug', slug)}
-                      className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-600 hover:border-emerald-300"
+                      className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-600 hover:border-[var(--brand-primary)]"
                     >
                       {slug}
                     </button>
@@ -183,7 +185,7 @@ export default function PermissionForm({
               onChange={(e) => update('description', e.target.value)}
               readOnly={isReadOnly}
               rows={4}
-              className={`w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 ${
+              className={`w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-[var(--brand-primary)] focus:bg-white focus:ring-4 focus:ring-[var(--brand-primary-soft)] ${
                 isReadOnly ? 'cursor-default opacity-70' : ''
               }`}
             />
@@ -201,7 +203,7 @@ export default function PermissionForm({
               <button
                 type="submit"
                 disabled={saving}
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-6 py-2.5 text-sm font-bold text-white shadow-lg shadow-emerald-600/20 transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-[var(--brand-primary)] px-6 py-2.5 text-sm font-bold text-white shadow-lg shadow-[color-mix(in_srgb,var(--brand-primary)_20%,transparent)] transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {saving && <Loader2 className="h-4 w-4 animate-spin" />}
                 {saving

@@ -158,7 +158,7 @@ export default function UsersPage() {
         {canCreate && (
           <button
             onClick={() => handleOpenForm('create')}
-            className="flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-emerald-600/20 transition hover:bg-emerald-700"
+            className="flex items-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-[color-mix(in_srgb,var(--brand-primary)_20%,transparent)] transition hover:brightness-95"
           >
             <Plus className="h-4 w-4" /> Add User
           </button>
@@ -172,7 +172,7 @@ export default function UsersPage() {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="Search users by name or email..."
-            className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10"
+            className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm outline-none focus:border-[var(--brand-primary)] focus:ring-4 focus:ring-[var(--brand-primary-soft)]"
           />
         </div>
         {isTenantAdmin && (
@@ -226,7 +226,7 @@ export default function UsersPage() {
                 <tr key={user.id} className="hover:bg-slate-50/80">
                   <td className="px-5 py-4">
                     <div className="flex items-center gap-3">
-                      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-50 text-emerald-700">
+                      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--brand-icon-soft)] text-[var(--brand-icon)]">
                         <Users className="h-4 w-4" />
                       </div>
                       <div>
@@ -243,7 +243,7 @@ export default function UsersPage() {
                       <span
                         className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
                           user.branch_id
-                            ? 'bg-sky-50 text-sky-700'
+                            ? 'bg-[var(--brand-icon-soft)] text-[var(--brand-icon)]'
                             : 'bg-slate-100 text-slate-600'
                         }`}
                       >
@@ -260,7 +260,7 @@ export default function UsersPage() {
                     <span
                       className={`rounded-full px-2.5 py-1 text-xs font-bold ${
                         user.is_active
-                          ? 'bg-emerald-50 text-emerald-700'
+                          ? 'bg-[var(--brand-icon-soft)] text-[var(--brand-icon)]'
                           : 'bg-slate-100 text-slate-500'
                       }`}
                     >

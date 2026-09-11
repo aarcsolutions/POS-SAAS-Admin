@@ -139,7 +139,7 @@ export default function DriverForm({
                 value={data.name}
                 onChange={(e) => update('name', e.target.value)}
                 readOnly={readOnly}
-                className="h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 disabled:bg-slate-50"
+                className="h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-[var(--brand-primary)] focus:ring-4 focus:ring-[var(--brand-primary-soft)] disabled:bg-slate-50"
               />
               {errors.name && (
                 <p className="mt-1 text-xs text-rose-600">{errors.name}</p>
@@ -156,7 +156,7 @@ export default function DriverForm({
                   value={data.phone}
                   onChange={(e) => update('phone', e.target.value)}
                   readOnly={readOnly}
-                  className="h-11 w-full rounded-xl border border-slate-200 pl-10 pr-3 text-sm outline-none focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 disabled:bg-slate-50"
+                  className="h-11 w-full rounded-xl border border-slate-200 pl-10 pr-3 text-sm outline-none focus:border-[var(--brand-primary)] focus:ring-4 focus:ring-[var(--brand-primary-soft)] disabled:bg-slate-50"
                 />
               </div>
               {errors.phone && (
@@ -175,7 +175,7 @@ export default function DriverForm({
                   onChange={(e) => update('notes', e.target.value)}
                   readOnly={readOnly}
                   rows={3}
-                  className="w-full rounded-xl border border-slate-200 py-2.5 pl-10 pr-3 text-sm outline-none focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 disabled:bg-slate-50"
+                  className="w-full rounded-xl border border-slate-200 py-2.5 pl-10 pr-3 text-sm outline-none focus:border-[var(--brand-primary)] focus:ring-4 focus:ring-[var(--brand-primary-soft)] disabled:bg-slate-50"
                 />
               </div>
             </div>
@@ -187,7 +187,7 @@ export default function DriverForm({
                   checked={data.is_active}
                   onChange={(e) => update('is_active', e.target.checked)}
                   disabled={readOnly}
-                  className="h-4 w-4 rounded border-slate-300 text-amber-600"
+                  className="h-4 w-4 rounded border-slate-300 accent-[var(--brand-primary)]"
                 />
                 Active driver
               </label>
@@ -207,7 +207,7 @@ export default function DriverForm({
             <button
               type="submit"
               disabled={saving}
-              className="inline-flex items-center gap-2 rounded-xl bg-amber-600 px-5 py-2.5 text-sm font-bold text-white disabled:opacity-60"
+              className="inline-flex items-center gap-2 rounded-xl bg-[var(--brand-primary)] px-5 py-2.5 text-sm font-bold text-white disabled:opacity-60"
             >
               {saving && <Loader2 className="h-4 w-4 animate-spin" />}
               {mode === 'create' ? 'Create Driver' : 'Save Changes'}

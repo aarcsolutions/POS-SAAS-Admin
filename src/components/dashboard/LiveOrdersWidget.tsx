@@ -8,7 +8,7 @@ const statusStyles: Record<string, string> = {
   pending: 'bg-amber-100 text-amber-700',
   accepted: 'bg-sky-100 text-sky-700',
   in_kitchen: 'bg-orange-100 text-orange-700',
-  ready: 'bg-emerald-100 text-emerald-700',
+  ready: 'bg-[var(--brand-icon-soft)] text-[var(--brand-icon)]',
   out_for_delivery: 'bg-violet-100 text-violet-700',
 };
 
@@ -31,7 +31,7 @@ export default function LiveOrdersWidget({ orders }: Props) {
     <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
       <div className="mb-5 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-50 text-violet-700">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--brand-icon-soft)] text-[var(--brand-icon)]">
             <ShoppingCart className="h-5 w-5" />
           </div>
           <div>
@@ -41,7 +41,7 @@ export default function LiveOrdersWidget({ orders }: Props) {
         </div>
         <Link
           href="/orders"
-          className="inline-flex items-center gap-1 text-sm font-semibold text-emerald-600 hover:text-emerald-700"
+          className="inline-flex items-center gap-1 text-sm font-semibold text-[var(--brand-primary)] hover:text-[var(--brand-icon)]"
         >
           View all <ArrowRight className="h-4 w-4" />
         </Link>

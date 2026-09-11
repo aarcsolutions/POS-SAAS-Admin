@@ -91,15 +91,15 @@ export const STATUS_BADGE: Record<
 > = {
   pending: {
     label: 'Pending',
-    className: 'bg-amber-100 text-amber-800',
+    className: 'bg-[var(--brand-primary-soft)] text-[var(--brand-primary)]',
   },
   confirmed: {
     label: 'Confirmed',
-    className: 'bg-sky-100 text-sky-800',
+    className: 'bg-[var(--brand-primary-soft)] text-[var(--brand-primary)]',
   },
   seated: {
     label: 'Seated',
-    className: 'bg-violet-100 text-violet-800',
+    className: 'bg-[var(--brand-accent-soft)] text-[var(--brand-accent)]',
   },
   cancelled: {
     label: 'Cancelled',
@@ -111,6 +111,6 @@ export const STATUS_BADGE: Record<
   },
   completed: {
     label: 'Completed',
-    className: 'bg-emerald-100 text-emerald-700',
+    className: 'bg-[var(--brand-icon-soft)] text-[var(--brand-icon)]',
   },
 };

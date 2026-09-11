@@ -117,9 +117,17 @@ export default function RolesPage() {
     return (
       <RoleForm
         mode="create"
+        showBranchSelect={isTenantAdmin}
+        branchOptions={branchOptions}
+        initialBranchId={
+          branchFilter && branchFilter !== 'tenant' ? branchFilter : null
+        }
         onClose={() => setFormMode(null)}
-        onSubmit={async (title) => {
-          await createMutation.mutateAsync({ title });
+        onSubmit={async ({ title, branch_id }) => {
+          await createMutation.mutateAsync({
+            title,
+            ...(isTenantAdmin ? { branch_id: branch_id ?? null } : {}),
+          });
           setFormMode(null);
         }}
         saving={createMutation.isPending}
@@ -132,8 +140,14 @@ export default function RolesPage() {
       <RoleForm
         mode="edit"
         initialTitle={selectedRole.title}
+        showBranchSelect={isTenantAdmin}
+        initialBranchId={selectedRole.branch_id}
+        initialBranchLabel={
+          selectedRole.branch_name ||
+          (selectedRole.branch_id ? 'Branch' : 'Tenant-level')
+        }
         onClose={() => setFormMode(null)}
-        onSubmit={async (title) => {
+        onSubmit={async ({ title }) => {
           await updateMutation.mutateAsync({ id: selectedRole.id, title });
           setFormMode(null);
         }}
@@ -147,6 +161,12 @@ export default function RolesPage() {
       <RoleForm
         mode="view"
         initialTitle={selectedRole.title}
+        showBranchSelect={isTenantAdmin}
+        initialBranchId={selectedRole.branch_id}
+        initialBranchLabel={
+          selectedRole.branch_name ||
+          (selectedRole.branch_id ? 'Branch' : 'Tenant-level')
+        }
         onClose={() => setFormMode(null)}
         onSubmit={async () => {}}
       />
@@ -167,7 +187,7 @@ export default function RolesPage() {
         {canCreate && (
           <button
             onClick={() => handleOpenForm('create')}
-            className="flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-emerald-600/20 transition hover:bg-emerald-700"
+            className="flex items-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-[color-mix(in_srgb,var(--brand-primary)_20%,transparent)] transition hover:brightness-95"
           >
             <Plus className="h-4 w-4" /> Add Role
           </button>
@@ -181,7 +201,7 @@ export default function RolesPage() {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="Search roles..."
-            className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10"
+            className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm outline-none focus:border-[var(--brand-primary)] focus:ring-4 focus:ring-[var(--brand-primary-soft)]"
           />
         </div>
         {isTenantAdmin && (
@@ -235,7 +255,7 @@ export default function RolesPage() {
                 <tr key={role.id} className="hover:bg-slate-50/80">
                   <td className="px-5 py-4">
                     <div className="flex items-center gap-2 font-semibold text-slate-800">
-                      <Shield className="h-4 w-4 text-emerald-600" />
+                      <Shield className="h-4 w-4 text-[var(--brand-primary)]" />
                       {role.title}
                     </div>
                   </td>
@@ -245,7 +265,7 @@ export default function RolesPage() {
                       <span
                         className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
                           role.branch_id
-                            ? 'bg-sky-50 text-sky-700'
+                            ? 'bg-[var(--brand-icon-soft)] text-[var(--brand-icon)]'
                             : 'bg-slate-100 text-slate-600'
                         }`}
                       >
@@ -260,7 +280,7 @@ export default function RolesPage() {
                     <span
                       className={`rounded-full px-2.5 py-1 text-xs font-bold ${
                         role.is_active
-                          ? 'bg-emerald-50 text-emerald-700'
+                          ? 'bg-[var(--brand-icon-soft)] text-[var(--brand-icon)]'
                           : 'bg-slate-100 text-slate-500'
                       }`}
                     >

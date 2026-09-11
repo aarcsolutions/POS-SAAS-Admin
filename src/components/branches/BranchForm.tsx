@@ -4,6 +4,8 @@ import { useMemo, useState } from 'react';
 import {
   ArrowLeft,
   ChevronDown,
+  Eye,
+  EyeOff,
   Loader2,
   Shield,
   Store,
@@ -28,7 +30,7 @@ interface BranchFormProps {
 }
 
 const inputClass = (hasError?: boolean, readOnly?: boolean) =>
-  `h-12 w-full rounded-xl border bg-slate-50 px-4 text-sm text-slate-800 placeholder:text-slate-400 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 focus:outline-none transition-all ${
+  `h-12 w-full rounded-xl border bg-slate-50 px-4 text-sm text-slate-800 placeholder:text-slate-400 focus:border-[var(--brand-primary)] focus:ring-4 focus:ring-[var(--brand-primary-soft)] focus:outline-none transition-all ${
     hasError ? 'border-rose-400' : 'border-slate-200'
   } ${readOnly ? 'cursor-default opacity-70' : ''}`;
 
@@ -46,7 +48,6 @@ export default function BranchForm({
   const [openModules, setOpenModules] = useState<Record<string, boolean>>({});
 
   const [name, setName] = useState(initialData?.name || '');
-  const [code, setCode] = useState(initialData?.code || '');
   const [address, setAddress] = useState(initialData?.address || '');
   const [phone, setPhone] = useState(initialData?.phone || '');
   const [status, setStatus] = useState<BranchStatus>(initialData?.status || 'active');
@@ -63,6 +64,8 @@ export default function BranchForm({
   const [adminEmail, setAdminEmail] = useState(initialData?.adminEmail || '');
   const [adminPassword, setAdminPassword] = useState('');
   const [adminPasswordConfirm, setAdminPasswordConfirm] = useState('');
+  const [showAdminPassword, setShowAdminPassword] = useState(false);
+  const [showAdminPasswordConfirm, setShowAdminPasswordConfirm] = useState(false);
 
   const modulesForPermissions = useMemo(
     () => licensedModules.filter((m) => enabledModuleIds.includes(m.id)),
@@ -105,10 +108,23 @@ export default function BranchForm({
     });
   };
 
+  const allModulesSelected =
+    licensedModules.length > 0 &&
+    licensedModules.every((m) => enabledModuleIds.includes(m.id));
+
+  const toggleSelectAllModules = () => {
+    if (allModulesSelected) {
+      setEnabledModuleIds([]);
+      setPermissionIds([]);
+    } else {
+      setEnabledModuleIds(licensedModules.map((m) => m.id));
+    }
+    if (errors.modules) setErrors((p) => ({ ...p, modules: '' }));
+  };
+
   const validate = () => {
     const next: Record<string, string> = {};
     if (!name.trim()) next.name = 'Branch name is required';
-    if (!code.trim()) next.code = 'Branch code is required';
     if (!phone.trim()) next.phone = 'Phone is required';
     if (!address.trim()) next.address = 'Address is required';
     if (enabledModuleIds.length === 0) next.modules = 'Select at least one module';
@@ -155,7 +171,6 @@ export default function BranchForm({
     await new Promise((r) => setTimeout(r, 500));
     onSubmit({
       name: name.trim(),
-      code: code.trim().toUpperCase(),
       address: address.trim(),
       phone: phone.trim(),
       status,
@@ -194,7 +209,7 @@ export default function BranchForm({
         {/* 1. Branch info */}
         <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:p-8">
           <div className="mb-6 flex items-center gap-2">
-            <Store className="h-5 w-5 text-emerald-600" />
+            <Store className="h-5 w-5 text-[var(--brand-primary)]" />
             <h2 className="text-lg font-semibold text-slate-900">Branch details</h2>
           </div>
           <div className="grid gap-6 md:grid-cols-2">
@@ -213,21 +228,21 @@ export default function BranchForm({
               />
               {errors.name && <p className="mt-1 text-xs text-rose-600">{errors.name}</p>}
             </div>
-            <div>
-              <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500">
-                Branch code
-              </label>
-              <input
-                value={code}
-                onChange={(e) => {
-                  setCode(e.target.value);
-                  if (errors.code) setErrors((p) => ({ ...p, code: '' }));
-                }}
-                placeholder="e.g. DHA"
-                className={inputClass(!!errors.code)}
-              />
-              {errors.code && <p className="mt-1 text-xs text-rose-600">{errors.code}</p>}
-            </div>
+            {isEdit && initialData?.code ? (
+              <div>
+                <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500">
+                  Branch code
+                </label>
+                <input
+                  value={initialData.code}
+                  readOnly
+                  className={inputClass(false, true)}
+                />
+                <p className="mt-1 text-xs text-slate-400">
+                  Auto-generated — not editable
+                </p>
+              </div>
+            ) : null}
             <div>
               <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500">
                 Phone
@@ -271,7 +286,7 @@ export default function BranchForm({
                 }}
                 rows={3}
                 placeholder="Full branch address"
-                className={`w-full resize-none rounded-xl border bg-slate-50 px-4 py-3 text-sm outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 ${
+                className={`w-full resize-none rounded-xl border bg-slate-50 px-4 py-3 text-sm outline-none focus:border-[var(--brand-primary)] focus:ring-4 focus:ring-[var(--brand-primary-soft)] ${
                   errors.address ? 'border-rose-400' : 'border-slate-200'
                 }`}
               />
@@ -285,7 +300,7 @@ export default function BranchForm({
         {/* 2. Enabled modules */}
         <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:p-8">
           <div className="mb-2 flex items-center gap-2">
-            <Shield className="h-5 w-5 text-emerald-600" />
+            <Shield className="h-5 w-5 text-[var(--brand-primary)]" />
             <h2 className="text-lg font-semibold text-slate-900">Enabled modules</h2>
           </div>
           <p className="mb-4 text-sm text-slate-500">
@@ -297,13 +312,26 @@ export default function BranchForm({
           )}
           {catalogLoading ? (
             <div className="flex justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin text-emerald-600" />
+              <Loader2 className="h-6 w-6 animate-spin text-[var(--brand-primary)]" />
             </div>
           ) : licensedModules.length === 0 ? (
             <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-8 text-center text-sm text-slate-400">
               No licensed modules found for this tenant. Ask Platform Admin to assign modules.
             </div>
           ) : (
+          <>
+          <label className="mb-4 flex w-fit cursor-pointer items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-800 transition hover:bg-slate-100">
+            <input
+              type="checkbox"
+              checked={allModulesSelected}
+              onChange={toggleSelectAllModules}
+              className="h-4 w-4 rounded border-slate-300 text-[var(--brand-primary)] focus:ring-[var(--brand-primary)]"
+            />
+            Select all
+            <span className="font-medium text-slate-400">
+              ({enabledModuleIds.length}/{licensedModules.length})
+            </span>
+          </label>
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {licensedModules.map((module) => {
               const checked = enabledModuleIds.includes(module.id);
@@ -312,7 +340,7 @@ export default function BranchForm({
                   key={module.id}
                   className={`flex cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 text-sm transition ${
                     checked
-                      ? 'border-emerald-300 bg-emerald-50'
+                      ? 'border-[var(--brand-primary)] bg-[var(--brand-icon-soft)]'
                       : 'border-slate-200 hover:bg-slate-50'
                   }`}
                 >
@@ -323,20 +351,21 @@ export default function BranchForm({
                       toggleModule(module.id);
                       if (errors.modules) setErrors((p) => ({ ...p, modules: '' }));
                     }}
-                    className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                    className="h-4 w-4 rounded border-slate-300 text-[var(--brand-primary)] focus:ring-[var(--brand-primary)]"
                   />
                   <span className="font-medium text-slate-800">{module.title}</span>
                 </label>
               );
             })}
           </div>
+          </>
           )}
         </section>
 
         {/* 3. Role */}
         <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:p-8">
           <div className="mb-6 flex items-center gap-2">
-            <KeyRound className="h-5 w-5 text-emerald-600" />
+            <KeyRound className="h-5 w-5 text-[var(--brand-primary)]" />
             <h2 className="text-lg font-semibold text-slate-900">Branch Admin role</h2>
           </div>
           <div className="max-w-md">
@@ -363,7 +392,7 @@ export default function BranchForm({
         {/* 4. Permissions */}
         <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:p-8">
           <div className="mb-2 flex items-center gap-2">
-            <Shield className="h-5 w-5 text-emerald-600" />
+            <Shield className="h-5 w-5 text-[var(--brand-primary)]" />
             <h2 className="text-lg font-semibold text-slate-900">Role permissions</h2>
           </div>
           <p className="mb-4 text-sm text-slate-500">
@@ -417,7 +446,7 @@ export default function BranchForm({
                           <button
                             type="button"
                             onClick={() => toggleModuleAllPermissions(module, true)}
-                            className="rounded-lg bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700"
+                            className="rounded-lg bg-[var(--brand-icon-soft)] px-2.5 py-1 text-xs font-bold text-[var(--brand-icon)]"
                           >
                             Allow all
                           </button>
@@ -444,7 +473,7 @@ export default function BranchForm({
                                     setErrors((p) => ({ ...p, permissions: '' }));
                                   }
                                 }}
-                                className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                                className="h-4 w-4 rounded border-slate-300 text-[var(--brand-primary)] focus:ring-[var(--brand-primary)]"
                               />
                               <span className="text-slate-700">{permission.title}</span>
                             </label>
@@ -462,7 +491,7 @@ export default function BranchForm({
         {/* 5. Branch Admin user */}
         <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:p-8">
           <div className="mb-6 flex items-center gap-2">
-            <UserCog className="h-5 w-5 text-emerald-600" />
+            <UserCog className="h-5 w-5 text-[var(--brand-primary)]" />
             <h2 className="text-lg font-semibold text-slate-900">Branch Admin user</h2>
           </div>
           <div className="grid gap-6 md:grid-cols-2">
@@ -507,18 +536,34 @@ export default function BranchForm({
                   <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500">
                     Password
                   </label>
-                  <input
-                    type="password"
-                    value={adminPassword}
-                    onChange={(e) => {
-                      setAdminPassword(e.target.value);
-                      if (errors.adminPassword) {
-                        setErrors((p) => ({ ...p, adminPassword: '' }));
+                  <div className="relative">
+                    <input
+                      type={showAdminPassword ? 'text' : 'password'}
+                      value={adminPassword}
+                      onChange={(e) => {
+                        setAdminPassword(e.target.value);
+                        if (errors.adminPassword) {
+                          setErrors((p) => ({ ...p, adminPassword: '' }));
+                        }
+                      }}
+                      placeholder="Min 6 characters"
+                      className={`${inputClass(!!errors.adminPassword)} pr-11`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowAdminPassword((v) => !v)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                      aria-label={
+                        showAdminPassword ? 'Hide password' : 'Show password'
                       }
-                    }}
-                    placeholder="Min 6 characters"
-                    className={inputClass(!!errors.adminPassword)}
-                  />
+                    >
+                      {showAdminPassword ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
+                    </button>
+                  </div>
                   {errors.adminPassword && (
                     <p className="mt-1 text-xs text-rose-600">{errors.adminPassword}</p>
                   )}
@@ -527,18 +572,36 @@ export default function BranchForm({
                   <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500">
                     Confirm password
                   </label>
-                  <input
-                    type="password"
-                    value={adminPasswordConfirm}
-                    onChange={(e) => {
-                      setAdminPasswordConfirm(e.target.value);
-                      if (errors.adminPasswordConfirm) {
-                        setErrors((p) => ({ ...p, adminPasswordConfirm: '' }));
+                  <div className="relative">
+                    <input
+                      type={showAdminPasswordConfirm ? 'text' : 'password'}
+                      value={adminPasswordConfirm}
+                      onChange={(e) => {
+                        setAdminPasswordConfirm(e.target.value);
+                        if (errors.adminPasswordConfirm) {
+                          setErrors((p) => ({ ...p, adminPasswordConfirm: '' }));
+                        }
+                      }}
+                      placeholder="Re-enter password"
+                      className={`${inputClass(!!errors.adminPasswordConfirm)} pr-11`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowAdminPasswordConfirm((v) => !v)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                      aria-label={
+                        showAdminPasswordConfirm
+                          ? 'Hide password'
+                          : 'Show password'
                       }
-                    }}
-                    placeholder="Re-enter password"
-                    className={inputClass(!!errors.adminPasswordConfirm)}
-                  />
+                    >
+                      {showAdminPasswordConfirm ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
+                    </button>
+                  </div>
                   {errors.adminPasswordConfirm && (
                     <p className="mt-1 text-xs text-rose-600">
                       {errors.adminPasswordConfirm}
@@ -564,7 +627,7 @@ export default function BranchForm({
               <button
                 type="submit"
                 disabled={saving}
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-6 py-2.5 text-sm font-bold text-white shadow-lg shadow-emerald-600/20 transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-[var(--brand-primary)] px-6 py-2.5 text-sm font-bold text-white shadow-lg shadow-[color-mix(in_srgb,var(--brand-primary)_20%,transparent)] transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {saving && <Loader2 className="h-4 w-4 animate-spin" />}
             {saving ? 'Saving...' : isEdit ? 'Save Changes' : 'Create Branch'}

@@ -102,7 +102,7 @@ export default function RolePermissions({ roleId, roleTitle, onClose }: Props) {
         <button
           onClick={handleSave}
           disabled={updateMutation.isPending || isLoading}
-          className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-70"
+          className="inline-flex items-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-bold text-white hover:brightness-95 disabled:opacity-70"
         >
           {updateMutation.isPending ? (
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -119,7 +119,7 @@ export default function RolePermissions({ roleId, roleTitle, onClose }: Props) {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search modules or permissions..."
-          className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm outline-none focus:border-emerald-500"
+          className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm outline-none focus:border-[var(--brand-primary)]"
         />
       </div>
 
@@ -148,7 +148,7 @@ export default function RolePermissions({ roleId, roleTitle, onClose }: Props) {
                   className="flex w-full items-center justify-between px-5 py-4 text-left hover:bg-slate-50"
                 >
                   <div className="flex items-center gap-2 font-semibold text-slate-800">
-                    <Shield className="h-4 w-4 text-emerald-600" />
+                    <Shield className="h-4 w-4 text-[var(--brand-primary)]" />
                     {module.title}
                     <span className="text-xs font-medium text-slate-400">
                       ({module.permissions.filter((p) => p.is_allowed).length}/
@@ -167,7 +167,7 @@ export default function RolePermissions({ roleId, roleTitle, onClose }: Props) {
                       <button
                         type="button"
                         onClick={() => toggleModuleAll(module.id, true)}
-                        className="rounded-lg bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700"
+                        className="rounded-lg bg-[var(--brand-icon-soft)] px-2.5 py-1 text-xs font-bold text-[var(--brand-icon)]"
                       >
                         Allow all
                       </button>
@@ -192,7 +192,7 @@ export default function RolePermissions({ roleId, roleTitle, onClose }: Props) {
                             onChange={() =>
                               togglePermission(module.id, permission.id)
                             }
-                            className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                            className="h-4 w-4 rounded border-slate-300 text-[var(--brand-primary)] focus:ring-[var(--brand-primary)]"
                           />
                           <span className="text-slate-700">{permission.title}</span>
                         </label>

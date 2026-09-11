@@ -76,7 +76,7 @@ export default function RequestBranchesModal({
                 setRequestedCount(Number(e.target.value));
                 setError('');
               }}
-              className={`h-11 w-full rounded-xl border bg-slate-50 px-4 text-sm outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 ${
+              className={`h-11 w-full rounded-xl border bg-slate-50 px-4 text-sm outline-none focus:border-[var(--brand-primary)] focus:ring-4 focus:ring-[var(--brand-primary-soft)] ${
                 error ? 'border-rose-400' : 'border-slate-200'
               }`}
             />
@@ -92,7 +92,7 @@ export default function RequestBranchesModal({
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               placeholder="Why do you need more branches?"
-              className="w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10"
+              className="w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-[var(--brand-primary)] focus:ring-4 focus:ring-[var(--brand-primary-soft)]"
             />
           </div>
 
@@ -107,7 +107,7 @@ export default function RequestBranchesModal({
             <button
               type="submit"
               disabled={saving}
-              className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-60"
+              className="inline-flex items-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-bold text-white hover:brightness-95 disabled:opacity-60"
             >
               {saving && <Loader2 className="h-4 w-4 animate-spin" />}
               Send Request

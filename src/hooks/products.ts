@@ -108,3 +108,37 @@ export const useSetProductActiveMutation = () => {
     },
   });
 };
+
+export type ProductSyncPayload = {
+  source_branch_id?: string | null;
+  product_ids: string[];
+  target_branch_id: string;
+};
+
+export const useProductSyncMutation = () => {
+  return useMutation({
+    mutationFn: (payload: ProductSyncPayload) => productsApi.sync(payload),
+    onError: (error: any) => {
+      toast.error(
+        error?.response?.data?.message || 'Failed to queue product sync'
+      );
+    },
+  });
+};
+
+export const useProductSyncJobQuery = (
+  jobId: string | null,
+  options?: {
+    refetchInterval?:
+      | number
+      | false
+      | ((query: { state: { data: unknown } }) => number | false);
+  }
+) => {
+  return useQuery({
+    queryKey: ['products', 'sync', jobId],
+    queryFn: () => productsApi.getSyncJob(jobId!),
+    enabled: !!jobId,
+    refetchInterval: options?.refetchInterval as any,
+  });
+};

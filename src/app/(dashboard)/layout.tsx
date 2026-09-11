@@ -1,11 +1,9 @@
 'use client';
 
-import { useEffect, useRef, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-  Bell,
-  LogOut,
   Search,
   Store,
   LayoutDashboard,
@@ -14,14 +12,20 @@ import {
   Menu,
   X,
 } from 'lucide-react';
-import Cookies from 'js-cookie';
-import { MODULE_ICON_MAP, MODULE_HREF_BY_SLUG } from '@/data/sidebar';
+import {
+  MODULE_ICON_MAP,
+  MODULE_HREF_BY_SLUG,
+  getTenantSidebarOrderIndex,
+} from '@/data/sidebar';
 import { useAuthStore } from '@/store/authStore';
-import { useLogoutMutation } from '@/hooks/auth';
 import { PermissionBoundary } from '@/components/rbac/PermissionBoundary';
 import { authApi } from '@/services/auth';
 import { useUIStore } from '@/store/uiStore';
 import { AuthGuard } from '@/components/auth/AuthGuard';
+import { OrderSocketProvider } from '@/components/realtime/OrderSocketProvider';
+import NotificationBell from '@/components/notifications/NotificationBell';
+import HeaderAccountMenu from '@/components/layout/HeaderAccountMenu';
+import { useAdminTheme } from '@/components/providers/ThemeProvider';
 
 const SECTIONED_MODULES = new Set(['roles', 'permissions', 'modules']);
 
@@ -35,6 +39,7 @@ function resolveModuleHref(moduleSlug: string): string {
 type NavItem = {
   label: string;
   href: string;
+  slug: string;
   icon: React.ComponentType<{ className?: string }>;
   section?: string;
 };
@@ -53,8 +58,8 @@ function SidebarNav({
   const navClasses = (path: string) =>
     `flex items-center gap-3 rounded-[26px] text-sm font-medium transition-all ${
       pathname === path || pathname.startsWith(`${path}/`)
-        ? 'bg-[#d97706] text-white shadow-[0_20px_45px_rgba(217,119,6,0.18)]'
-        : 'text-[#fde4b6] hover:bg-[#ffffff1a] hover:text-white'
+        ? 'bg-[var(--brand-primary)] text-white shadow-[0_20px_45px_color-mix(in_srgb,var(--brand-primary)_18%,transparent)]'
+        : 'text-[var(--admin-sidebar-text)] hover:bg-[#ffffff1a] hover:text-white'
     } ${collapsed ? 'justify-center px-2 py-3' : 'px-4 py-3'}`;
 
   const elements: React.ReactNode[] = [];
@@ -67,7 +72,7 @@ function SidebarNav({
       elements.push(
         <div
           key={`section-${item.section}`}
-          className="mt-4 px-3 pb-1 pt-3 text-[10px] font-bold uppercase tracking-widest text-[#f5d8a5]/70"
+          className="mt-4 px-3 pb-1 pt-3 text-[10px] font-bold uppercase tracking-widest text-[var(--admin-sidebar-text)]/70"
         >
           {item.section}
         </div>
@@ -94,10 +99,12 @@ function SidebarBrand({
   portalName,
   collapsed,
   onToggle,
+  logoUrl,
 }: {
   portalName: string;
   collapsed: boolean;
   onToggle?: () => void;
+  logoUrl?: string | null;
 }) {
   return (
     <div className={`mb-6 ${collapsed ? 'px-0' : ''}`}>
@@ -106,24 +113,40 @@ function SidebarBrand({
           collapsed ? 'flex-col justify-center' : ''
         }`}
       >
-        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-3xl bg-[#d97706] text-white shadow-[0_16px_45px_rgba(217,119,6,0.24)]">
-          <Store className="h-5 w-5" />
-        </div>
-        {!collapsed && (
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold uppercase tracking-[0.18em] text-[#fde4b6]">
-              {portalName}
-            </p>
-            <p className="text-xs text-[#f5d8a5]">Admin</p>
-          </div>
+        {logoUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={logoUrl}
+            alt={portalName}
+            className={`shrink-0 rounded-2xl bg-white object-contain p-1.5 shadow-[0_16px_45px_color-mix(in_srgb,var(--brand-primary)_24%,transparent)] ${
+              collapsed ? 'h-11 w-11' : 'h-14 w-auto max-w-[180px]'
+            }`}
+          />
+        ) : (
+          <>
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-3xl bg-[var(--brand-primary)] text-white shadow-[0_16px_45px_color-mix(in_srgb,var(--brand-primary)_24%,transparent)]">
+              <Store className="h-5 w-5" />
+            </div>
+            {!collapsed && (
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold uppercase tracking-[0.18em] text-[var(--admin-sidebar-text)]">
+                  {portalName}
+                </p>
+                <p className="text-xs text-[var(--admin-sidebar-text)]/80">
+                  Admin
+                </p>
+              </div>
+            )}
+          </>
         )}
+        {logoUrl && !collapsed ? <div className="min-w-0 flex-1" /> : null}
         {onToggle && (
           <button
             type="button"
             onClick={onToggle}
             aria-label="Toggle sidebar"
             title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-[#fde4b6] transition-colors hover:bg-[#ffffff1a] hover:text-white ${
+            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-[var(--admin-sidebar-text)] transition-colors hover:bg-[#ffffff1a] hover:text-white ${
               collapsed ? 'mt-1' : ''
             }`}
           >
@@ -151,7 +174,7 @@ function SidebarUserCard({
   return (
     <div className={`mt-auto ${collapsed ? 'px-2 pb-4' : 'px-6 pb-6'}`}>
       <div
-        className={`rounded-[28px] border border-[#e6d3b2] bg-[#c68a4e]/10 backdrop-blur-sm ${
+        className={`rounded-[28px] border border-[var(--admin-border)] bg-[color-mix(in_srgb,var(--brand-primary)_12%,transparent)] backdrop-blur-sm ${
           collapsed ? 'p-2' : 'p-4'
         }`}
       >
@@ -160,15 +183,17 @@ function SidebarUserCard({
             collapsed ? 'justify-center' : ''
           }`}
         >
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#fde5c5] text-[#7a4e2b] font-bold shadow-sm">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[var(--brand-primary-soft)] text-[var(--brand-primary-dark)] font-bold shadow-sm">
             {userName?.substring(0, 2).toUpperCase() || 'AD'}
           </div>
           {!collapsed && (
             <div className="min-w-0">
-              <p className="truncate text-sm font-semibold text-[#fff1db]">
+              <p className="truncate text-sm font-semibold text-[var(--admin-sidebar-text)]">
                 {userName || 'Administrator'}
               </p>
-              <p className="text-xs text-[#f1d4aa]">{userRole || 'Admin'}</p>
+              <p className="text-xs text-[var(--admin-sidebar-text)]/80">
+                {userRole || 'Admin'}
+              </p>
             </div>
           )}
         </div>
@@ -183,9 +208,7 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const { user, modulesWithPermisssions, setAuth } = useAuthStore();
-  const logoutMutation = useLogoutMutation();
-  const sessionSynced = useRef(false);
+  const { user, modulesWithPermisssions } = useAuthStore();
   const [headerReady, setHeaderReady] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [resolvedTenantName, setResolvedTenantName] = useState(
@@ -194,35 +217,13 @@ export default function DashboardLayout({
   const collapsed = useUIStore((s) => s.sidebarCollapsed);
   const setSidebarCollapsed = useUIStore((s) => s.setSidebarCollapsed);
   const portalName = resolvedTenantName || user?.tenantName || 'Tenant Portal';
+  const { theme } = useAdminTheme();
+  const logoUrl = theme?.logo_url || null;
 
   // Avoid hydration noise from browser extensions that inject attrs (fdprocessedid)
   useEffect(() => {
     setHeaderReady(true);
   }, []);
-
-  // Reload modules after Master Admin license changes (stale localStorage session)
-  useEffect(() => {
-    if (sessionSynced.current) return;
-    const refreshToken = Cookies.get('refresh_token');
-    if (!refreshToken) return;
-
-    sessionSynced.current = true;
-    (async () => {
-      try {
-        const res = await authApi.refresh(refreshToken);
-        const payload = res?.data ?? res;
-        if (payload?.access_token && payload?.user) {
-          Cookies.set('access_token', payload.access_token);
-          if (payload.refresh_token) {
-            Cookies.set('refresh_token', payload.refresh_token);
-          }
-          setAuth(payload.user, payload.modules || []);
-        }
-      } catch {
-        /* keep existing session */
-      }
-    })();
-  }, [setAuth]);
 
   useEffect(() => {
     if (user?.tenantName) {
@@ -250,39 +251,46 @@ export default function DashboardLayout({
     document.title = portalName;
   }, [portalName]);
 
-  const visibleModules: NavItem[] = useMemo(
-    () =>
-      modulesWithPermisssions.reduce<NavItem[]>((acc, module) => {
-        const menuPermission = module.permissions.find(
-          (permission) =>
-            permission.is_Show_in_menu &&
-            permission.is_allowed &&
-            permission.route
-        );
+  const visibleModules: NavItem[] = useMemo(() => {
+    const items = modulesWithPermisssions.reduce<NavItem[]>((acc, module) => {
+      const menuPermission = module.permissions.find(
+        (permission) =>
+          permission.is_Show_in_menu &&
+          permission.is_allowed &&
+          permission.route
+      );
 
-        if (!menuPermission) {
-          return acc;
-        }
-
-        acc.push({
-          label: module.module_name,
-          href: resolveModuleHref(module.module_slug),
-          icon: MODULE_ICON_MAP[module.module_slug] ?? LayoutDashboard,
-          section: SECTIONED_MODULES.has(module.module_slug)
-            ? 'Access Control'
-            : undefined,
-        });
+      if (!menuPermission) {
         return acc;
-      }, []),
-    [modulesWithPermisssions]
-  );
+      }
+
+      acc.push({
+        label: module.module_name,
+        slug: module.module_slug,
+        href: resolveModuleHref(module.module_slug),
+        icon: MODULE_ICON_MAP[module.module_slug] ?? LayoutDashboard,
+        section: SECTIONED_MODULES.has(module.module_slug)
+          ? 'Access Control'
+          : undefined,
+      });
+      return acc;
+    }, []);
+
+    return items.sort(
+      (a, b) =>
+        getTenantSidebarOrderIndex(a.slug) -
+          getTenantSidebarOrderIndex(b.slug) ||
+        a.label.localeCompare(b.label)
+    );
+  }, [modulesWithPermisssions]);
 
   return (
     <AuthGuard>
-    <div className="min-h-screen overflow-x-hidden bg-[#f7f1e6] text-[#3e2a18]">
+    <OrderSocketProvider>
+    <div className="min-h-screen overflow-x-hidden bg-[var(--admin-bg)] text-[var(--brand-primary-dark)]">
       {/* Desktop sidebar */}
       <aside
-        className={`fixed left-0 top-0 z-30 hidden h-screen overflow-hidden border-r border-[#ecd6b6] bg-[#5b3b1e] shadow-[6px_0_30px_rgba(0,0,0,0.08)] transition-[width] duration-300 lg:flex lg:flex-col ${
+        className={`fixed left-0 top-0 z-30 hidden h-screen overflow-hidden border-r border-[var(--admin-border)] bg-[var(--brand-primary-dark)] shadow-[6px_0_30px_rgba(0,0,0,0.08)] transition-[width] duration-300 lg:flex lg:flex-col ${
           collapsed ? 'w-20' : 'w-[280px]'
         }`}
       >
@@ -292,6 +300,7 @@ export default function DashboardLayout({
           <SidebarBrand
             portalName={portalName}
             collapsed={collapsed}
+            logoUrl={logoUrl}
             onToggle={() => setSidebarCollapsed(!collapsed)}
           />
         </div>
@@ -318,65 +327,63 @@ export default function DashboardLayout({
         }`}
       >
         {/* Mobile top bar */}
-        <div className="flex h-14 items-center gap-2 border-b border-[#ecd6b6] bg-[#fff7ee] px-4 lg:hidden">
+        <div className="flex h-14 items-center gap-2 border-b border-[var(--admin-border)] bg-[var(--admin-surface)] px-4 lg:hidden">
           <button
             type="button"
             aria-label="Open sidebar"
             onClick={() => setMobileOpen(true)}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-[#ecd6b6] bg-white text-[#7a553d]"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-[var(--admin-border)] bg-white text-[var(--brand-primary-dark)]"
           >
             <Menu className="h-5 w-5" />
           </button>
-          <div className="truncate text-sm font-semibold text-[#5b3b1e]">
-            {portalName}
+          <div className="flex min-w-0 flex-1 items-center gap-2">
+            {logoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={logoUrl}
+                alt={portalName}
+                className="h-9 w-auto max-w-[140px] rounded-lg object-contain"
+              />
+            ) : (
+              <div className="truncate text-sm font-semibold text-[var(--brand-primary-dark)]">
+                {portalName}
+              </div>
+            )}
           </div>
         </div>
 
         {/* Desktop header */}
-        <header className="sticky top-0 z-10 hidden border-b border-[#ecd6b6] bg-[#fff7ee]/90 shadow-sm backdrop-blur-sm lg:block">
+        <header className="sticky top-0 z-10 hidden border-b border-[var(--admin-border)] bg-[color-mix(in_srgb,var(--admin-surface)_90%,transparent)] shadow-sm backdrop-blur-sm lg:block">
           <div className="mx-auto flex h-16 max-w-[1600px] items-center justify-between gap-4 px-8">
             <div className="relative w-full max-w-xl">
-              <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#a16f4f]" />
+              <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--admin-muted)]" />
               {headerReady ? (
                 <input
                   placeholder="Search finished goods, orders, or stock..."
-                  className="h-11 w-full rounded-[28px] border border-[#ecd6b6] bg-[#fff4e6] px-12 text-sm text-[#5b3b1e] outline-none transition focus:border-[#d97706] focus:ring-2 focus:ring-[#fcd299]/60"
+                  className="h-11 w-full rounded-[28px] border border-[var(--admin-border)] bg-[var(--admin-surface)] px-12 text-sm text-[var(--brand-primary-dark)] outline-none transition focus:border-[var(--brand-primary)] focus:ring-2 focus:ring-[var(--brand-primary-soft)]"
                 />
               ) : (
                 <div
                   aria-hidden
-                  className="h-11 w-full rounded-[28px] border border-[#ecd6b6] bg-[#fff4e6]"
+                  className="h-11 w-full rounded-[28px] border border-[var(--admin-border)] bg-[var(--admin-surface)]"
                 />
               )}
             </div>
             <div className="flex min-h-11 items-center gap-3">
               {headerReady ? (
                 <>
-                  <button
-                    type="button"
-                    className="flex h-11 w-11 items-center justify-center rounded-[18px] border border-[#ecd6b6] bg-white text-[#7a553d] shadow-sm transition hover:bg-[#fff0dc]"
-                  >
-                    <Bell className="h-4 w-4" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => logoutMutation.mutate()}
-                    disabled={logoutMutation.isPending}
-                    className="flex items-center gap-2 rounded-[18px] border border-[#ecd6b6] bg-white px-4 py-2 text-sm font-semibold text-[#7a553d] transition hover:bg-[#fff0dc] disabled:opacity-50"
-                  >
-                    <LogOut className="h-4 w-4" />
-                    {logoutMutation.isPending ? 'Signing out...' : 'Logout'}
-                  </button>
+                  <NotificationBell />
+                  <HeaderAccountMenu />
                 </>
               ) : (
                 <>
                   <div
                     aria-hidden
-                    className="h-11 w-11 rounded-[18px] border border-[#ecd6b6] bg-white"
+                    className="h-11 w-11 rounded-[18px] border border-[var(--admin-border)] bg-white"
                   />
                   <div
                     aria-hidden
-                    className="h-11 w-[96px] rounded-[18px] border border-[#ecd6b6] bg-white"
+                    className="h-11 w-11 rounded-[18px] border border-[var(--admin-border)] bg-white"
                   />
                 </>
               )}
@@ -400,16 +407,27 @@ export default function DashboardLayout({
             className="absolute inset-0 bg-black/40"
             onClick={() => setMobileOpen(false)}
           />
-          <div className="absolute left-0 top-0 flex h-full w-[280px] max-w-[85%] flex-col overflow-hidden bg-[#5b3b1e] shadow-xl">
-            <div className="flex h-14 items-center justify-between border-b border-[#ecd6b6]/30 px-4">
-              <div className="truncate text-sm font-semibold text-[#fde4b6]">
-                {portalName}
+          <div className="absolute left-0 top-0 flex h-full w-[280px] max-w-[85%] flex-col overflow-hidden bg-[var(--brand-primary-dark)] shadow-xl">
+            <div className="flex h-14 items-center justify-between border-b border-white/20 px-4">
+              <div className="flex min-w-0 items-center gap-2">
+                {logoUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={logoUrl}
+                    alt={portalName}
+                    className="h-9 w-auto max-w-[160px] rounded-lg bg-white object-contain p-0.5"
+                  />
+                ) : (
+                  <div className="truncate text-sm font-semibold text-[var(--admin-sidebar-text)]">
+                    {portalName}
+                  </div>
+                )}
               </div>
               <button
                 type="button"
                 aria-label="Close sidebar"
                 onClick={() => setMobileOpen(false)}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-[#ecd6b6]/40 text-[#fde4b6]"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-white/30 text-[var(--admin-sidebar-text)]"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -430,6 +448,7 @@ export default function DashboardLayout({
         </div>
       )}
     </div>
+    </OrderSocketProvider>
     </AuthGuard>
   );
 }

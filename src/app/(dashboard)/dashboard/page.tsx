@@ -17,26 +17,19 @@ import SalesPerformanceChart from '@/components/dashboard/SalesPerformanceChart'
 import KpiStrip, { KpiItem } from '@/components/dashboard/KpiStrip';
 import LiveOrdersWidget from '@/components/dashboard/LiveOrdersWidget';
 import PaymentMixChart from '@/components/dashboard/PaymentMixChart';
-import { Select } from '@/components/ui/Select';
+import DateRangePicker, {
+  defaultLastDaysRange,
+} from '@/components/ui/DateRangePicker';
 import { useDashboardQuery } from '@/hooks/dashboard';
-import { DashboardPeriod } from '@/types/dashboard.types';
 
 function formatChange(percent: number): string {
   const sign = percent > 0 ? '+' : '';
   return `${sign}${percent}%`;
 }
 
-const PERIOD_OPTIONS = [
-  { value: '7d', label: 'Last 7 days' },
-  { value: '30d', label: 'Last 30 days' },
-  { value: '90d', label: 'Last 90 days' },
-  { value: 'month', label: 'This month' },
-  { value: 'year', label: 'This year' },
-];
-
 export default function DashboardPage() {
-  const [period, setPeriod] = useState<DashboardPeriod>('30d');
-  const { data, isLoading, isError, isFetching } = useDashboardQuery(period, {
+  const [range, setRange] = useState(defaultLastDaysRange(30));
+  const { data, isLoading, isError, isFetching } = useDashboardQuery(range, {
     poll: true,
   });
 
@@ -51,41 +44,35 @@ export default function DashboardPage() {
         value: kpis.today_revenue_formatted,
         sublabel: `${kpis.today_orders} orders`,
         icon: Wallet,
-        accent: 'emerald',
       },
       {
         label: 'Period Revenue',
         value: kpis.period_revenue_formatted,
         sublabel: formatChange(kpis.period_change_percent),
         icon: TrendingUp,
-        accent: 'sky',
       },
       {
         label: 'Period Orders',
         value: String(kpis.period_orders),
         sublabel: `${kpis.period_orders} in range`,
         icon: ShoppingBag,
-        accent: 'violet',
       },
       {
         label: 'Avg Order Value',
         value: kpis.period_avg_order_value_formatted,
         icon: ShoppingCart,
-        accent: 'amber',
       },
       {
         label: 'Active Orders',
         value: String(kpis.active_orders_count),
         sublabel: 'In progress',
         icon: Package,
-        accent: 'violet',
       },
       {
         label: 'Customers',
         value: String(kpis.totals.customers),
         sublabel: `${kpis.totals.products} products`,
         icon: Users,
-        accent: 'emerald',
       },
     ];
   }, [kpis]);
@@ -103,18 +90,10 @@ export default function DashboardPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <div className="w-44">
-            <Select
-              value={period}
-              onChange={(value) => setPeriod(value as DashboardPeriod)}
-              size="md"
-              allowEmpty={false}
-              options={PERIOD_OPTIONS}
-            />
-          </div>
+          <DateRangePicker value={range} onChange={setRange} />
           <Link
             href="/reports"
-            className="flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-emerald-600/20 hover:bg-emerald-700"
+            className="flex items-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-[color-mix(in_srgb,var(--brand-primary)_20%,transparent)] hover:brightness-95"
           >
             View Reports
             <ArrowUpRight className="h-4 w-4" />
@@ -124,7 +103,7 @@ export default function DashboardPage() {
 
       {isLoading && !overview ? (
         <div className="flex items-center justify-center py-24">
-          <Loader2 className="h-8 w-8 animate-spin text-emerald-600" />
+          <Loader2 className="h-8 w-8 animate-spin text-[var(--brand-primary)]" />
         </div>
       ) : isError ? (
         <div className="rounded-2xl border border-rose-200 bg-rose-50 p-6 text-sm text-rose-700">
@@ -169,7 +148,7 @@ export default function DashboardPage() {
 
             <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
               <div className="mb-5 flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--brand-icon-soft)] text-[var(--brand-icon)]">
                   <Package className="h-5 w-5" />
                 </div>
                 <div>
@@ -221,44 +200,98 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-            <div className="mb-5 flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
-                <AlertTriangle className="h-5 w-5" />
+          <div className="rounded-2xl border border-[var(--brand-primary-soft)] bg-white p-6 shadow-sm">
+            <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--brand-primary-soft)] bg-[var(--brand-icon-soft)] text-[var(--brand-icon)]">
+                  <AlertTriangle className="h-5 w-5" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-slate-900">
+                    Low Stock Alerts
+                  </h2>
+                  <p className="text-sm text-slate-500">
+                    {overview?.low_stock_count ?? 0} item
+                    {(overview?.low_stock_count ?? 0) === 1 ? '' : 's'} at or
+                    below minimum quantity
+                    {overview?.active_branches
+                      ? ` · ${overview.branches_subtitle}`
+                      : ''}
+                  </p>
+                </div>
               </div>
-              <div>
-                <h2 className="text-lg font-bold text-slate-900">
-                  Low Stock Alerts
-                </h2>
-                <p className="text-sm text-slate-500">
-                  {overview?.low_stock_count ?? 0} items at or below{' '}
-                  {overview?.low_stock_threshold ?? 10} units
-                  {overview?.active_branches
-                    ? ` · ${overview.branches_subtitle}`
-                    : ''}
-                </p>
-              </div>
+              {(overview?.low_stock_items || []).length > 0 && (
+                <Link
+                  href={`/suppliers?createPo=1&materials=${(overview?.low_stock_items || [])
+                    .map((i) => i.id)
+                    .join(',')}`}
+                  className="inline-flex items-center gap-1.5 self-start rounded-xl bg-[var(--brand-primary)] px-3.5 py-2 text-sm font-semibold text-white hover:brightness-95 sm:self-auto"
+                >
+                  Create PO
+                  <ArrowUpRight className="h-4 w-4" />
+                </Link>
+              )}
             </div>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               {(overview?.low_stock_items || []).length === 0 ? (
                 <p className="col-span-full rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-500">
-                  No low stock items right now.
+                  No low stock items right now. Stock is managed via Raw
+                  Materials and supplier purchase orders.
                 </p>
               ) : (
-                overview?.low_stock_items.map((item) => (
-                  <div
-                    key={item.id}
-                    className="rounded-xl border border-slate-200 bg-slate-50 p-4"
-                  >
-                    <div className="font-semibold text-slate-800">
-                      {item.name}
+                overview?.low_stock_items.map((item) => {
+                  const threshold =
+                    item.min_stock_level ??
+                    overview?.low_stock_threshold ??
+                    10;
+                  return (
+                    <div
+                      key={item.id}
+                      className="rounded-xl border border-[var(--brand-primary-soft)] bg-gradient-to-br from-[var(--brand-primary-soft)] to-white p-4"
+                    >
+                      <div className="font-semibold text-slate-800">
+                        {item.name}
+                      </div>
+                      <div className="mt-0.5 text-xs text-slate-500">
+                        {item.unit || 'Raw material'}
+                      </div>
+                      <div className="mt-3 flex items-end justify-between gap-2">
+                        <div>
+                          <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                            On hand
+                          </div>
+                          <div className="text-lg font-bold text-[var(--brand-primary-dark)]">
+                            {item.stock_quantity}
+                            {item.unit ? (
+                              <span className="ml-1 text-xs font-semibold text-slate-500">
+                                {item.unit}
+                              </span>
+                            ) : null}
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                            Min qty
+                          </div>
+                          <div className="text-sm font-semibold text-slate-600">
+                            {threshold}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="mt-3 flex items-center justify-between gap-2">
+                        <span className="inline-flex rounded-full border border-[var(--brand-primary-soft)] bg-[color-mix(in_srgb,var(--brand-primary)_14%,white)] px-2.5 py-0.5 text-xs font-bold text-[var(--brand-primary-dark)]">
+                          {item.stock_label}
+                        </span>
+                        <Link
+                          href={`/suppliers?createPo=1&materials=${item.id}`}
+                          className="text-xs font-bold text-[var(--brand-primary)] hover:brightness-90"
+                        >
+                          Create PO →
+                        </Link>
+                      </div>
                     </div>
-                    <div className="mt-1 text-xs text-slate-500">{item.sku}</div>
-                    <div className="mt-2 inline-flex rounded-full bg-amber-100 px-2.5 py-1 text-xs font-bold text-amber-700">
-                      {item.stock_label}
-                    </div>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           </div>

@@ -93,7 +93,7 @@ export default function StockTransactionForm({ type, inventory, reasons, onClose
           Back to Inventory
         </button>
         <div className="flex items-center gap-3">
-          <div className={`flex h-12 w-12 items-center justify-center rounded-2xl ${type === 'in' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+          <div className={`flex h-12 w-12 items-center justify-center rounded-2xl ${type === 'in' ? 'bg-[var(--brand-icon-soft)] text-[var(--brand-icon)]' : 'bg-amber-100 text-amber-700'}`}>
             {type === 'in' ? <ArrowDownLeft className="h-6 w-6" /> : <ArrowUpRight className="h-6 w-6" />}
           </div>
           <div>
@@ -129,6 +129,8 @@ export default function StockTransactionForm({ type, inventory, reasons, onClose
                   value: item.sku,
                   label: `${item.productName} (${item.sku}) — Current: ${item.currentStock} ${item.unit}`,
                 }))}
+                searchable
+                searchPlaceholder="Search products…"
               />
               {errors.selectedSku && (
                 <p className="mt-1 text-xs text-rose-600">{errors.selectedSku}</p>
@@ -156,7 +158,7 @@ export default function StockTransactionForm({ type, inventory, reasons, onClose
                 }}
                 min={1}
                 placeholder="Enter quantity"
-                className={`h-12 w-full rounded-xl border bg-slate-50 px-4 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 ${
+                className={`h-12 w-full rounded-xl border bg-slate-50 px-4 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-[var(--brand-primary)] focus:bg-white focus:ring-4 focus:ring-[var(--brand-primary-soft)] ${
                   errors.quantity ? 'border-rose-400' : 'border-slate-200'
                 }`}
               />
@@ -191,7 +193,7 @@ export default function StockTransactionForm({ type, inventory, reasons, onClose
                   value={supplier}
                   onChange={(e) => setSupplier(e.target.value)}
                   placeholder="Supplier name"
-                  className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10"
+                  className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-[var(--brand-primary)] focus:bg-white focus:ring-4 focus:ring-[var(--brand-primary-soft)]"
                 />
               </div>
             )}
@@ -209,7 +211,7 @@ export default function StockTransactionForm({ type, inventory, reasons, onClose
                   if (errors.reference) setErrors((prev) => ({ ...prev, reference: '' }));
                 }}
                 placeholder="e.g. PO-2024-0012"
-                className={`h-12 w-full rounded-xl border bg-slate-50 px-4 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 ${
+                className={`h-12 w-full rounded-xl border bg-slate-50 px-4 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-[var(--brand-primary)] focus:bg-white focus:ring-4 focus:ring-[var(--brand-primary-soft)] ${
                   errors.reference ? 'border-rose-400' : 'border-slate-200'
                 }`}
               />
@@ -228,7 +230,7 @@ export default function StockTransactionForm({ type, inventory, reasons, onClose
                 onChange={(e) => setNotes(e.target.value)}
                 rows={3}
                 placeholder="Additional details about this transaction..."
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 resize-none"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-[var(--brand-primary)] focus:bg-white focus:ring-4 focus:ring-[var(--brand-primary-soft)] resize-none"
               />
             </div>
           </div>
@@ -247,7 +249,7 @@ export default function StockTransactionForm({ type, inventory, reasons, onClose
               disabled={saving}
               className={`inline-flex items-center justify-center gap-2 rounded-xl px-6 py-2.5 text-sm font-bold text-white shadow-lg transition disabled:opacity-60 disabled:cursor-not-allowed ${
                 type === 'in'
-                  ? 'bg-emerald-600 shadow-emerald-600/20 hover:bg-emerald-700'
+                  ? 'bg-[var(--brand-primary)] shadow-[color-mix(in_srgb,var(--brand-primary)_20%,transparent)] hover:brightness-95'
                   : 'bg-amber-600 shadow-amber-600/20 hover:bg-amber-700'
               }`}
             >

@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { DashboardSalesPoint } from '@/types/dashboard.types';
+import { readCssVar } from '@/components/providers/ThemeProvider';
+import { THEME_COLOR_DEFAULTS } from '@/constants/theme-defaults';
 
 interface Props {
   series: DashboardSalesPoint[];
@@ -9,19 +11,22 @@ interface Props {
 
 const SalesPerformanceChart = ({ series }: Props) => {
   const [isClient, setIsClient] = useState(false);
+  const [chartColor, setChartColor] = useState(
+    THEME_COLOR_DEFAULTS.chart_color
+  );
 
   useEffect(() => {
     setIsClient(true);
+    setChartColor(
+      readCssVar('--brand-chart', THEME_COLOR_DEFAULTS.chart_color)
+    );
   }, []);
 
   if (!isClient) {
     return <div className="h-72 animate-pulse rounded-2xl bg-slate-50" />;
   }
 
-  const data =
-    series.length > 0
-      ? series
-      : [{ label: '—', total: 0 }];
+  const data = series.length > 0 ? series : [{ label: '—', total: 0 }];
 
   const values = data.map((d) => d.total);
   const maxValue = Math.max(...values, 1);
@@ -64,8 +69,8 @@ const SalesPerformanceChart = ({ series }: Props) => {
         <svg viewBox={`0 0 ${width} ${height}`} className="h-72 w-full">
           <defs>
             <linearGradient id="gradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#10b981" stopOpacity="0.3" />
-              <stop offset="100%" stopColor="#10b981" stopOpacity="0" />
+              <stop offset="0%" stopColor={chartColor} stopOpacity="0.3" />
+              <stop offset="100%" stopColor={chartColor} stopOpacity="0" />
             </linearGradient>
             <filter id="shadow">
               <feGaussianBlur in="SourceGraphic" stdDeviation="1.5" />
@@ -86,7 +91,7 @@ const SalesPerformanceChart = ({ series }: Props) => {
 
           <path
             d={pathD}
-            stroke="#10b981"
+            stroke={chartColor}
             strokeWidth="3"
             fill="none"
             filter="url(#shadow)"
@@ -103,7 +108,7 @@ const SalesPerformanceChart = ({ series }: Props) => {
               cx={point.x}
               cy={point.y}
               r="4"
-              fill="#10b981"
+              fill={chartColor}
               stroke="#ffffff"
               strokeWidth="2"
             />
@@ -126,7 +131,12 @@ const SalesPerformanceChart = ({ series }: Props) => {
             index % labelStep === 0 || index === data.length - 1 ? (
               <text
                 key={`x-label-${index}`}
-                x={padding + (data.length > 1 ? (index / (data.length - 1)) * plotWidth : 0)}
+                x={
+                  padding +
+                  (data.length > 1
+                    ? (index / (data.length - 1)) * plotWidth
+                    : 0)
+                }
                 y={height - 8}
                 fontSize="10"
                 fill="#64748b"

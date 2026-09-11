@@ -52,7 +52,7 @@ const statusStyles: Record<PromoStatus, string> = {
   Expired: 'bg-rose-100 text-rose-700',
   Maxed: 'bg-amber-100 text-amber-700',
   Scheduled: 'bg-sky-100 text-sky-700',
-  Active: 'bg-emerald-100 text-emerald-700',
+  Active: 'bg-[var(--brand-icon-soft)] text-[var(--brand-icon)]',
   Inactive: 'bg-slate-100 text-slate-500',
 };
 
@@ -218,7 +218,7 @@ export default function PromoCodesPage() {
         {canCreate && (
           <button
             onClick={() => handleOpenForm('create')}
-            className="flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-violet-600/20 transition hover:bg-violet-700"
+            className="flex items-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-[color-mix(in_srgb,var(--brand-primary)_20%,transparent)] transition hover:brightness-95"
           >
             <Plus className="h-4 w-4" /> Add Coupon
           </button>
@@ -232,7 +232,7 @@ export default function PromoCodesPage() {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="Search by code..."
-            className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm outline-none focus:border-violet-500 focus:ring-4 focus:ring-violet-500/10"
+            className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm outline-none focus:border-[var(--brand-primary)] focus:ring-4 focus:ring-[var(--brand-primary-soft)]"
           />
         </div>
         {isTenantAdmin && (
@@ -323,7 +323,7 @@ export default function PromoCodesPage() {
                           onClick={() => handleToggle(p)}
                           disabled={togglingId === p.id}
                           className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition ${
-                            p.is_active ? 'bg-violet-600' : 'bg-slate-300'
+                            p.is_active ? 'bg-[var(--brand-primary)]' : 'bg-slate-300'
                           } ${togglingId === p.id ? 'opacity-60' : ''}`}
                           aria-label={p.is_active ? 'Deactivate' : 'Activate'}
                         >

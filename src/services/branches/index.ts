@@ -29,7 +29,6 @@ export const branchesApi = {
   create: async (payload: BranchCreateBootstrapPayload & { moduleIds: string[]; permissionIds: string[] }) => {
     const { data } = await api.post('/branches/create', {
       name: payload.name,
-      code: payload.code,
       address: payload.address,
       phone: payload.phone,
       is_active: payload.status !== 'inactive',
@@ -57,7 +56,6 @@ export const branchesApi = {
     const { data } = await api.put('/branches/update', {
       id,
       name: payload.name,
-      code: payload.code,
       address: payload.address,
       phone: payload.phone,
       is_active: payload.status !== 'inactive',

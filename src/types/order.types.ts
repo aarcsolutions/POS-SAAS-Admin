@@ -53,6 +53,7 @@ export interface OrderListItem {
   order_type: OrderType;
   branch_id?: string | null;
   table_name?: string | null;
+  table_id?: string | null;
   delivery_address?: string | null;
   delivery_city?: string | null;
   delivery_phone?: string | null;
@@ -120,6 +121,7 @@ export interface OrderDetailResponse {
 export interface CreateOrderPayload {
   customer_id: string;
   order_type: OrderType;
+  table_id?: string;
   table_name?: string;
   delivery_address?: string;
   delivery_city?: string;

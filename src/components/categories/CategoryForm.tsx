@@ -166,7 +166,7 @@ export default function CategoryForm({
               onChange={(e) => setName(e.target.value)}
               readOnly={isReadOnly}
               placeholder="e.g. Beverages"
-              className={`h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 ${
+              className={`h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm outline-none focus:border-[var(--brand-primary)] focus:ring-4 focus:ring-[var(--brand-primary-soft)] ${
                 isReadOnly ? 'opacity-70' : ''
               }`}
             />
@@ -226,7 +226,7 @@ export default function CategoryForm({
                 type="button"
                 disabled={isReadOnly || uploading}
                 onClick={() => fileRef.current?.click()}
-                className="flex h-40 w-40 flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 bg-slate-50 text-slate-400 transition hover:border-emerald-400 hover:bg-emerald-50/40 hover:text-emerald-600 disabled:opacity-60"
+                className="flex h-40 w-40 flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 bg-slate-50 text-slate-400 transition hover:border-[var(--brand-primary)] hover:bg-[var(--brand-icon-soft)]/40 hover:text-[var(--brand-primary)] disabled:opacity-60"
               >
                 {uploading ? (
                   <Loader2 className="h-6 w-6 animate-spin" />
@@ -243,7 +243,7 @@ export default function CategoryForm({
                 type="button"
                 disabled={uploading}
                 onClick={() => fileRef.current?.click()}
-                className="mt-2 text-xs font-semibold text-emerald-700 hover:underline"
+                className="mt-2 text-xs font-semibold text-[var(--brand-icon)] hover:underline"
               >
                 Replace image
               </button>
@@ -260,7 +260,7 @@ export default function CategoryForm({
               readOnly={isReadOnly}
               rows={4}
               placeholder="Optional category description..."
-              className={`w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 resize-none ${
+              className={`w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-[var(--brand-primary)] focus:ring-4 focus:ring-[var(--brand-primary-soft)] resize-none ${
                 isReadOnly ? 'opacity-70' : ''
               }`}
             />
@@ -278,7 +278,7 @@ export default function CategoryForm({
               <button
                 type="submit"
                 disabled={saving || uploading}
-                className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-70"
+                className="inline-flex items-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-bold text-white hover:brightness-95 disabled:opacity-70"
               >
                 {saving ? (
                   <Loader2 className="h-4 w-4 animate-spin" />

@@ -14,6 +14,8 @@ import {
 import CategoryTreePicker from '@/components/products/CategoryTreePicker';
 import { useCategoriesQuery } from '@/hooks/categories';
 import { filesApi } from '@/services/files';
+import { notifyError } from '@/utils/notify';
+import { blockInvalidSubmit } from '@/utils/form-validation';
 import {
   Product,
   ProductImage,
@@ -90,7 +92,7 @@ export default function ProductForm({
         ? 'Edit Product'
         : 'View Product';
 
-  const validate = () => {
+  const validate = (): Record<string, string> => {
     const next: Record<string, string> = {};
     if (!name.trim()) next.name = 'Name is required';
     if (!categoryId) next.category_id = 'Category is required';
@@ -104,7 +106,7 @@ export default function ProductForm({
       });
     }
     setErrors(next);
-    return Object.keys(next).length === 0;
+    return next;
   };
 
   const handleUpload = async (files: FileList | null) => {
@@ -138,7 +140,8 @@ export default function ProductForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isReadOnly) return;
-    if (!validate()) return;
+    const next = validate();
+    if (!blockInvalidSubmit(next, notifyError)) return;
 
     const payload: ProductPayload = {
       name: name.trim(),
@@ -205,7 +208,7 @@ export default function ProductForm({
               onChange={(e) => setName(e.target.value)}
               readOnly={isReadOnly}
               placeholder="e.g. Latte"
-              className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10"
+              className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm outline-none focus:border-[var(--brand-primary)] focus:ring-4 focus:ring-[var(--brand-primary-soft)]"
             />
             {errors.name && (
               <p className="mt-1 text-xs text-rose-600">{errors.name}</p>
@@ -236,7 +239,7 @@ export default function ProductForm({
               readOnly={isReadOnly}
               rows={3}
               placeholder="Short menu description..."
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 resize-none"
+              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-[var(--brand-primary)] focus:ring-4 focus:ring-[var(--brand-primary-soft)] resize-none"
             />
           </div>
 
@@ -292,7 +295,7 @@ export default function ProductForm({
                   value={price}
                   readOnly={isReadOnly}
                   onChange={(e) => setPrice(Number(e.target.value))}
-                  className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10"
+                  className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm outline-none focus:border-[var(--brand-primary)] focus:ring-4 focus:ring-[var(--brand-primary-soft)]"
                 />
                 {errors.price && (
                   <p className="mt-1 text-xs text-rose-600">{errors.price}</p>
@@ -309,7 +312,7 @@ export default function ProductForm({
                   value={costPrice}
                   readOnly={isReadOnly}
                   onChange={(e) => setCostPrice(Number(e.target.value))}
-                  className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10"
+                  className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm outline-none focus:border-[var(--brand-primary)] focus:ring-4 focus:ring-[var(--brand-primary-soft)]"
                 />
               </div>
             </div>
@@ -329,7 +332,7 @@ export default function ProductForm({
                       { name: '', price: 0, cost_price: 0 },
                     ])
                   }
-                  className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-emerald-700"
+                  className="inline-flex items-center gap-1 rounded-lg bg-[var(--brand-primary)] px-3 py-1.5 text-xs font-bold text-white hover:brightness-95"
                 >
                   <Plus className="h-3.5 w-3.5" /> Add
                 </button>
@@ -359,7 +362,7 @@ export default function ProductForm({
                       next[idx] = { ...v, name: e.target.value };
                       setVariants(next);
                     }}
-                    className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none focus:border-emerald-500"
+                    className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none focus:border-[var(--brand-primary)]"
                   />
                   <input
                     type="number"
@@ -373,7 +376,7 @@ export default function ProductForm({
                       next[idx] = { ...v, price: Number(e.target.value) };
                       setVariants(next);
                     }}
-                    className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none focus:border-emerald-500"
+                    className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none focus:border-[var(--brand-primary)]"
                   />
                   <input
                     type="number"
@@ -390,7 +393,7 @@ export default function ProductForm({
                       };
                       setVariants(next);
                     }}
-                    className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none focus:border-emerald-500"
+                    className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none focus:border-[var(--brand-primary)]"
                   />
                   {!isReadOnly && (
                     <button
@@ -427,7 +430,7 @@ export default function ProductForm({
                 type="button"
                 disabled={uploading}
                 onClick={() => fileRef.current?.click()}
-                className="flex w-full flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 py-8 text-slate-500 hover:border-emerald-400 hover:bg-emerald-50/40"
+                className="flex w-full flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 py-8 text-slate-500 hover:border-[var(--brand-primary)] hover:bg-[var(--brand-icon-soft)]/40"
               >
                 {uploading ? (
                   <Loader2 className="h-6 w-6 animate-spin" />
@@ -504,7 +507,7 @@ export default function ProductForm({
             <button
               type="submit"
               disabled={saving || uploading}
-              className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-70"
+              className="inline-flex items-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-bold text-white hover:brightness-95 disabled:opacity-70"
             >
               {saving ? (
                 <Loader2 className="h-4 w-4 animate-spin" />

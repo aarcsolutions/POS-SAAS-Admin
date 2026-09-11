@@ -51,9 +51,14 @@ export default function DispatchModal({ order, onClose }: Props) {
     }));
   }, [driversRes]);
 
+  const customerSiteBase = (
+    process.env.NEXT_PUBLIC_CUSTOMER_SITE_URL ||
+    (typeof window !== 'undefined' ? window.location.origin : '')
+  ).replace(/\/$/, '');
+
   const trackingUrl =
     result?.tracking_token && tenantSlug
-      ? `${typeof window !== 'undefined' ? window.location.origin : ''}/track/${result.tenant_slug || tenantSlug}/${result.tracking_token}`
+      ? `${customerSiteBase}/track/${result.tenant_slug || tenantSlug}/${result.tracking_token}`
       : '';
 
   const whatsAppUrl =
@@ -120,6 +125,8 @@ export default function DispatchModal({ order, onClose }: Props) {
                   onChange={setDriverId}
                   placeholder="Select driver"
                   options={driverOptions}
+                  searchable
+                  searchPlaceholder="Search drivers…"
                 />
               )}
             </div>
@@ -135,7 +142,7 @@ export default function DispatchModal({ order, onClose }: Props) {
                 type="button"
                 disabled={dispatchMutation.isPending || !driverId}
                 onClick={() => void handleDispatch()}
-                className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+                className="inline-flex items-center gap-2 rounded-lg bg-[var(--brand-primary)] px-4 py-2 text-sm font-semibold text-white hover:brightness-95 disabled:opacity-60"
               >
                 {dispatchMutation.isPending && (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -146,7 +153,7 @@ export default function DispatchModal({ order, onClose }: Props) {
           </div>
         ) : (
           <div className="mt-5 space-y-4">
-            <div className="rounded-xl bg-emerald-50 p-4 text-sm text-emerald-800">
+            <div className="rounded-xl bg-[var(--brand-icon-soft)] p-4 text-sm text-[var(--brand-icon)]">
               <div className="flex items-center gap-2 font-semibold">
                 <CheckCircle2 className="h-4 w-4" />
                 Order dispatched
@@ -167,7 +174,7 @@ export default function DispatchModal({ order, onClose }: Props) {
                 <button
                   type="button"
                   onClick={() => void copyTrackingLink()}
-                  className="inline-flex items-center gap-1 text-sm font-semibold text-amber-700"
+                  className="inline-flex items-center gap-1 text-sm font-semibold text-[var(--brand-primary)]"
                 >
                   <Copy className="h-4 w-4" /> Copy link
                 </button>

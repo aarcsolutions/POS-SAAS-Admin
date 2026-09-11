@@ -44,6 +44,7 @@ export default function RawMaterialTable({
             <th className="px-5 py-4">Material Name</th>
             <th className="px-5 py-4">Unit</th>
             <th className="px-5 py-4">Current Stock</th>
+            <th className="px-5 py-4">Min Qty</th>
             <th className="px-5 py-4">Created Date</th>
             <th className="px-5 py-4 text-right">Actions</th>
           </tr>
@@ -51,13 +52,13 @@ export default function RawMaterialTable({
         <tbody className="divide-y divide-slate-200 bg-white">
           {loading ? (
             <tr>
-              <td colSpan={5} className="py-12 text-center text-slate-400">
+              <td colSpan={6} className="py-12 text-center text-slate-400">
                 <Loader2 className="mx-auto h-5 w-5 animate-spin" />
               </td>
             </tr>
           ) : materials.length === 0 ? (
             <tr>
-              <td colSpan={5} className="py-12 text-center text-slate-400">
+              <td colSpan={6} className="py-12 text-center text-slate-400">
                 <Package className="mx-auto mb-2 h-8 w-8 opacity-40" />
                 No raw materials found.
               </td>
@@ -71,6 +72,9 @@ export default function RawMaterialTable({
                 <td className="px-5 py-4 text-slate-600">{m.unit}</td>
                 <td className="px-5 py-4 font-semibold text-slate-800">
                   {Number(m.stock_quantity).toLocaleString()}
+                </td>
+                <td className="px-5 py-4 text-slate-600">
+                  {Number(m.min_stock_level ?? 0).toLocaleString()}
                 </td>
                 <td className="px-5 py-4 text-slate-600">
                   {formatDate(m.created_at)}

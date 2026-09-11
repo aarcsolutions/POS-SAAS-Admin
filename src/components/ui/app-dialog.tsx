@@ -47,7 +47,7 @@ export function AppDialog() {
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200"
+      className="fixed inset-0 z-[60] flex items-center justify-center bg-[color-mix(in_srgb,var(--brand-primary-dark)_40%,transparent)] backdrop-blur-sm animate-in fade-in duration-200"
       role="presentation"
       onClick={isConfirm ? handleCancel : handleConfirm}
     >
@@ -60,25 +60,24 @@ export function AppDialog() {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-4 flex items-center gap-4">
-          <div
-            className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full ${
-              isDanger ? 'bg-rose-100' : 'bg-[#fde5c5]'
-            }`}
-          >
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[var(--brand-toast-soft)]">
             {isDanger ? (
-              <AlertCircle className="h-6 w-6 text-rose-600" />
+              <AlertCircle className="h-6 w-6 text-[var(--brand-toast)]" />
             ) : (
-              <Info className="h-6 w-6 text-[#d97706]" />
+              <Info className="h-6 w-6 text-[var(--brand-toast)]" />
             )}
           </div>
           <div>
-            <h2 id="app-dialog-title" className="text-xl font-bold text-[#3e2a18]">
+            <h2
+              id="app-dialog-title"
+              className="text-xl font-bold text-[var(--brand-primary-dark)]"
+            >
               {active.title}
             </h2>
           </div>
         </div>
 
-        <p id="app-dialog-desc" className="mb-6 text-sm text-slate-600">
+        <p id="app-dialog-desc" className="mb-6 text-sm text-[var(--admin-muted)]">
           {active.message}
         </p>
 
@@ -87,7 +86,7 @@ export function AppDialog() {
             <button
               type="button"
               onClick={handleCancel}
-              className="flex-1 rounded-xl bg-slate-100 px-4 py-2.5 text-sm font-bold text-slate-700 transition hover:bg-slate-200 sm:flex-none"
+              className="flex-1 rounded-xl bg-[var(--admin-surface)] px-4 py-2.5 text-sm font-bold text-[var(--brand-primary-dark)] transition hover:bg-[var(--brand-primary-soft)] sm:flex-none"
             >
               {active.cancelLabel}
             </button>
@@ -96,11 +95,7 @@ export function AppDialog() {
             type="button"
             onClick={handleConfirm}
             autoFocus
-            className={`flex-1 rounded-xl px-4 py-2.5 text-sm font-bold text-white shadow-md transition sm:flex-none ${
-              isDanger
-                ? 'bg-rose-600 shadow-rose-600/20 hover:bg-rose-700'
-                : 'bg-[#d97706] shadow-[#d97706]/25 hover:bg-[#b45309]'
-            }`}
+            className="flex-1 rounded-xl bg-[var(--brand-toast)] px-4 py-2.5 text-sm font-bold text-white shadow-md shadow-[color-mix(in_srgb,var(--brand-toast)_25%,transparent)] transition hover:brightness-95 sm:flex-none"
           >
             {active.confirmLabel}
           </button>

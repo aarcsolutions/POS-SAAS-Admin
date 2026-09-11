@@ -115,7 +115,7 @@ export default function InventoryPage() {
 
   const getStatusStyle = (status: string) => {
     switch (status) {
-      case 'optimal': return 'bg-emerald-100 text-emerald-700';
+      case 'optimal': return 'bg-[var(--brand-icon-soft)] text-[var(--brand-icon)]';
       case 'low': return 'bg-amber-100 text-amber-700';
       case 'critical': return 'bg-rose-100 text-rose-700';
       case 'out': return 'bg-slate-100 text-slate-500';
@@ -181,7 +181,7 @@ export default function InventoryPage() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => { setTransactionType('in'); setShowTransactionForm(true); }}
-            className="flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-emerald-600/20 transition hover:bg-emerald-700"
+            className="flex items-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-[color-mix(in_srgb,var(--brand-primary)_20%,transparent)] transition hover:brightness-95"
           >
             <ArrowDownLeft className="h-4 w-4" />
             Stock In
@@ -199,7 +199,7 @@ export default function InventoryPage() {
       {/* Stats */}
       <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-5">
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
+          <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-[var(--brand-icon-soft)] text-[var(--brand-icon)]">
             <Boxes className="h-5 w-5" />
           </div>
           <div className="text-sm font-medium text-slate-500">Total Items</div>
@@ -207,7 +207,7 @@ export default function InventoryPage() {
         </div>
 
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
+          <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-[var(--brand-icon-soft)] text-[var(--brand-icon)]">
             <Warehouse className="h-5 w-5" />
           </div>
           <div className="text-sm font-medium text-slate-500">Total Stock Units</div>
@@ -215,7 +215,7 @@ export default function InventoryPage() {
         </div>
 
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-rose-50 text-rose-700">
+          <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-[var(--brand-icon-soft)] text-[var(--brand-icon)]">
             <AlertTriangle className="h-5 w-5" />
           </div>
           <div className="text-sm font-medium text-slate-500">Low Stock Alerts</div>
@@ -223,15 +223,15 @@ export default function InventoryPage() {
         </div>
 
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
+          <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-[var(--brand-icon-soft)] text-[var(--brand-icon)]">
             <TrendingUp className="h-5 w-5" />
           </div>
           <div className="text-sm font-medium text-slate-500">Stock In (Total)</div>
-          <div className="mt-1 text-2xl font-bold text-emerald-600">{stockInCount}</div>
+          <div className="mt-1 text-2xl font-bold text-[var(--brand-primary)]">{stockInCount}</div>
         </div>
 
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-amber-50 text-amber-700">
+          <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-[var(--brand-icon-soft)] text-[var(--brand-icon)]">
             <TrendingDown className="h-5 w-5" />
           </div>
           <div className="text-sm font-medium text-slate-500">Stock Out (Total)</div>
@@ -275,7 +275,7 @@ export default function InventoryPage() {
               key={tab.id}
               onClick={() => setActiveTab(tab.id as typeof activeTab)}
               className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition
-                ${activeTab === tab.id ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20' : 'text-slate-600 hover:bg-slate-50'}`}
+                ${activeTab === tab.id ? 'bg-[var(--brand-primary)] text-white shadow-md shadow-[color-mix(in_srgb,var(--brand-primary)_20%,transparent)]' : 'text-slate-600 hover:bg-slate-50'}`}
             >
               <TabIcon className="h-4 w-4" />
               {tab.label}
@@ -293,7 +293,7 @@ export default function InventoryPage() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search by product name, SKU, or supplier..."
-            className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10"
+            className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm outline-none transition focus:border-[var(--brand-primary)] focus:ring-4 focus:ring-[var(--brand-primary-soft)]"
           />
         </div>
         {activeTab === 'overview' && (
@@ -347,7 +347,7 @@ export default function InventoryPage() {
                 <tr key={item.id} className="transition hover:bg-slate-50">
                   <td className="px-5 py-4">
                     <div className="flex items-center gap-3">
-                      <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-100 text-sm font-bold text-emerald-700">
+                      <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--brand-icon-soft)] text-sm font-bold text-[var(--brand-icon)]">
                         {item.productName.charAt(0)}
                       </div>
                       <div>
@@ -365,7 +365,7 @@ export default function InventoryPage() {
                     <div className="mt-1 h-1.5 w-24 overflow-hidden rounded-full bg-slate-100">
                       <div
                         className={`h-full rounded-full transition-all ${
-                          item.status === 'optimal' ? 'bg-emerald-500' :
+                          item.status === 'optimal' ? 'bg-[var(--brand-icon-soft)]0' :
                           item.status === 'low' ? 'bg-amber-500' :
                           item.status === 'critical' ? 'bg-rose-500' : 'bg-slate-300'
                         }`}
@@ -401,7 +401,7 @@ export default function InventoryPage() {
                         }}
                         className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-slate-700 transition hover:bg-slate-50"
                       >
-                        <ArrowDownLeft className="h-4 w-4 text-emerald-600" />
+                        <ArrowDownLeft className="h-4 w-4 text-[var(--brand-primary)]" />
                         Stock In
                       </button>
                       <button
@@ -448,7 +448,7 @@ export default function InventoryPage() {
                 <tr key={t.id} className="transition hover:bg-slate-50">
                   <td className="px-5 py-4">
                     <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold ${
-                      t.type === 'in' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
+                      t.type === 'in' ? 'bg-[var(--brand-icon-soft)] text-[var(--brand-icon)]' : 'bg-amber-100 text-amber-700'
                     }`}>
                       {t.type === 'in' ? <ArrowDownLeft className="h-3 w-3" /> : <ArrowUpRight className="h-3 w-3" />}
                       {t.type === 'in' ? 'IN' : 'OUT'}

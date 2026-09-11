@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import {
   Plus,
   Search,
@@ -15,6 +16,7 @@ import {
   ChevronRight,
   Power,
   PowerOff,
+  RefreshCw,
 } from 'lucide-react';
 import ProductForm from '@/components/products/ProductForm';
 import RowActionsMenu from '@/components/ui/RowActionsMenu';
@@ -94,7 +96,7 @@ function CategoryCard({
     <button
       type="button"
       onClick={onClick}
-      className="group flex h-full w-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white text-left shadow-sm transition hover:border-emerald-200 hover:shadow-md"
+      className="group flex h-full w-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white text-left shadow-sm transition hover:border-[var(--admin-border)] hover:shadow-md"
     >
       <div className="relative aspect-square w-full shrink-0 overflow-hidden bg-slate-100">
         {category.image_url ? (
@@ -126,7 +128,7 @@ function CategoryCard({
             {productCount} product{productCount === 1 ? '' : 's'}
             {subcategoryCount > 0 ? ` · ${subcategoryCount} sub` : ''}
           </span>
-          <ChevronRight className="h-4 w-4 shrink-0 text-emerald-600 opacity-0 transition group-hover:opacity-100" />
+          <ChevronRight className="h-4 w-4 shrink-0 text-[var(--brand-primary)] opacity-0 transition group-hover:opacity-100" />
         </div>
       </div>
     </button>
@@ -155,6 +157,7 @@ export default function ProductsPage() {
   const canCreate = usePermission(ENTITY_PERMS.products.create);
   const canUpdate = usePermission(ENTITY_PERMS.products.update);
   const canDelete = usePermission(ENTITY_PERMS.products.delete);
+  const canSync = usePermission(ENTITY_PERMS.products.sync);
 
   const debouncedSearch = useDebouncedValue(searchTerm.trim(), 300);
   const debouncedMinPrice = useDebouncedValue(minPrice.trim(), 300);
@@ -400,14 +403,24 @@ export default function ProductsPage() {
               : 'Choose a category to view products and subcategories'}
           </p>
         </div>
-        {canCreate && (
-          <button
-            onClick={() => handleOpen('create')}
-            className="flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-emerald-600/20 transition hover:bg-emerald-700"
-          >
-            <Plus className="h-4 w-4" /> Add Product
-          </button>
-        )}
+        <div className="flex flex-wrap items-center gap-2">
+          {isTenantAdmin && canSync && (
+            <Link
+              href="/products/sync"
+              className="flex items-center gap-2 rounded-xl border border-[var(--admin-border)] bg-white px-4 py-2.5 text-sm font-bold text-[var(--brand-primary)] shadow-sm transition hover:bg-[color-mix(in_srgb,var(--brand-primary)_6%,white)]"
+            >
+              <RefreshCw className="h-4 w-4" /> Sync Products
+            </Link>
+          )}
+          {canCreate && (
+            <button
+              onClick={() => handleOpen('create')}
+              className="flex items-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-[color-mix(in_srgb,var(--brand-primary)_20%,transparent)] transition hover:brightness-95"
+            >
+              <Plus className="h-4 w-4" /> Add Product
+            </button>
+          )}
+        </div>
       </div>
 
       {selectedCategoryId && (
@@ -428,7 +441,7 @@ export default function ProductsPage() {
                 <button
                   type="button"
                   onClick={() => goToCategory(c.id)}
-                  className="font-medium text-slate-500 hover:text-emerald-700"
+                  className="font-medium text-slate-500 hover:text-[var(--brand-icon)]"
                 >
                   {c.name}
                 </button>
@@ -449,7 +462,7 @@ export default function ProductsPage() {
                 ? 'Search products in this category...'
                 : 'Search categories...'
             }
-            className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10"
+            className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm outline-none focus:border-[var(--brand-primary)] focus:ring-4 focus:ring-[var(--brand-primary-soft)]"
           />
         </div>
         {isTenantAdmin && (
@@ -479,7 +492,7 @@ export default function ProductsPage() {
                 value={minPrice}
                 onChange={(e) => setMinPrice(e.target.value)}
                 placeholder="Min price"
-                className="h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 lg:w-28"
+                className="h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm outline-none focus:border-[var(--brand-primary)] focus:ring-4 focus:ring-[var(--brand-primary-soft)] lg:w-28"
               />
               <span className="text-sm text-slate-400">–</span>
               <input
@@ -489,7 +502,7 @@ export default function ProductsPage() {
                 value={maxPrice}
                 onChange={(e) => setMaxPrice(e.target.value)}
                 placeholder="Max price"
-                className="h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 lg:w-28"
+                className="h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm outline-none focus:border-[var(--brand-primary)] focus:ring-4 focus:ring-[var(--brand-primary-soft)] lg:w-28"
               />
             </div>
             {hasPriceFilters && (
@@ -557,7 +570,7 @@ export default function ProductsPage() {
                     return (
                       <div
                         key={product.id}
-                        className="group relative flex h-full w-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:border-emerald-200 hover:shadow-md"
+                        className="group relative flex h-full w-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:border-[var(--admin-border)] hover:shadow-md"
                       >
                         <div className="relative aspect-square w-full shrink-0 overflow-hidden bg-slate-100">
                           {imageUrl ? (
@@ -576,7 +589,7 @@ export default function ProductsPage() {
                             <span
                               className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${
                                 product.is_active
-                                  ? 'bg-emerald-600 text-white'
+                                  ? 'bg-[var(--brand-primary)] text-white'
                                   : 'bg-slate-700 text-white'
                               }`}
                             >
@@ -676,7 +689,7 @@ export default function ProductsPage() {
                               <button
                                 type="button"
                                 onClick={() => handleOpen('edit', product)}
-                                className="shrink-0 rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700"
+                                className="shrink-0 rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-[var(--brand-icon-soft)] hover:text-[var(--brand-icon)]"
                               >
                                 Edit
                               </button>

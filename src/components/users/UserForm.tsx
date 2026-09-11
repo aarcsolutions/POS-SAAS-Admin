@@ -93,7 +93,7 @@ export default function UserForm({
               value={name}
               onChange={(e) => setName(e.target.value)}
               readOnly={isReadOnly}
-              className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm outline-none focus:border-emerald-500"
+              className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm outline-none focus:border-[var(--brand-primary)]"
               placeholder="e.g. Ahmed Khan"
             />
             {errors.name && <p className="mt-1 text-xs text-rose-600">{errors.name}</p>}
@@ -108,7 +108,7 @@ export default function UserForm({
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               readOnly={isReadOnly}
-              className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm outline-none focus:border-emerald-500"
+              className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm outline-none focus:border-[var(--brand-primary)]"
               placeholder="user@tenant.com"
             />
             {errors.email && <p className="mt-1 text-xs text-rose-600">{errors.email}</p>}
@@ -162,6 +162,8 @@ export default function UserForm({
                 value: role.id,
                 label: role.title,
               }))}
+              searchable
+              searchPlaceholder="Search roles…"
             />
             {errors.roleId && (
               <p className="mt-1 text-xs text-rose-600">{errors.roleId}</p>
@@ -180,7 +182,7 @@ export default function UserForm({
               <button
                 type="submit"
                 disabled={saving}
-                className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-70"
+                className="inline-flex items-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-bold text-white hover:brightness-95 disabled:opacity-70"
               >
                 {saving ? (
                   <Loader2 className="h-4 w-4 animate-spin" />

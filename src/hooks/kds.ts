@@ -1,14 +1,18 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { kdsApi, KdsMarkReadyAction } from '@/services/kds';
+import { useOrderSocketConnected } from '@/components/realtime/OrderSocketProvider';
 import { toast } from 'sonner';
 
-export const useKdsQueueQuery = () =>
-  useQuery({
+export const useKdsQueueQuery = () => {
+  const socketConnected = useOrderSocketConnected();
+
+  return useQuery({
     queryKey: ['kds'],
     queryFn: () => kdsApi.getAll(),
-    refetchInterval: 8000,
+    refetchInterval: socketConnected ? 60000 : 8000,
     placeholderData: (previousData) => previousData,
   });
+};
 
 export const useKdsMarkReadyMutation = () => {
   const queryClient = useQueryClient();

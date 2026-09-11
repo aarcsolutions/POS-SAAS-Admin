@@ -1,11 +1,17 @@
-export type DashboardPeriod = '7d' | '30d' | '90d' | 'month' | 'year';
+export type DashboardPeriod = '7d' | '30d' | '90d' | 'month' | 'year' | 'custom';
+
+export type DashboardDateRange = {
+  from: string;
+  to: string;
+};
 
 export interface DashboardLowStockItem {
   id: string;
   name: string;
-  sku: string;
+  sku?: string;
   unit: string;
   stock_quantity: number;
+  min_stock_level: number;
   stock_label: string;
 }
 

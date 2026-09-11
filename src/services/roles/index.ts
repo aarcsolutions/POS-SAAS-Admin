@@ -25,7 +25,7 @@ export const rolesApi = {
     return data;
   },
 
-  create: async (payload: { title: string }) => {
+  create: async (payload: { title: string; branch_id?: string | null }) => {
     const { data } = await api.post('/roles/create', payload);
     return data;
   },

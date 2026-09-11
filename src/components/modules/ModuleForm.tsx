@@ -99,7 +99,7 @@ export default function ModuleForm({
                 value={data.title}
                 onChange={(e) => update('title', e.target.value)}
                 readOnly={isReadOnly}
-                className={`h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm outline-none focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 ${
+                className={`h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm outline-none focus:border-[var(--brand-primary)] focus:bg-white focus:ring-4 focus:ring-[var(--brand-primary-soft)] ${
                   isReadOnly ? 'cursor-default opacity-70' : ''
                 }`}
               />
@@ -116,7 +116,7 @@ export default function ModuleForm({
                 value={data.slug}
                 onChange={(e) => update('slug', e.target.value)}
                 readOnly={isReadOnly}
-                className={`h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 font-mono text-sm outline-none focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 ${
+                className={`h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 font-mono text-sm outline-none focus:border-[var(--brand-primary)] focus:bg-white focus:ring-4 focus:ring-[var(--brand-primary-soft)] ${
                   isReadOnly ? 'cursor-default opacity-70' : ''
                 }`}
               />
@@ -135,7 +135,7 @@ export default function ModuleForm({
               onChange={(e) => update('description', e.target.value)}
               readOnly={isReadOnly}
               rows={4}
-              className={`w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 ${
+              className={`w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-[var(--brand-primary)] focus:bg-white focus:ring-4 focus:ring-[var(--brand-primary-soft)] ${
                 isReadOnly ? 'cursor-default opacity-70' : ''
               }`}
             />
@@ -153,7 +153,7 @@ export default function ModuleForm({
               <button
                 type="submit"
                 disabled={saving}
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-6 py-2.5 text-sm font-bold text-white shadow-lg shadow-emerald-600/20 transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-[var(--brand-primary)] px-6 py-2.5 text-sm font-bold text-white shadow-lg shadow-[color-mix(in_srgb,var(--brand-primary)_20%,transparent)] transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {saving && <Loader2 className="h-4 w-4 animate-spin" />}
                 {saving

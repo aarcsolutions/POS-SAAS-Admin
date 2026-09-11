@@ -155,7 +155,7 @@ export default function CustomersPage() {
   if (formLoading) {
     return (
       <div className="flex justify-center py-24">
-        <Loader2 className="h-8 w-8 animate-spin text-emerald-600" />
+        <Loader2 className="h-8 w-8 animate-spin text-[var(--brand-primary)]" />
       </div>
     );
   }
@@ -201,7 +201,7 @@ export default function CustomersPage() {
         {canCreate && (
           <button
             onClick={() => handleOpenForm('create')}
-            className="flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-emerald-600/20 transition hover:bg-emerald-700"
+            className="flex items-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-[color-mix(in_srgb,var(--brand-primary)_20%,transparent)] transition hover:brightness-95"
           >
             <Plus className="h-4 w-4" /> Add Customer
           </button>
@@ -215,7 +215,7 @@ export default function CustomersPage() {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="Search by name, phone, email, or city..."
-            className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10"
+            className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm outline-none focus:border-[var(--brand-primary)] focus:ring-4 focus:ring-[var(--brand-primary-soft)]"
           />
         </div>
         {isTenantAdmin && (
@@ -273,7 +273,7 @@ export default function CustomersPage() {
                 <tr key={c.id} className="transition hover:bg-slate-50">
                   <td className="px-5 py-4">
                     <div className="flex items-center gap-3">
-                      <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-100 text-sm font-bold text-blue-700">
+                      <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-100 text-sm font-bold text-[var(--brand-icon)]">
                         {c.name.charAt(0).toUpperCase()}
                       </div>
                       <div>
@@ -307,7 +307,7 @@ export default function CustomersPage() {
                     <span
                       className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
                         c.marketing_subscribed
-                          ? 'bg-emerald-100 text-emerald-700'
+                          ? 'bg-[var(--brand-icon-soft)] text-[var(--brand-icon)]'
                           : 'bg-slate-100 text-slate-500'
                       }`}
                     >
@@ -331,7 +331,7 @@ export default function CustomersPage() {
                       <span
                         className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
                           c.branch_id
-                            ? 'bg-sky-50 text-sky-700'
+                            ? 'bg-[var(--brand-icon-soft)] text-[var(--brand-icon)]'
                             : 'bg-slate-100 text-slate-600'
                         }`}
                       >
@@ -343,7 +343,7 @@ export default function CustomersPage() {
                     <span
                       className={`rounded-full px-3 py-1 text-xs font-bold ${
                         c.is_active
-                          ? 'bg-emerald-100 text-emerald-700'
+                          ? 'bg-[var(--brand-icon-soft)] text-[var(--brand-icon)]'
                           : 'bg-slate-100 text-slate-500'
                       }`}
                     >

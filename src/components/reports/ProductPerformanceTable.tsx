@@ -31,17 +31,17 @@ export default function ProductPerformanceTable({
   return (
     <div className="space-y-6">
       {top && (
-        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 shadow-sm">
+        <div className="rounded-2xl border border-[var(--admin-border)] bg-[var(--brand-icon-soft)] p-5 shadow-sm">
           <div className="flex items-center gap-4">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--brand-icon-soft)] text-[var(--brand-icon)]">
               <Award className="h-7 w-7" />
             </div>
             <div className="flex-1">
-              <div className="text-xs font-bold uppercase tracking-wider text-emerald-600">
+              <div className="text-xs font-bold uppercase tracking-wider text-[var(--brand-primary)]">
                 Top Performer
               </div>
-              <div className="text-lg font-bold text-emerald-800">{top.name}</div>
-              <div className="text-sm text-emerald-600">
+              <div className="text-lg font-bold text-[var(--brand-icon)]">{top.name}</div>
+              <div className="text-sm text-[var(--brand-primary)]">
                 {top.revenueFormatted} · {top.unitsSold} units ·{' '}
                 {top.orderCount} orders
               </div>
@@ -57,7 +57,7 @@ export default function ProductPerformanceTable({
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
           placeholder="Search products by name..."
-          className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10"
+          className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm outline-none transition focus:border-[var(--brand-primary)] focus:ring-4 focus:ring-[var(--brand-primary-soft)]"
         />
       </div>
 
@@ -79,9 +79,9 @@ export default function ProductPerformanceTable({
                   <div
                     className={`flex h-8 w-8 items-center justify-center rounded-lg text-xs font-bold ${
                       i === 0
-                        ? 'bg-emerald-100 text-emerald-700'
+                        ? 'bg-[var(--brand-icon-soft)] text-[var(--brand-icon)]'
                         : i === 1
-                          ? 'bg-blue-100 text-blue-700'
+                          ? 'bg-blue-100 text-[var(--brand-icon)]'
                           : i === 2
                             ? 'bg-amber-100 text-amber-700'
                             : 'bg-slate-100 text-slate-500'
@@ -92,7 +92,7 @@ export default function ProductPerformanceTable({
                 </td>
                 <td className="px-5 py-4">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-100 text-sm font-bold text-emerald-700">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--brand-icon-soft)] text-sm font-bold text-[var(--brand-icon)]">
                       {p.name.charAt(0)}
                     </div>
                     <div className="font-semibold text-slate-800">{p.name}</div>

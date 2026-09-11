@@ -1,6 +1,9 @@
 'use client';
 
+import { useEffect, useMemo, useState } from 'react';
 import { DashboardPaymentMixItem } from '@/types/dashboard.types';
+import { readCssVar } from '@/components/providers/ThemeProvider';
+import { THEME_COLOR_DEFAULTS } from '@/constants/theme-defaults';
 
 const methodLabels: Record<string, string> = {
   cod: 'Cash on Delivery',
@@ -9,14 +12,56 @@ const methodLabels: Record<string, string> = {
   unknown: 'Unknown',
 };
 
-const methodColors = ['#10b981', '#3b82f6', '#f59e0b', '#8b5cf6', '#64748b'];
-
 interface Props {
   items: DashboardPaymentMixItem[];
 }
 
+function buildPalette(primary: string, secondary: string) {
+  return [
+    primary,
+    secondary,
+    `color-mix(in srgb, ${primary} 70%, white)`,
+    `color-mix(in srgb, ${secondary} 70%, black)`,
+    `color-mix(in srgb, ${primary} 45%, ${secondary})`,
+  ];
+}
+
 export default function PaymentMixChart({ items }: Props) {
+  const [palette, setPalette] = useState(() =>
+    buildPalette(
+      THEME_COLOR_DEFAULTS.chart_color,
+      THEME_COLOR_DEFAULTS.chart_secondary
+    )
+  );
+
+  useEffect(() => {
+    setPalette(
+      buildPalette(
+        readCssVar('--brand-chart', THEME_COLOR_DEFAULTS.chart_color),
+        readCssVar(
+          '--brand-chart-secondary',
+          THEME_COLOR_DEFAULTS.chart_secondary
+        )
+      )
+    );
+  }, []);
+
   const total = items.reduce((sum, i) => sum + i.amount, 0);
+
+  const segments = useMemo(() => {
+    if (items.length === 0 || total <= 0) return [];
+    let cumulative = 0;
+    return items.map((item, index) => {
+      const start = cumulative;
+      cumulative += item.percent;
+      return {
+        ...item,
+        start,
+        end: cumulative,
+        color: palette[index % palette.length],
+      };
+    });
+  }, [items, palette, total]);
 
   if (items.length === 0 || total <= 0) {
     return (
@@ -25,13 +70,6 @@ export default function PaymentMixChart({ items }: Props) {
       </div>
     );
   }
-
-  let cumulative = 0;
-  const segments = items.map((item, index) => {
-    const start = cumulative;
-    cumulative += item.percent;
-    return { ...item, start, end: cumulative, color: methodColors[index % methodColors.length] };
-  });
 
   const gradient = segments
     .map((s) => `${s.color} ${s.start}% ${s.end}%`)
@@ -62,7 +100,7 @@ export default function PaymentMixChart({ items }: Props) {
               <span className="flex items-center gap-2 font-medium text-slate-700">
                 <span
                   className="h-2.5 w-2.5 rounded-full"
-                  style={{ backgroundColor: methodColors[index % methodColors.length] }}
+                  style={{ backgroundColor: palette[index % palette.length] }}
                 />
                 {methodLabels[item.method] || item.method}
               </span>
@@ -75,7 +113,7 @@ export default function PaymentMixChart({ items }: Props) {
                 className="h-full rounded-full transition-all"
                 style={{
                   width: `${item.percent}%`,
-                  backgroundColor: methodColors[index % methodColors.length],
+                  backgroundColor: palette[index % palette.length],
                 }}
               />
             </div>

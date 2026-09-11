@@ -28,11 +28,25 @@ export const ENTITY_PERMS = {
     delete: 'modules/delete',
   },
   business_settings: {
-    list:   'business_settings/getAll',
-    create: 'business_settings/create',
-    read:   'business_settings/getById',
-    update: 'business_settings/update',
-    delete: 'business_settings/delete',
+    list:   'business-settings/getAll',
+    create: 'business-settings/create',
+    read:   'business-settings/getById',
+    update: 'business-settings/update',
+    delete: 'business-settings/delete',
+  },
+  website: {
+    list:   'website/getAll',
+    update: 'website/update',
+  },
+  theme: {
+    list:   'theme/getAll',
+    update: 'theme/update',
+  },
+  tenant_billing: {
+    list:   'tenant-billing/myInvoices',
+    read:   'tenant-billing/myInvoiceById',
+    submit: 'tenant-billing/submitPayment',
+    payments: 'tenant-billing/myPayments',
   },
   branches: {
     list:   'branches/getAll',
@@ -61,6 +75,14 @@ export const ENTITY_PERMS = {
     read:   'products/getById',
     update: 'products/update',
     delete: 'products/delete',
+    sync:   'products/sync',
+  },
+  taxes: {
+    list:   'taxes/getAll',
+    create: 'taxes/create',
+    read:   'taxes/getById',
+    update: 'taxes/update',
+    delete: 'taxes/delete',
   },
   recipes: {
     list:   'recipes/getAll',
@@ -141,6 +163,18 @@ export const ENTITY_PERMS = {
     read:   'suppliers/getById',
     update: 'suppliers/update',
     delete: 'suppliers/delete',
+    extras: {
+      createPurchase: 'suppliers/createPurchase',
+      getAllPurchases: 'suppliers/getAllPurchases',
+      getPurchaseById: 'suppliers/getPurchaseById',
+      updatePurchase: 'suppliers/updatePurchase',
+      markOrdered: 'suppliers/markOrdered',
+      receivePurchase: 'suppliers/receivePurchase',
+      cancelPurchase: 'suppliers/cancelPurchase',
+      sendPurchaseEmail: 'suppliers/sendPurchaseEmail',
+      assignRawMaterials: 'suppliers/assignRawMaterials',
+      matchByMaterials: 'suppliers/matchByMaterials',
+    },
   },
   payments: {
     list: 'payments/getAll',
@@ -166,5 +200,12 @@ export const ENTITY_PERMS = {
     read: 'catering/getById',
     update: 'catering/update',
     delete: 'catering/delete',
+  },
+  tables: {
+    list: 'tables/getAll',
+    create: 'tables/create',
+    read: 'tables/getById',
+    update: 'tables/update',
+    delete: 'tables/delete',
   },
 } as const;

@@ -3,11 +3,32 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --brand-primary: #d97706;
+  --brand-primary-dark: #5b3b1e;
+  --brand-accent: #d97706;
+  --brand-gold: #c5a04d;
+  --brand-icon: #d97706;
+  --brand-chart: #d97706;
+  --brand-chart-secondary: #b45309;
+  --brand-toast: #d97706;
+  --brand-primary-soft: color-mix(in srgb, var(--brand-primary) 14%, white);
+  --brand-accent-soft: color-mix(in srgb, var(--brand-accent) 14%, white);
+  --brand-icon-soft: color-mix(in srgb, var(--brand-icon) 14%, white);
+  --brand-toast-soft: color-mix(in srgb, var(--brand-toast) 14%, white);
+  --admin-bg: #f7f1e6;
+  --admin-surface: #fff7ee;
+  --admin-border: #ecd6b6;
+  --admin-muted: #a16f4f;
+  --admin-sidebar-text: #fde4b6;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-brand-primary: var(--brand-primary);
+  --color-brand-primary-dark: var(--brand-primary-dark);
+  --color-brand-accent: var(--brand-accent);
+  --color-brand-gold: var(--brand-gold);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
@@ -18,6 +39,11 @@ body {
   font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
 }
 
+/* Native checkboxes follow admin theme (sidebar / brand primary) */
+input[type='checkbox'] {
+  accent-color: var(--brand-primary);
+}
+
 *::-webkit-scrollbar {
   display: none;
 }
@@ -25,4 +51,107 @@ body {
 * {
   -ms-overflow-style: none;
   scrollbar-width: none;
+}
+
+@keyframes selectPanelIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes selectItemIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Brand toasts — driven by theme toast color */
+[data-sonner-toaster] {
+  --normal-bg: var(--brand-toast) !important;
+  --normal-border: var(--brand-primary-dark) !important;
+  --normal-text: #ffffff !important;
+  --success-bg: var(--brand-toast) !important;
+  --success-border: var(--brand-primary-dark) !important;
+  --success-text: #ffffff !important;
+  --error-bg: var(--brand-toast) !important;
+  --error-border: var(--brand-primary-dark) !important;
+  --error-text: #ffffff !important;
+  --info-bg: var(--brand-toast) !important;
+  --info-border: var(--brand-primary-dark) !important;
+  --info-text: #ffffff !important;
+  --warning-bg: var(--brand-toast) !important;
+  --warning-border: var(--brand-primary-dark) !important;
+  --warning-text: #ffffff !important;
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+}
+
+[data-sonner-toast],
+[data-sonner-toast][data-styled="true"],
+[data-sonner-toast][data-type="success"],
+[data-sonner-toast][data-type="error"],
+[data-sonner-toast][data-type="info"],
+[data-sonner-toast][data-type="warning"],
+[data-sonner-toast].saas-toast,
+[data-sonner-toast].saas-toast-success,
+[data-sonner-toast].saas-toast-error,
+[data-sonner-toast].saas-toast-info,
+[data-sonner-toast].saas-toast-warning {
+  background: var(--brand-toast) !important;
+  background-color: var(--brand-toast) !important;
+  border: 1px solid var(--brand-primary-dark) !important;
+  color: #ffffff !important;
+  border-radius: 16px !important;
+  box-shadow: 0 14px 40px color-mix(in srgb, var(--brand-toast) 28%, transparent) !important;
+  opacity: 1 !important;
+}
+
+[data-sonner-toast] .saas-toast-title,
+[data-sonner-toast] [data-title] {
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  color: #ffffff !important;
+}
+
+[data-sonner-toast] .saas-toast-description,
+[data-sonner-toast] [data-description] {
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  color: #ffffff !important;
+  opacity: 0.95 !important;
+}
+
+[data-sonner-toast] [data-icon] {
+  color: #ffffff !important;
+}
+
+[data-sonner-toast] [data-icon] svg {
+  color: #ffffff !important;
+  fill: #ffffff !important;
+  stroke: #ffffff !important;
+}
+
+[data-sonner-toast] [data-close-button],
+[data-sonner-toast] [data-close-button].saas-toast-close {
+  background: rgba(255, 255, 255, 0.2) !important;
+  border: 1px solid rgba(255, 255, 255, 0.4) !important;
+  color: #ffffff !important;
+  left: unset !important;
+  right: 8px !important;
+  top: 8px !important;
+  transform: none !important;
+}
+
+[data-sonner-toast] [data-close-button]:hover {
+  background: rgba(255, 255, 255, 0.3) !important;
+  color: #ffffff !important;
 }

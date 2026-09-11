@@ -1,13 +1,20 @@
 import api from '../lib/api';
 import {
-  DashboardPeriod,
+  DashboardDateRange,
   DashboardResponse,
 } from '@/types/dashboard.types';
 
 export const dashboardApi = {
-  getAll: async (period: DashboardPeriod = '30d') => {
+  getAll: async (range: DashboardDateRange) => {
+    if (!range?.from || !range?.to) {
+      throw new Error('date_from and date_to are required');
+    }
+
     const { data } = await api.get<DashboardResponse>('/dashboard/getAll', {
-      params: { period },
+      params: {
+        date_from: range.from,
+        date_to: range.to,
+      },
     });
     return data;
   },

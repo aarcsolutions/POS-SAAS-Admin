@@ -190,7 +190,7 @@ export default function BranchesPage() {
   if (editLoading) {
     return (
       <div className="flex justify-center py-24">
-        <Loader2 className="h-8 w-8 animate-spin text-emerald-600" />
+        <Loader2 className="h-8 w-8 animate-spin text-[var(--brand-primary)]" />
       </div>
     );
   }
@@ -243,7 +243,7 @@ export default function BranchesPage() {
             <button
               type="button"
               onClick={() => setShowRequestModal(true)}
-              className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100"
+              className="flex items-center gap-2 rounded-xl border border-[var(--admin-border)] bg-[var(--brand-icon-soft)] px-4 py-2.5 text-sm font-semibold text-[var(--brand-icon)] transition hover:bg-[var(--brand-icon-soft)]"
             >
               <Send className="h-4 w-4" />
               Request Branches
@@ -255,8 +255,8 @@ export default function BranchesPage() {
             aria-disabled={atLicenseCap}
             className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white transition ${
               atLicenseCap
-                ? 'cursor-not-allowed bg-emerald-600/50'
-                : 'bg-emerald-600 shadow-lg shadow-emerald-600/20 hover:bg-emerald-700'
+                ? 'cursor-not-allowed bg-[var(--brand-primary)]/50'
+                : 'bg-[var(--brand-primary)] shadow-lg shadow-[color-mix(in_srgb,var(--brand-primary)_20%,transparent)] hover:brightness-95'
             }`}
           >
             <Plus className="h-4 w-4" />
@@ -267,23 +267,23 @@ export default function BranchesPage() {
 
       <div className="grid gap-5 md:grid-cols-3">
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
+          <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-[var(--brand-icon-soft)] text-[var(--brand-icon)]">
             <Building2 className="h-5 w-5" />
           </div>
           <div className="text-sm font-medium text-slate-500">Total Branches</div>
           <div className="mt-1 text-2xl font-bold text-slate-900">{currentCount}</div>
         </div>
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
+          <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-[var(--brand-icon-soft)] text-[var(--brand-icon)]">
             <Check className="h-5 w-5" />
           </div>
           <div className="text-sm font-medium text-slate-500">Active</div>
-          <div className="mt-1 text-2xl font-bold text-emerald-600">
+          <div className="mt-1 text-2xl font-bold text-[var(--brand-primary)]">
             {branches.filter((b) => b.status === 'active').length}
           </div>
         </div>
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-amber-50 text-amber-700">
+          <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-[var(--brand-icon-soft)] text-[var(--brand-icon)]">
             <Building2 className="h-5 w-5" />
           </div>
           <div className="text-sm font-medium text-slate-500">Licensed Cap</div>
@@ -298,14 +298,14 @@ export default function BranchesPage() {
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="Search by name or code..."
-          className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10"
+          className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm outline-none transition focus:border-[var(--brand-primary)] focus:ring-4 focus:ring-[var(--brand-primary-soft)]"
         />
       </div>
 
       <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         {isLoading ? (
           <div className="flex justify-center py-16">
-            <Loader2 className="h-6 w-6 animate-spin text-emerald-600" />
+            <Loader2 className="h-6 w-6 animate-spin text-[var(--brand-primary)]" />
           </div>
         ) : (
           <table className="w-full text-left text-sm">
@@ -325,7 +325,7 @@ export default function BranchesPage() {
                 <tr key={branch.id} className="transition hover:bg-slate-50">
                   <td className="px-5 py-4">
                     <div className="flex items-center gap-3">
-                      <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
+                      <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--brand-icon-soft)] text-[var(--brand-icon)]">
                         <Store className="h-4 w-4" />
                       </div>
                       <div>
@@ -349,7 +349,7 @@ export default function BranchesPage() {
                     <span
                       className={`rounded-full px-3 py-1 text-xs font-bold ${
                         branch.status === 'active'
-                          ? 'bg-emerald-100 text-emerald-700'
+                          ? 'bg-[var(--brand-icon-soft)] text-[var(--brand-icon)]'
                           : 'bg-slate-100 text-slate-500'
                       }`}
                     >

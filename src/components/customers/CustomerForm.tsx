@@ -159,7 +159,7 @@ export default function CustomerForm({
                 onChange={(e) => update('name', e.target.value)}
                 disabled={readOnly}
                 placeholder="e.g. Ali Hassan"
-                className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 disabled:opacity-70"
+                className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-[var(--brand-primary)] focus:bg-white focus:ring-4 focus:ring-[var(--brand-primary-soft)] disabled:opacity-70"
               />
               {errors.name && (
                 <p className="mt-1 text-xs text-rose-500">{errors.name}</p>
@@ -175,7 +175,7 @@ export default function CustomerForm({
                 onChange={(e) => update('phone', e.target.value)}
                 disabled={readOnly}
                 placeholder="e.g. 03001234567"
-                className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 disabled:opacity-70"
+                className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-[var(--brand-primary)] focus:bg-white focus:ring-4 focus:ring-[var(--brand-primary-soft)] disabled:opacity-70"
               />
               {errors.phone && (
                 <p className="mt-1 text-xs text-rose-500">{errors.phone}</p>
@@ -191,7 +191,7 @@ export default function CustomerForm({
                 onChange={(e) => update('email', e.target.value)}
                 disabled={readOnly}
                 placeholder="e.g. ali@example.com (optional)"
-                className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 disabled:opacity-70"
+                className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-[var(--brand-primary)] focus:bg-white focus:ring-4 focus:ring-[var(--brand-primary-soft)] disabled:opacity-70"
               />
               {errors.email && (
                 <p className="mt-1 text-xs text-rose-500">{errors.email}</p>
@@ -208,7 +208,7 @@ export default function CustomerForm({
                     checked={data.is_active}
                     onChange={() => update('is_active', true)}
                     disabled={readOnly}
-                    className="h-4 w-4 accent-emerald-600"
+                    className="h-4 w-4 accent-[var(--brand-primary)]"
                   />
                   <span className="text-sm font-medium text-slate-700">
                     Active
@@ -220,7 +220,7 @@ export default function CustomerForm({
                     checked={!data.is_active}
                     onChange={() => update('is_active', false)}
                     disabled={readOnly}
-                    className="h-4 w-4 accent-emerald-600"
+                    className="h-4 w-4 accent-[var(--brand-primary)]"
                   />
                   <span className="text-sm font-medium text-slate-700">
                     Inactive
@@ -260,7 +260,7 @@ export default function CustomerForm({
                 value={data.date_of_birth}
                 onChange={(e) => update('date_of_birth', e.target.value)}
                 disabled={readOnly}
-                className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-800 outline-none transition focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 disabled:opacity-70"
+                className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-800 outline-none transition focus:border-[var(--brand-primary)] focus:bg-white focus:ring-4 focus:ring-[var(--brand-primary-soft)] disabled:opacity-70"
               />
             </div>
             <div className="md:col-span-2">
@@ -272,7 +272,7 @@ export default function CustomerForm({
                     update('marketing_subscribed', e.target.checked)
                   }
                   disabled={readOnly}
-                  className="h-4 w-4 rounded border-slate-300 text-emerald-600"
+                  className="h-4 w-4 rounded border-slate-300 text-[var(--brand-primary)]"
                 />
                 Subscribe to marketing communications
               </label>
@@ -295,7 +295,7 @@ export default function CustomerForm({
                 onChange={(e) => update('address', e.target.value)}
                 disabled={readOnly}
                 placeholder="Enter street address"
-                className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 disabled:opacity-70"
+                className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-[var(--brand-primary)] focus:bg-white focus:ring-4 focus:ring-[var(--brand-primary-soft)] disabled:opacity-70"
               />
             </div>
             <div>
@@ -308,7 +308,7 @@ export default function CustomerForm({
                 onChange={(e) => update('city', e.target.value)}
                 disabled={readOnly}
                 placeholder="Enter city"
-                className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 disabled:opacity-70"
+                className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-[var(--brand-primary)] focus:bg-white focus:ring-4 focus:ring-[var(--brand-primary-soft)] disabled:opacity-70"
               />
             </div>
           </div>
@@ -324,7 +324,7 @@ export default function CustomerForm({
             disabled={readOnly}
             rows={4}
             placeholder="Add any notes about this customer..."
-            className="w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 disabled:opacity-70"
+            className="w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-[var(--brand-primary)] focus:bg-white focus:ring-4 focus:ring-[var(--brand-primary-soft)] disabled:opacity-70"
           />
         </div>
 
@@ -340,7 +340,7 @@ export default function CustomerForm({
             <button
               type="submit"
               disabled={saving}
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-6 py-2.5 text-sm font-bold text-white shadow-lg shadow-emerald-600/20 transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-[var(--brand-primary)] px-6 py-2.5 text-sm font-bold text-white shadow-lg shadow-[color-mix(in_srgb,var(--brand-primary)_20%,transparent)] transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {saving && <Loader2 className="h-4 w-4 animate-spin" />}
               {saving

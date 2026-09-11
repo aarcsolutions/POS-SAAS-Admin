@@ -28,6 +28,7 @@ import {
   useRecordPaymentMutation,
 } from '@/hooks/orders';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
+import { useOrderSocketConnected } from '@/components/realtime/OrderSocketProvider';
 import { useAuthStore } from '@/store/authStore';
 import { confirmDialog } from '@/store/dialogStore';
 import {
@@ -74,17 +75,17 @@ function nextStatus(
 function statusBadgeClass(status: OrderStatus) {
   switch (status) {
     case 'pending':
-      return 'bg-amber-100 text-amber-800';
+      return 'bg-[var(--brand-toast-soft)] text-[var(--brand-toast)]';
     case 'accepted':
-      return 'bg-sky-100 text-sky-800';
+      return 'bg-[var(--brand-primary-soft)] text-[var(--brand-primary-dark)]';
     case 'in_kitchen':
-      return 'bg-orange-100 text-orange-800';
+      return 'bg-[var(--brand-icon-soft)] text-[var(--brand-icon)]';
     case 'ready':
-      return 'bg-violet-100 text-violet-800';
+      return 'bg-[var(--brand-accent-soft)] text-[var(--brand-accent)]';
     case 'out_for_delivery':
-      return 'bg-indigo-100 text-indigo-800';
+      return 'bg-[var(--brand-primary-soft)] text-[var(--brand-primary)]';
     case 'completed':
-      return 'bg-emerald-100 text-emerald-800';
+      return 'bg-[var(--brand-icon-soft)] text-[var(--brand-icon)]';
     case 'cancelled':
       return 'bg-rose-100 text-rose-800';
     default:
@@ -118,6 +119,7 @@ export default function OrdersPage() {
   const [dispatchOrder, setDispatchOrder] = useState<OrderListItem | null>(null);
 
   const debouncedSearch = useDebouncedValue(search.trim(), 300);
+  const socketConnected = useOrderSocketConnected();
   useEffect(() => {
     setPage(1);
   }, [debouncedSearch, typeFilter, statusFilter]);
@@ -130,7 +132,13 @@ export default function OrdersPage() {
       status: statusFilter || undefined,
       order_type: typeFilter || undefined,
     },
-    { pollMs: statusFilter === 'pending' ? 8000 : undefined }
+    {
+      pollMs: socketConnected
+        ? 60000
+        : statusFilter === 'pending'
+          ? 8000
+          : undefined,
+    }
   );
   const detailQuery = useOrderDetailQuery(detailId);
   const statusMutation = useUpdateOrderStatusMutation();
@@ -177,19 +185,19 @@ export default function OrdersPage() {
           <p className="mt-1 text-sm text-slate-500">
             Create orders, update kitchen status, take payment, and print slips
             {statusFilter === 'pending' && (
-              <span className="text-amber-700"> · pending queue auto-refreshes</span>
+              <span className="text-[var(--brand-primary)]"> · pending queue auto-refreshes</span>
             )}
           </p>
         </div>
         <div className="flex items-center gap-2">
           {statusFilter === 'pending' && ordersQuery.isFetching && !ordersQuery.isLoading && (
-            <Loader2 className="h-5 w-5 animate-spin text-amber-600" aria-label="Refreshing" />
+            <Loader2 className="h-5 w-5 animate-spin text-[var(--brand-icon)]" aria-label="Refreshing" />
           )}
         {canCreate && (
           <button
             type="button"
             onClick={() => setScreen('create')}
-            className="inline-flex items-center gap-2 rounded-md bg-amber-600 px-4 py-2 text-sm font-semibold text-white"
+            className="inline-flex items-center gap-2 rounded-md bg-[var(--brand-primary)] px-4 py-2 text-sm font-semibold text-white hover:brightness-95"
           >
             <Plus className="h-4 w-4" /> Create Order
         </button>
@@ -312,7 +320,7 @@ export default function OrdersPage() {
                               ? ` · fee ${Number(order.delivery_fee).toFixed(2)}`
                               : ''}
                             {order.driver && (
-                              <div className="mt-0.5 text-indigo-600">
+                              <div className="mt-0.5 text-[var(--brand-icon)]">
                                 Driver: {order.driver.name} ({order.driver.phone})
                               </div>
                             )}
@@ -326,7 +334,7 @@ export default function OrdersPage() {
                         <span
                           className={`rounded-full px-2 py-0.5 text-xs font-bold ${
                             order.payment_status === 'paid'
-                              ? 'bg-emerald-50 text-emerald-700'
+                              ? 'bg-[var(--brand-icon-soft)] text-[var(--brand-icon)]'
                               : 'bg-slate-100 text-slate-600'
                           }`}
                         >
@@ -350,12 +358,14 @@ export default function OrdersPage() {
                       </td>
                       <td className="px-4 py-3 text-right">
                         <div className="flex items-center justify-end gap-2">
-                          {canUpdateStatus && order.status === 'pending' && (
+                          {canUpdateStatus &&
+                            order.status === 'pending' &&
+                            order.order_type !== 'dine_in' && (
                             <button
                               type="button"
                               disabled={statusMutation.isPending}
                               onClick={() => handleAccept(order.id)}
-                              className="inline-flex items-center gap-1 rounded-md bg-emerald-600 px-2.5 py-1.5 text-xs font-semibold text-white disabled:opacity-60"
+                              className="inline-flex items-center gap-1 rounded-md bg-[var(--brand-primary)] px-2.5 py-1.5 text-xs font-semibold text-white disabled:opacity-60"
                             >
                               <CheckCircle2 className="h-3.5 w-3.5" /> Accept
                             </button>
@@ -364,7 +374,7 @@ export default function OrdersPage() {
                             <button
                               type="button"
                               onClick={() => setDispatchOrder(order)}
-                              className="inline-flex items-center gap-1 rounded-md bg-indigo-600 px-2.5 py-1.5 text-xs font-semibold text-white disabled:opacity-60"
+                              className="inline-flex items-center gap-1 rounded-md bg-[var(--brand-primary)] px-2.5 py-1.5 text-xs font-semibold text-white hover:brightness-95 disabled:opacity-60"
                             >
                               <Truck className="h-3.5 w-3.5" /> Dispatch
                             </button>

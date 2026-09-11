@@ -149,7 +149,7 @@ export default function RecipeIngredientEditor({
       <button
         type="button"
         onClick={onClose}
-        className="flex items-center gap-2 text-sm font-medium text-emerald-600 hover:text-emerald-700"
+        className="flex items-center gap-2 text-sm font-medium text-[var(--brand-primary)] hover:text-[var(--brand-icon)]"
       >
         <ArrowLeft className="h-4 w-4" /> Back
       </button>
@@ -191,8 +191,8 @@ export default function RecipeIngredientEditor({
                   }
                   className={`rounded-xl border p-4 text-left transition ${
                     active
-                      ? 'border-emerald-500 bg-emerald-50 ring-2 ring-emerald-500/20'
-                      : 'border-slate-200 bg-white hover:border-emerald-200'
+                      ? 'border-[var(--brand-primary)] bg-[var(--brand-icon-soft)] ring-2 ring-[var(--brand-primary-soft)]'
+                      : 'border-slate-200 bg-white hover:border-[var(--admin-border)]'
                   }`}
                 >
                   <div className="flex items-start justify-between gap-2">
@@ -204,7 +204,7 @@ export default function RecipeIngredientEditor({
                       </p>
                     </div>
                     {active && (
-                      <Check className="h-4 w-4 shrink-0 text-emerald-600" />
+                      <Check className="h-4 w-4 shrink-0 text-[var(--brand-primary)]" />
                     )}
                   </div>
                 </button>
@@ -250,7 +250,7 @@ export default function RecipeIngredientEditor({
                         quantity: e.target.value,
                       })
                     }
-                    className={`h-11 w-full rounded-xl border bg-white px-3 text-sm outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 ${
+                    className={`h-11 w-full rounded-xl border bg-white px-3 text-sm outline-none focus:border-[var(--brand-primary)] focus:ring-4 focus:ring-[var(--brand-primary-soft)] ${
                       lineErrors[line.raw_material_id]
                         ? 'border-rose-400'
                         : 'border-slate-200'
@@ -311,7 +311,7 @@ export default function RecipeIngredientEditor({
           type="button"
           disabled={saving}
           onClick={handleSubmit}
-          className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-60"
+          className="inline-flex items-center gap-2 rounded-xl bg-[var(--brand-primary)] px-5 py-2.5 text-sm font-bold text-white hover:brightness-95 disabled:opacity-60"
         >
           {saving && <Loader2 className="h-4 w-4 animate-spin" />}
           {mode === 'create' ? 'Save Recipe' : 'Update Recipe'}

@@ -49,4 +49,23 @@ export const productsApi = {
     const { data } = await api.put('/products/setActive', { id, is_active });
     return data;
   },
+
+  sync: async (payload: {
+    source_branch_id?: string | null;
+    product_ids: string[];
+    target_branch_id: string;
+  }) => {
+    const { data } = await api.post('/products/sync', payload);
+    return data;
+  },
+
+  getSyncJob: async (jobId: string) => {
+    const { data } = await api.get(`/products/sync/${jobId}`);
+    return data;
+  },
+
+  listSyncJobs: async (limit = 20) => {
+    const { data } = await api.get('/products/sync', { params: { limit } });
+    return data;
+  },
 };

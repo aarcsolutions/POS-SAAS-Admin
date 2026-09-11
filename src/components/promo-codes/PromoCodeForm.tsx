@@ -166,7 +166,7 @@ export default function PromoCodeForm({
                 value={data.code}
                 onChange={(e) => update('code', e.target.value.toUpperCase())}
                 readOnly={readOnly}
-                className="h-11 w-full rounded-xl border border-slate-200 px-3 text-sm uppercase outline-none focus:border-violet-500 focus:ring-4 focus:ring-violet-500/10 disabled:bg-slate-50"
+                className="h-11 w-full rounded-xl border border-slate-200 px-3 text-sm uppercase outline-none focus:border-[var(--brand-primary)] focus:ring-4 focus:ring-[var(--brand-primary-soft)] disabled:bg-slate-50"
               />
               {errors.code && (
                 <p className="mt-1 text-xs text-rose-600">{errors.code}</p>
@@ -199,7 +199,7 @@ export default function PromoCodeForm({
                 value={data.value}
                 onChange={(e) => update('value', e.target.value)}
                 readOnly={readOnly}
-                className="h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-violet-500 focus:ring-4 focus:ring-violet-500/10 disabled:bg-slate-50"
+                className="h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-[var(--brand-primary)] focus:ring-4 focus:ring-[var(--brand-primary-soft)] disabled:bg-slate-50"
               />
               {errors.value && (
                 <p className="mt-1 text-xs text-rose-600">{errors.value}</p>
@@ -216,7 +216,7 @@ export default function PromoCodeForm({
                 value={data.min_order_amount}
                 onChange={(e) => update('min_order_amount', e.target.value)}
                 readOnly={readOnly}
-                className="h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-violet-500 focus:ring-4 focus:ring-violet-500/10 disabled:bg-slate-50"
+                className="h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-[var(--brand-primary)] focus:ring-4 focus:ring-[var(--brand-primary-soft)] disabled:bg-slate-50"
               />
             </div>
 
@@ -230,7 +230,7 @@ export default function PromoCodeForm({
                 value={data.max_discount}
                 onChange={(e) => update('max_discount', e.target.value)}
                 readOnly={readOnly}
-                className="h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-violet-500 focus:ring-4 focus:ring-violet-500/10 disabled:bg-slate-50"
+                className="h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-[var(--brand-primary)] focus:ring-4 focus:ring-[var(--brand-primary-soft)] disabled:bg-slate-50"
               />
             </div>
 
@@ -244,7 +244,7 @@ export default function PromoCodeForm({
                 value={data.usage_limit}
                 onChange={(e) => update('usage_limit', e.target.value)}
                 readOnly={readOnly}
-                className="h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-violet-500 focus:ring-4 focus:ring-violet-500/10 disabled:bg-slate-50"
+                className="h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-[var(--brand-primary)] focus:ring-4 focus:ring-[var(--brand-primary-soft)] disabled:bg-slate-50"
               />
             </div>
 
@@ -257,7 +257,7 @@ export default function PromoCodeForm({
                 value={data.starts_at}
                 onChange={(e) => update('starts_at', e.target.value)}
                 readOnly={readOnly}
-                className="h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-violet-500 focus:ring-4 focus:ring-violet-500/10 disabled:bg-slate-50"
+                className="h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-[var(--brand-primary)] focus:ring-4 focus:ring-[var(--brand-primary-soft)] disabled:bg-slate-50"
               />
             </div>
 
@@ -270,7 +270,7 @@ export default function PromoCodeForm({
                 value={data.expires_at}
                 onChange={(e) => update('expires_at', e.target.value)}
                 readOnly={readOnly}
-                className="h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-violet-500 focus:ring-4 focus:ring-violet-500/10 disabled:bg-slate-50"
+                className="h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-[var(--brand-primary)] focus:ring-4 focus:ring-[var(--brand-primary-soft)] disabled:bg-slate-50"
               />
             </div>
 
@@ -282,7 +282,7 @@ export default function PromoCodeForm({
                     checked={data.is_active}
                     onChange={(e) => update('is_active', e.target.checked)}
                     disabled={readOnly}
-                    className="h-4 w-4 rounded border-slate-300 text-violet-600"
+                    className="h-4 w-4 rounded border-slate-300 accent-[var(--brand-primary)]"
                   />
                   Active coupon
                 </label>
@@ -303,7 +303,7 @@ export default function PromoCodeForm({
             <button
               type="submit"
               disabled={saving}
-              className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-5 py-2.5 text-sm font-bold text-white disabled:opacity-60"
+              className="inline-flex items-center gap-2 rounded-xl bg-[var(--brand-primary)] px-5 py-2.5 text-sm font-bold text-white disabled:opacity-60"
             >
               {saving && <Loader2 className="h-4 w-4 animate-spin" />}
               {mode === 'create' ? 'Create Coupon' : 'Save Changes'}

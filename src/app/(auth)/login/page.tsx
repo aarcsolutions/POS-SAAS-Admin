@@ -22,6 +22,8 @@ import {
   isBranchNotFoundError,
   getBranchNotFoundMessage,
 } from '@/services/lib/api';
+import { applyThemeToDocument } from '@/components/providers/ThemeProvider';
+import { THEME_COLOR_DEFAULTS } from '@/constants/theme-defaults';
 
 const LOCK_MESSAGE = TENANT_DISABLED_MESSAGE;
 
@@ -49,6 +51,7 @@ export default function LoginPage() {
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const [touched, setTouched] = useState<{ email?: boolean; password?: boolean }>({});
   const [tenantName, setTenantName] = useState('Tenant Portal');
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [tenantLoading, setTenantLoading] = useState(true);
   const [lockModalOpen, setLockModalOpen] = useState(false);
   const [lockMessage, setLockMessage] = useState(LOCK_MESSAGE);
@@ -73,9 +76,18 @@ export default function LoginPage() {
     (async () => {
       try {
         const res = await authApi.getTenantInfo();
-        if (!cancelled && res.status && res.data?.title) {
-          setTenantName(res.data.title);
-          document.title = `${res.data.title} | Login`;
+        if (!cancelled && res.status && res.data) {
+          if (res.data.title) {
+            setTenantName(res.data.title);
+            document.title = `${res.data.title} | Login`;
+          }
+          const theme = res.data.theme;
+          if (theme) {
+            applyThemeToDocument(theme);
+            setLogoUrl(theme.logo_url || null);
+          } else {
+            applyThemeToDocument(THEME_COLOR_DEFAULTS);
+          }
         }
       } catch (err) {
         if (!cancelled) {
@@ -84,6 +96,7 @@ export default function LoginPage() {
             setLockModalOpen(true);
           }
           setTenantName('Tenant Portal');
+          applyThemeToDocument(THEME_COLOR_DEFAULTS);
         }
       } finally {
         if (!cancelled) setTenantLoading(false);
@@ -166,42 +179,51 @@ export default function LoginPage() {
     Boolean(loginMutation.error) && !isTenantDisabledError(loginMutation.error);
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center bg-gradient-to-br from-[#f7f1e6] via-[#f2e3cd] to-[#fff7ec] px-4 py-12 text-[#3e2a18]">
+    <div className="relative flex min-h-screen items-center justify-center bg-[var(--admin-bg)] px-4 py-12 text-[var(--brand-primary-dark)]">
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute -top-28 -right-28 h-[26rem] w-[26rem] rounded-full bg-gradient-to-br from-[#d7a469]/80 to-[#f4dcba]/50 blur-3xl" />
-        <div className="absolute -bottom-28 -left-28 h-[26rem] w-[26rem] rounded-full bg-gradient-to-tr from-[#b26407]/15 to-[#f6d29b]/15 blur-3xl" />
+        <div className="absolute -top-28 -right-28 h-[26rem] w-[26rem] rounded-full bg-[color-mix(in_srgb,var(--brand-primary)_28%,transparent)] blur-3xl" />
+        <div className="absolute -bottom-28 -left-28 h-[26rem] w-[26rem] rounded-full bg-[color-mix(in_srgb,var(--brand-gold)_35%,transparent)] blur-3xl" />
       </div>
 
       <div className="relative w-full max-w-[460px]">
         <div className="mb-10 text-center">
-          <div className="mb-5 inline-flex h-16 w-16 items-center justify-center rounded-[26px] bg-[#8b5a2b] text-white shadow-[0_20px_50px_rgba(139,90,43,0.22)]">
-            <CircleDot className="h-8 w-8" strokeWidth={2.5} />
-          </div>
-          <p className="text-sm uppercase tracking-[0.3em] text-[#b0783d]">
+          {logoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={logoUrl}
+              alt={tenantName}
+              className="mx-auto mb-5 h-20 w-auto max-w-[220px] object-contain"
+            />
+          ) : (
+            <div className="mb-5 inline-flex h-16 w-16 items-center justify-center rounded-[26px] bg-[var(--brand-primary-dark)] text-white shadow-[0_20px_50px_color-mix(in_srgb,var(--brand-primary-dark)_22%,transparent)]">
+              <CircleDot className="h-8 w-8" strokeWidth={2.5} />
+            </div>
+          )}
+          <p className="text-sm uppercase tracking-[0.3em] text-[var(--admin-muted)]">
             {tenantLoading ? '…' : tenantName}
           </p>
-          <h1 className="mt-4 text-4xl font-bold tracking-tight text-[#3e2a18]">
+          <h1 className="mt-4 text-4xl font-bold tracking-tight text-[var(--brand-primary-dark)]">
             Admin Login
           </h1>
-          <p className="mt-2 text-sm text-[#6e553d]">
+          <p className="mt-2 text-sm text-[var(--admin-muted)]">
             Sign in to manage your store operations.
           </p>
         </div>
 
-        <div className="relative rounded-[36px] border border-[#dec3a3] bg-white/95 p-10 shadow-[0_30px_70px_rgba(71,55,34,0.12)] ring-1 ring-[#f3e1cb]/60">
+        <div className="relative rounded-[36px] border border-[var(--admin-border)] bg-white/95 p-10 shadow-[0_30px_70px_color-mix(in_srgb,var(--brand-primary-dark)_12%,transparent)] ring-1 ring-[var(--brand-primary-soft)]">
           {showCredentialBanner && (
             <div className="mb-6 rounded-3xl border border-[#f1c0a2] bg-[#fff1ec] p-4 text-sm text-[#9b2b0d]">
               {getErrorMessage(loginMutation.error)}
             </div>
           )}
           <div className="mb-6">
-            <label className="mb-3 block text-sm font-semibold text-[#5f4b35]">
+            <label className="mb-3 block text-sm font-semibold text-[var(--brand-primary-dark)]">
               Email address
             </label>
             <div className="relative group">
               <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
                 <Mail
-                  className="h-5 w-5 text-[#7e6a54] transition-colors group-focus-within:text-[#a86b19]"
+                  className="h-5 w-5 text-[var(--admin-muted)] transition-colors group-focus-within:text-[var(--brand-primary)]"
                   strokeWidth={1.5}
                 />
               </div>
@@ -212,10 +234,10 @@ export default function LoginPage() {
                 onBlur={handleEmailBlur}
                 onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
                 suppressHydrationWarning
-                className={`h-12 w-full rounded-xl border bg-white pl-11 pr-4 text-sm text-[#3b2a1b] placeholder:text-[#b79b7f] transition-all focus:outline-none focus:ring-4 ${
+                className={`h-12 w-full rounded-xl border bg-white pl-11 pr-4 text-sm text-[var(--brand-primary-dark)] placeholder:text-[var(--admin-muted)] transition-all focus:outline-none focus:ring-4 ${
                   errors.email && touched.email
                     ? 'border-[#f0a38b] focus:border-[#c97a48] focus:ring-[#f3d2af]/50'
-                    : 'border-[#e3d1be] focus:border-[#c47b1d] focus:ring-[#f5d4a5]/50'
+                    : 'border-[var(--admin-border)] focus:border-[var(--brand-primary)] focus:ring-[var(--brand-primary-soft)]'
                 }`}
                 placeholder="you@company.com"
               />
@@ -230,12 +252,12 @@ export default function LoginPage() {
 
           <div className="mb-8">
             <div className="mb-3 flex items-center justify-between">
-              <label className="block text-sm font-semibold text-[#5f4b35]">
+              <label className="block text-sm font-semibold text-[var(--brand-primary-dark)]">
                 Password
               </label>
               <a
-                href="#"
-                className="text-xs font-semibold text-[#9c5a0e] transition-colors hover:text-[#b76c10]"
+                href="/forgot-password"
+                className="text-xs font-semibold text-[var(--brand-primary)] transition-colors hover:brightness-90"
               >
                 Forgot password?
               </a>
@@ -243,7 +265,7 @@ export default function LoginPage() {
             <div className="relative group">
               <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
                 <Lock
-                  className="h-5 w-5 text-[#7e6a54] transition-colors group-focus-within:text-[#a86b19]"
+                  className="h-5 w-5 text-[var(--admin-muted)] transition-colors group-focus-within:text-[var(--brand-primary)]"
                   strokeWidth={1.5}
                 />
               </div>
@@ -254,10 +276,10 @@ export default function LoginPage() {
                 onBlur={handlePasswordBlur}
                 onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
                 suppressHydrationWarning
-                className={`h-12 w-full rounded-xl border bg-white pl-11 pr-12 text-sm text-[#3b2a1b] placeholder:text-[#b79b7f] transition-all focus:outline-none focus:ring-4 ${
+                className={`h-12 w-full rounded-xl border bg-white pl-11 pr-12 text-sm text-[var(--brand-primary-dark)] placeholder:text-[var(--admin-muted)] transition-all focus:outline-none focus:ring-4 ${
                   errors.password && touched.password
                     ? 'border-[#f0a38b] focus:border-[#c97a48] focus:ring-[#f3d2af]/50'
-                    : 'border-[#e3d1be] focus:border-[#c47b1d] focus:ring-[#f5d4a5]/50'
+                    : 'border-[var(--admin-border)] focus:border-[var(--brand-primary)] focus:ring-[var(--brand-primary-soft)]'
                 }`}
                 placeholder="Enter your password"
               />
@@ -265,7 +287,7 @@ export default function LoginPage() {
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 suppressHydrationWarning
-                className="absolute inset-y-0 right-0 flex items-center pr-4 text-[#7e6a54] transition-colors hover:text-[#5d3f1f]"
+                className="absolute inset-y-0 right-0 flex items-center pr-4 text-[var(--admin-muted)] transition-colors hover:text-[var(--brand-primary-dark)]"
               >
                 {showPassword ? (
                   <EyeOff className="h-5 w-5" strokeWidth={1.5} />
@@ -287,7 +309,7 @@ export default function LoginPage() {
             onClick={handleLogin}
             disabled={loginMutation.isPending || lockModalOpen}
             suppressHydrationWarning
-            className="group relative flex h-12 w-full items-center justify-center gap-2.5 rounded-xl bg-[#b45309] px-4 text-sm font-bold text-white shadow-[0_16px_40px_rgba(180,83,9,0.25)] transition-all hover:bg-[#8f3f08] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
+            className="group relative flex h-12 w-full items-center justify-center gap-2.5 rounded-xl bg-[var(--brand-primary)] px-4 text-sm font-bold text-white shadow-[0_16px_40px_color-mix(in_srgb,var(--brand-primary)_25%,transparent)] transition-all hover:brightness-95 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
           >
             {loginMutation.isPending ? (
               <>
@@ -307,15 +329,18 @@ export default function LoginPage() {
           </button>
 
           <div className="mt-8 text-center">
-            <p className="text-sm text-[#6e553d]">
+            <p className="text-sm text-[var(--admin-muted)]">
               Tenant access is provisioned by your platform administrator.
             </p>
           </div>
         </div>
 
-        <div className="mt-10 text-center text-xs text-[#7e6a54]">
+        <div className="mt-10 text-center text-xs text-[var(--admin-muted)]">
           <div className="flex items-center justify-center gap-2">
-            <CheckCircle2 className="h-3.5 w-3.5 text-[#b45309]" strokeWidth={2} />
+            <CheckCircle2
+              className="h-3.5 w-3.5 text-[var(--brand-primary)]"
+              strokeWidth={2}
+            />
             <p>Secure, encrypted connection</p>
           </div>
         </div>
@@ -323,7 +348,7 @@ export default function LoginPage() {
 
       {lockModalOpen && (
         <div
-          className="fixed inset-0 z-[80] flex items-center justify-center bg-[#3e2a18]/45 px-4 backdrop-blur-sm"
+          className="fixed inset-0 z-[80] flex items-center justify-center bg-[color-mix(in_srgb,var(--brand-primary-dark)_45%,transparent)] px-4 backdrop-blur-sm"
           role="presentation"
           onClick={() => setLockModalOpen(false)}
         >
@@ -332,18 +357,24 @@ export default function LoginPage() {
             aria-modal="true"
             aria-labelledby="tenant-lock-title"
             aria-describedby="tenant-lock-desc"
-            className="w-full max-w-md rounded-3xl border border-[#ecd6b6] bg-[#fff7ee] p-6 shadow-[0_24px_60px_rgba(91,59,30,0.25)]"
+            className="w-full max-w-md rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-surface)] p-6 shadow-[0_24px_60px_color-mix(in_srgb,var(--brand-primary-dark)_25%,transparent)]"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-4 flex items-center gap-4">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#fde5c5]">
-                <ShieldAlert className="h-6 w-6 text-[#d97706]" />
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[var(--brand-toast-soft)]">
+                <ShieldAlert className="h-6 w-6 text-[var(--brand-toast)]" />
               </div>
-              <h2 id="tenant-lock-title" className="text-xl font-bold text-[#3e2a18]">
+              <h2
+                id="tenant-lock-title"
+                className="text-xl font-bold text-[var(--brand-primary-dark)]"
+              >
                 Account Locked
               </h2>
             </div>
-            <p id="tenant-lock-desc" className="mb-6 text-sm leading-relaxed text-[#7a553d]">
+            <p
+              id="tenant-lock-desc"
+              className="mb-6 text-sm leading-relaxed text-[var(--admin-muted)]"
+            >
               {lockMessage}
             </p>
             <div className="flex justify-end">
@@ -351,7 +382,7 @@ export default function LoginPage() {
                 type="button"
                 autoFocus
                 onClick={() => setLockModalOpen(false)}
-                className="rounded-xl bg-[#d97706] px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-[#d97706]/20 transition hover:bg-[#b45309]"
+                className="rounded-xl bg-[var(--brand-primary)] px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-[color-mix(in_srgb,var(--brand-primary)_20%,transparent)] transition hover:brightness-95"
               >
                 OK
               </button>

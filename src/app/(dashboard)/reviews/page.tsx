@@ -28,7 +28,7 @@ import { useBranchesQuery } from '@/hooks/branches';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { useAuthStore } from '@/store/authStore';
 import { extractListItems, extractPagination } from '@/utils/helpers';
-import { Review, RATING_OPTIONS } from '@/types/review.types';
+import { Review } from '@/types/review.types';
 import { confirmDialog } from '@/store/dialogStore';
 
 const LIMIT = 10;
@@ -50,8 +50,8 @@ function RatingStars({ rating }: { rating: number }) {
           key={n}
           className={`h-3.5 w-3.5 ${
             n <= rating
-              ? 'fill-amber-400 text-amber-400'
-              : 'text-slate-200'
+              ? 'fill-[#f5c518] text-[#f5c518]'
+              : 'fill-transparent text-[var(--brand-primary)]'
           }`}
         />
       ))}
@@ -227,7 +227,7 @@ export default function ReviewsPage() {
         {canCreate && (
           <button
             onClick={() => handleOpenForm('create')}
-            className="flex items-center gap-2 rounded-xl bg-amber-600 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-amber-600/20 transition hover:bg-amber-700"
+            className="flex items-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-[color-mix(in_srgb,var(--brand-primary)_20%,transparent)] transition hover:brightness-95"
           >
             <Plus className="h-4 w-4" /> Add Review
           </button>
@@ -241,33 +241,53 @@ export default function ReviewsPage() {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="Search comment or customer..."
-            className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm outline-none focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10"
+            className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm outline-none focus:border-[var(--brand-primary)] focus:ring-4 focus:ring-[var(--brand-primary-soft)]"
           />
         </div>
-        <div className="w-full sm:w-40">
-          <Select
-            value={ratingFilter}
-            onChange={setRatingFilter}
-            variant="filter"
-            size="lg"
-            allowEmpty
-            placeholder="All ratings"
-            aria-label="Filter by rating"
-            options={RATING_OPTIONS}
-          />
+        <div
+          className="flex h-11 items-center gap-1 rounded-xl border border-slate-200 bg-white px-3"
+          role="group"
+          aria-label="Filter by rating"
+        >
+          {[1, 2, 3, 4, 5].map((n) => {
+            const active = ratingFilter === String(n);
+            const filled =
+              ratingFilter === '' ? false : Number(ratingFilter) >= n;
+            return (
+              <button
+                key={n}
+                type="button"
+                onClick={() =>
+                  setRatingFilter(ratingFilter === String(n) ? '' : String(n))
+                }
+                className="rounded p-0.5 transition hover:scale-110"
+                aria-label={`${n} stars`}
+                aria-pressed={active}
+                title={active ? 'Clear rating filter' : `Filter ${n} stars`}
+              >
+                <Star
+                  className={`h-5 w-5 ${
+                    filled || active
+                      ? 'fill-[#f5c518] text-[#f5c518]'
+                      : 'fill-transparent text-[var(--brand-primary)]'
+                  }`}
+                />
+              </button>
+            );
+          })}
         </div>
         <input
           type="date"
           value={dateFrom}
           onChange={(e) => setDateFrom(e.target.value)}
-          className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-amber-500"
+          className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-[var(--brand-primary)]"
           aria-label="From date"
         />
         <input
           type="date"
           value={dateTo}
           onChange={(e) => setDateTo(e.target.value)}
-          className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-amber-500"
+          className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-[var(--brand-primary)]"
           aria-label="To date"
         />
         {isTenantAdmin && (
@@ -344,7 +364,7 @@ export default function ReviewsPage() {
                     {formatDateTime(r.reviewed_at)}
                   </td>
                   <td className="px-5 py-4">
-                    <span className="inline-flex rounded-full bg-sky-50 px-2.5 py-1 text-xs font-semibold text-sky-700">
+                    <span className="inline-flex rounded-full bg-[var(--brand-primary-soft)] px-2.5 py-1 text-xs font-semibold text-[var(--brand-primary)]">
                       {r.branch_name || '—'}
                     </span>
                   </td>

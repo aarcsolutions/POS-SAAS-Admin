@@ -163,7 +163,7 @@ export default function RecipesPage() {
               screen.mode === 'create' ? { type: 'add-list' } : { type: 'list' }
             )
           }
-          className="flex items-center gap-2 text-sm font-medium text-emerald-600 hover:text-emerald-700"
+          className="flex items-center gap-2 text-sm font-medium text-[var(--brand-primary)] hover:text-[var(--brand-icon)]"
         >
           <ArrowLeft className="h-4 w-4" /> Back
         </button>
@@ -190,7 +190,7 @@ export default function RecipesPage() {
                   variantName: v.name,
                 })
               }
-              className="rounded-2xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:border-emerald-200 hover:shadow-md"
+              className="rounded-2xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:border-[var(--admin-border)] hover:shadow-md"
             >
               <div className="flex items-center justify-between">
                 <div>
@@ -199,7 +199,7 @@ export default function RecipesPage() {
                     PKR {Number(v.price).toFixed(2)}
                   </p>
                 </div>
-                <ChevronRight className="h-5 w-5 text-emerald-600" />
+                <ChevronRight className="h-5 w-5 text-[var(--brand-primary)]" />
               </div>
             </button>
           ))}
@@ -217,7 +217,7 @@ export default function RecipesPage() {
             setSearch('');
             setScreen({ type: 'list' });
           }}
-          className="flex items-center gap-2 text-sm font-medium text-emerald-600 hover:text-emerald-700"
+          className="flex items-center gap-2 text-sm font-medium text-[var(--brand-primary)] hover:text-[var(--brand-icon)]"
         >
           <ArrowLeft className="h-4 w-4" /> Back to Recipes
         </button>
@@ -233,7 +233,7 @@ export default function RecipesPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search products..."
-            className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10"
+            className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm outline-none focus:border-[var(--brand-primary)] focus:ring-4 focus:ring-[var(--brand-primary-soft)]"
           />
         </div>
         {withoutQuery.isLoading ? (
@@ -251,9 +251,9 @@ export default function RecipesPage() {
                 key={product.id}
                 type="button"
                 onClick={() => openProductForCreate(product)}
-                className="rounded-2xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:border-emerald-200 hover:shadow-md"
+                className="rounded-2xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:border-[var(--admin-border)] hover:shadow-md"
               >
-                <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-amber-50 text-amber-700">
+                <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-[var(--brand-icon-soft)] text-[var(--brand-icon)]">
                   <Package className="h-5 w-5" />
                 </div>
                 <p className="font-bold text-slate-900">{product.name}</p>
@@ -286,7 +286,7 @@ export default function RecipesPage() {
               setSearch('');
               setScreen({ type: 'add-list' });
             }}
-            className="flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-emerald-600/20 transition hover:bg-emerald-700"
+            className="flex items-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-[color-mix(in_srgb,var(--brand-primary)_20%,transparent)] transition hover:brightness-95"
           >
             <Plus className="h-4 w-4" /> Add Recipe
           </button>
@@ -299,7 +299,7 @@ export default function RecipesPage() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search recipes..."
-          className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10"
+          className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm outline-none focus:border-[var(--brand-primary)] focus:ring-4 focus:ring-[var(--brand-primary-soft)]"
         />
       </div>
 
@@ -324,7 +324,7 @@ export default function RecipesPage() {
                 onClick={() => openProductForEdit(product)}
                 className="w-full text-left"
               >
-                <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
+                <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-[var(--brand-icon-soft)] text-[var(--brand-icon)]">
                   <ChefHat className="h-5 w-5" />
                 </div>
                 <p className="font-bold text-slate-900">{product.name}</p>
@@ -338,7 +338,7 @@ export default function RecipesPage() {
                   <button
                     type="button"
                     onClick={() => openProductForEdit(product)}
-                    className="inline-flex items-center gap-1 rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700"
+                    className="inline-flex items-center gap-1 rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-[var(--brand-icon-soft)] hover:text-[var(--brand-icon)]"
                   >
                     <Pencil className="h-3.5 w-3.5" /> Edit
                   </button>

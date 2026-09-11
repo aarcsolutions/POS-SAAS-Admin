@@ -72,4 +72,33 @@ export const ordersApi = {
     const { data } = await api.post('/orders/recordPayment', payload);
     return data;
   },
+
+  validatePromo: async (
+    code: string,
+    orderAmount: number
+  ): Promise<{
+    valid: boolean;
+    discount?: number;
+    code?: string;
+    message?: string;
+  }> => {
+    const { data } = await api.post<{
+      status: boolean;
+      message?: string;
+      data?: {
+        valid: boolean;
+        discount?: number;
+        code?: string;
+        message?: string;
+      };
+    }>('/orders/validatePromoCode', {
+      code: code.trim(),
+      order_amount: orderAmount,
+    });
+    if (data?.data) return data.data;
+    return {
+      valid: false,
+      message: data?.message || 'Invalid promo code',
+    };
+  },
 };

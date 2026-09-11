@@ -6,6 +6,7 @@ import { ENTITY_PERMS } from './permissions-map';
 export const ADMIN_LINK_PERM: Record<string, string> = {
   '/dashboard':            ENTITY_PERMS.dashboard.overview,
   '/business-settings':    ENTITY_PERMS.business_settings.list,
+  '/billing':              ENTITY_PERMS.tenant_billing.list,
   '/branches':             ENTITY_PERMS.branches.list,
   '/users':                ENTITY_PERMS.users.list,
   '/categories':           ENTITY_PERMS.categories.list,
@@ -18,6 +19,7 @@ export const ADMIN_LINK_PERM: Record<string, string> = {
   '/kds':                  ENTITY_PERMS.kds.list,
   '/drivers':              ENTITY_PERMS.drivers.list,
   '/promo-codes':          ENTITY_PERMS.promo_codes.list,
+  '/taxes':                ENTITY_PERMS.taxes.list,
   '/raw-materials':        ENTITY_PERMS.raw_materials.list,
   '/suppliers':            ENTITY_PERMS.suppliers.list,
   '/payments':             ENTITY_PERMS.payments.list,
@@ -25,6 +27,7 @@ export const ADMIN_LINK_PERM: Record<string, string> = {
   '/reservations':         ENTITY_PERMS.reservations.list,
   '/reviews':              ENTITY_PERMS.reviews.list,
   '/catering':             ENTITY_PERMS.catering.list,
+  '/tables':               ENTITY_PERMS.tables.list,
   '/roles':                ENTITY_PERMS.roles.list,
   '/permissions':          ENTITY_PERMS.permissions.list,
   '/modules':              ENTITY_PERMS.modules.list,

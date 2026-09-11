@@ -37,13 +37,13 @@ function formatMoney(value: number) {
 
 function statusBadge(status: string, source: PaymentListItem['source']) {
   if (source === 'pending_cod') {
-    return 'bg-amber-100 text-amber-800';
+    return 'bg-[var(--brand-primary-soft)] text-[var(--brand-primary)]';
   }
   switch (status) {
     case 'completed':
-      return 'bg-emerald-100 text-emerald-700';
+      return 'bg-[var(--brand-icon-soft)] text-[var(--brand-icon)]';
     case 'pending':
-      return 'bg-amber-100 text-amber-800';
+      return 'bg-[var(--brand-primary-soft)] text-[var(--brand-primary)]';
     case 'failed':
       return 'bg-rose-100 text-rose-700';
     case 'refunded':
@@ -129,7 +129,7 @@ export default function PaymentsPage() {
             onClick={() => setTab(opt.value)}
             className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
               tab === opt.value
-                ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20'
+                ? 'bg-[var(--brand-primary)] text-white shadow-md shadow-[color-mix(in_srgb,var(--brand-primary)_20%,transparent)]'
                 : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
             }`}
           >
@@ -145,7 +145,7 @@ export default function PaymentsPage() {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="Search by order #, customer, or transaction no..."
-            className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10"
+            className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm outline-none focus:border-[var(--brand-primary)] focus:ring-4 focus:ring-[var(--brand-primary-soft)]"
           />
         </div>
         {isTenantAdmin && (
@@ -225,9 +225,9 @@ export default function PaymentsPage() {
                   <td className="px-5 py-4">
                     <span className="inline-flex items-center gap-1.5 capitalize text-slate-700">
                       {row.method === 'cod' ? (
-                        <Clock className="h-3.5 w-3.5 text-amber-500" />
+                        <Clock className="h-3.5 w-3.5 text-[var(--brand-icon)]" />
                       ) : (
-                        <Banknote className="h-3.5 w-3.5 text-emerald-500" />
+                        <Banknote className="h-3.5 w-3.5 text-[var(--brand-icon)]" />
                       )}
                       {row.method}
                     </span>
@@ -247,7 +247,7 @@ export default function PaymentsPage() {
                   </td>
                   {isTenantAdmin && (
                     <td className="px-5 py-4">
-                      <span className="inline-flex rounded-full bg-sky-50 px-2.5 py-1 text-xs font-semibold text-sky-700">
+                      <span className="inline-flex rounded-full bg-[var(--brand-primary-soft)] px-2.5 py-1 text-xs font-semibold text-[var(--brand-primary)]">
                         {row.branch_name || 'Branch'}
                       </span>
                     </td>
@@ -320,7 +320,7 @@ export default function PaymentsPage() {
 
             {detailQuery.isLoading ? (
               <div className="flex justify-center py-8">
-                <Loader2 className="h-6 w-6 animate-spin text-emerald-600" />
+                <Loader2 className="h-6 w-6 animate-spin text-[var(--brand-primary)]" />
               </div>
             ) : (
               <dl className="grid gap-3 text-sm">
@@ -370,7 +370,7 @@ export default function PaymentsPage() {
             <div className="mt-6 flex justify-end">
               <Link
                 href="/orders"
-                className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white hover:bg-emerald-700"
+                className="rounded-xl bg-[var(--brand-primary)] px-4 py-2 text-sm font-bold text-white hover:brightness-95"
                 onClick={() => setSelectedId(null)}
               >
                 Collect on Orders page

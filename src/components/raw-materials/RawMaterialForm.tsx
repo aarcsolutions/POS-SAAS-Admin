@@ -26,6 +26,7 @@ export default function RawMaterialForm({
   const [name, setName] = useState('');
   const [unit, setUnit] = useState(UNITS[0]);
   const [stock, setStock] = useState<number | ''>('');
+  const [minStock, setMinStock] = useState<number | ''>('');
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
@@ -33,10 +34,12 @@ export default function RawMaterialForm({
       setName(initial.name);
       setUnit(initial.unit || UNITS[0]);
       setStock(Number(initial.stock_quantity ?? 0));
+      setMinStock(Number(initial.min_stock_level ?? 0));
     } else {
       setName('');
       setUnit(UNITS[0]);
       setStock('');
+      setMinStock('');
     }
   }, [initial]);
 
@@ -54,6 +57,9 @@ export default function RawMaterialForm({
     if (stock !== '' && Number(stock) < 0) {
       next.stock_quantity = 'Stock cannot be negative';
     }
+    if (minStock !== '' && Number(minStock) < 0) {
+      next.min_stock_level = 'Minimum quantity cannot be negative';
+    }
     setErrors(next);
     return Object.keys(next).length === 0;
   };
@@ -66,6 +72,7 @@ export default function RawMaterialForm({
       name: name.trim(),
       unit: unit.trim(),
       stock_quantity: Number(stock === '' ? 0 : stock),
+      min_stock_level: Number(minStock === '' ? 0 : minStock),
     });
   };
 
@@ -74,7 +81,7 @@ export default function RawMaterialForm({
       <button
         type="button"
         onClick={onClose}
-        className="flex items-center gap-2 text-sm font-medium text-emerald-600 transition hover:text-emerald-700"
+        className="flex items-center gap-2 text-sm font-medium text-[var(--brand-primary)] transition hover:text-[var(--brand-icon)]"
       >
         <ArrowLeft className="h-4 w-4" /> Back to Raw Materials
       </button>
@@ -93,7 +100,7 @@ export default function RawMaterialForm({
               onChange={(e) => setName(e.target.value)}
               readOnly={isReadOnly}
               placeholder="e.g. Flour"
-              className={`h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 ${
+              className={`h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm outline-none transition focus:border-[var(--brand-primary)] focus:ring-4 focus:ring-[var(--brand-primary-soft)] ${
                 isReadOnly ? 'opacity-70' : ''
               }`}
             />
@@ -140,12 +147,38 @@ export default function RawMaterialForm({
               }
               readOnly={isReadOnly}
               placeholder="0"
-              className={`h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 ${
+              className={`h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm outline-none transition focus:border-[var(--brand-primary)] focus:ring-4 focus:ring-[var(--brand-primary-soft)] ${
                 isReadOnly ? 'opacity-70' : ''
               }`}
             />
             {errors.stock_quantity && (
               <p className="mt-1 text-xs text-rose-600">{errors.stock_quantity}</p>
+            )}
+          </div>
+
+          <div>
+            <label className="mb-2 block text-sm font-medium text-slate-700">
+              Minimum Quantity
+            </label>
+            <input
+              type="number"
+              min={0}
+              step="0.01"
+              value={minStock}
+              onChange={(e) =>
+                setMinStock(e.target.value === '' ? '' : Number(e.target.value))
+              }
+              readOnly={isReadOnly}
+              placeholder="0"
+              className={`h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm outline-none transition focus:border-[var(--brand-primary)] focus:ring-4 focus:ring-[var(--brand-primary-soft)] ${
+                isReadOnly ? 'opacity-70' : ''
+              }`}
+            />
+            <p className="mt-1 text-xs text-slate-500">
+              Low-stock alert when current stock reaches this level
+            </p>
+            {errors.min_stock_level && (
+              <p className="mt-1 text-xs text-rose-600">{errors.min_stock_level}</p>
             )}
           </div>
 
@@ -161,7 +194,7 @@ export default function RawMaterialForm({
               <button
                 type="submit"
                 disabled={saving}
-                className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-emerald-600/20 transition hover:bg-emerald-700 disabled:opacity-60"
+                className="inline-flex items-center gap-2 rounded-xl bg-[var(--brand-primary)] px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-[color-mix(in_srgb,var(--brand-primary)_20%,transparent)] transition hover:brightness-95 disabled:opacity-60"
               >
                 {saving && <Loader2 className="h-4 w-4 animate-spin" />}
                 {mode === 'create' ? 'Create Material' : 'Save Changes'}

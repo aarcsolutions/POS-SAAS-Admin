@@ -22,7 +22,8 @@ export const useCreateRoleMutation = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (payload: { title: string }) => rolesApi.create(payload),
+    mutationFn: (payload: { title: string; branch_id?: string | null }) =>
+      rolesApi.create(payload),
     onSuccess: (response) => {
       if (response.status) {
         toast.success(response.message || 'Role created successfully');

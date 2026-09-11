@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Loader2, CheckCircle2, MapPin, Phone, Truck } from 'lucide-react';
+import { Loader2, CheckCircle2, MapPin, Phone, Truck, ExternalLink } from 'lucide-react';
 import axios from 'axios';
 import { API_CONFIG } from '@/utils/constants';
 
@@ -36,6 +36,14 @@ const STATUS_LABEL: Record<string, string> = {
   completed: 'Delivered',
   cancelled: 'Cancelled',
 };
+
+function formatDeliveryAddress(order: TrackData): string {
+  return [order.delivery_city, order.delivery_address].filter(Boolean).join(', ');
+}
+
+function googleMapsUrl(address: string): string {
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
+}
 
 export default function TrackOrderPage({
   params,
@@ -143,13 +151,20 @@ export default function TrackOrderPage({
               </div>
 
               {(order.delivery_address || order.delivery_city) && (
-                <div className="flex gap-2 text-sm text-slate-700">
-                  <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
-                  <span>
-                    {[order.delivery_city, order.delivery_address]
-                      .filter(Boolean)
-                      .join(', ')}
-                  </span>
+                <div className="space-y-3 rounded-xl border border-slate-100 bg-slate-50 p-4">
+                  <div className="flex gap-2 text-sm text-slate-700">
+                    <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
+                    <span>{formatDeliveryAddress(order)}</span>
+                  </div>
+                  <a
+                    href={googleMapsUrl(formatDeliveryAddress(order))}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-3 text-sm font-bold text-white transition hover:brightness-95"
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                    Open in Google Maps
+                  </a>
                 </div>
               )}
 
@@ -171,7 +186,7 @@ export default function TrackOrderPage({
               )}
 
               {order.status === 'completed' && (
-                <div className="flex items-center gap-2 rounded-xl bg-emerald-50 p-4 text-emerald-800">
+                <div className="flex items-center gap-2 rounded-xl bg-[var(--brand-icon-soft)] p-4 text-[var(--brand-icon)]">
                   <CheckCircle2 className="h-5 w-5" />
                   <span className="font-semibold">Order delivered</span>
                 </div>
@@ -182,7 +197,7 @@ export default function TrackOrderPage({
                   type="button"
                   disabled={delivering}
                   onClick={() => void handleDeliver()}
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white disabled:opacity-60"
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-3 text-sm font-bold text-white disabled:opacity-60"
                 >
                   {delivering && <Loader2 className="h-4 w-4 animate-spin" />}
                   Mark as Delivered

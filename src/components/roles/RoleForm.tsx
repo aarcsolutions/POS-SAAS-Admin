@@ -2,23 +2,41 @@
 
 import { useState } from 'react';
 import { ArrowLeft, Save, Loader2, Shield } from 'lucide-react';
+import { Select } from '@/components/ui/Select';
+
+export type RoleFormPayload = {
+  title: string;
+  /** Tenant Admin only: branch uuid, or null/undefined for tenant-level */
+  branch_id?: string | null;
+};
 
 interface Props {
   mode: 'create' | 'edit' | 'view';
   initialTitle?: string;
+  initialBranchId?: string | null;
+  initialBranchLabel?: string | null;
+  /** When true (tenant user with null branchId), show branch picker on create */
+  showBranchSelect?: boolean;
+  branchOptions?: { value: string; label: string }[];
   onClose: () => void;
-  onSubmit: (title: string) => Promise<void> | void;
+  onSubmit: (payload: RoleFormPayload) => Promise<void> | void;
   saving?: boolean;
 }
 
 export default function RoleForm({
   mode,
   initialTitle = '',
+  initialBranchId = null,
+  initialBranchLabel = null,
+  showBranchSelect = false,
+  branchOptions = [],
   onClose,
   onSubmit,
   saving = false,
 }: Props) {
   const [title, setTitle] = useState(initialTitle);
+  /** '' = tenant-level */
+  const [branchId, setBranchId] = useState(initialBranchId || '');
   const [error, setError] = useState('');
 
   const isReadOnly = mode === 'view';
@@ -32,7 +50,12 @@ export default function RoleForm({
       setError('Role name is required');
       return;
     }
-    await onSubmit(title.trim());
+    await onSubmit({
+      title: title.trim(),
+      ...(mode === 'create' && showBranchSelect
+        ? { branch_id: branchId || null }
+        : {}),
+    });
   };
 
   return (
@@ -56,8 +79,8 @@ export default function RoleForm({
         <div className="mb-5 flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-slate-400">
           <Shield className="h-4 w-4" /> Role Details
         </div>
-        <form onSubmit={handleSubmit}>
-          <div className="mb-5">
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div>
             <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500">
               Role Name {!isReadOnly && <span className="text-rose-500">*</span>}
             </label>
@@ -70,12 +93,51 @@ export default function RoleForm({
               }}
               readOnly={isReadOnly}
               placeholder="e.g. Cashier"
-              className={`h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 ${
+              className={`h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm outline-none focus:border-[var(--brand-primary)] focus:ring-4 focus:ring-[var(--brand-primary-soft)] ${
                 isReadOnly ? 'opacity-70' : ''
               }`}
             />
             {error && <p className="mt-1 text-xs text-rose-600">{error}</p>}
           </div>
+
+          {mode === 'create' && showBranchSelect && (
+            <div>
+              <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500">
+                Branch scope
+              </label>
+              <Select
+                value={branchId}
+                onChange={setBranchId}
+                size="lg"
+                variant="form"
+                allowEmpty
+                placeholder="Tenant-level (all branches)"
+                aria-label="Select branch for this role"
+                options={branchOptions}
+              />
+              <p className="mt-2 text-xs text-slate-500">
+                Choose a branch to create a branch-only role, or leave as
+                tenant-level for portal-wide access.
+              </p>
+            </div>
+          )}
+
+          {mode !== 'create' && showBranchSelect && (
+            <div>
+              <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500">
+                Branch scope
+              </label>
+              <input
+                type="text"
+                readOnly
+                value={
+                  initialBranchLabel ||
+                  (initialBranchId ? 'Branch' : 'Tenant-level')
+                }
+                className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm opacity-70 outline-none"
+              />
+            </div>
+          )}
 
           {!isReadOnly && (
             <div className="flex justify-end gap-3">
@@ -89,7 +151,7 @@ export default function RoleForm({
               <button
                 type="submit"
                 disabled={saving}
-                className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-70"
+                className="inline-flex items-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-bold text-white hover:brightness-95 disabled:opacity-70"
               >
                 {saving ? (
                   <Loader2 className="h-4 w-4 animate-spin" />

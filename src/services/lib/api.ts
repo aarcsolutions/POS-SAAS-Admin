@@ -107,6 +107,26 @@ export function getBranchNotFoundMessage(error: unknown): string {
   return BRANCH_NOT_FOUND_MESSAGE;
 }
 
+function isAuthPagePath(pathname: string) {
+  return (
+    pathname.startsWith('/login') ||
+    pathname.startsWith('/signup') ||
+    pathname.startsWith('/track')
+  );
+}
+
+/** Clear tenant session; hard-nav to login only when not already on an auth page. */
+function clearSessionAndMaybeRedirectToLogin() {
+  if (typeof window === 'undefined') return;
+  Cookies.remove('access_token', { path: '/' });
+  Cookies.remove('refresh_token', { path: '/' });
+  useAuthStore.getState().logout();
+  delete api.defaults.headers.common['Authorization'];
+  if (!isAuthPagePath(window.location.pathname)) {
+    window.location.replace('/login');
+  }
+}
+
 function kickToLoginWithMessage(message: string) {
   if (typeof window === 'undefined') return;
   try {
@@ -114,12 +134,16 @@ function kickToLoginWithMessage(message: string) {
   } catch {
     // ignore storage failures
   }
-  Cookies.remove('access_token', { path: '/' });
-  Cookies.remove('refresh_token', { path: '/' });
-  useAuthStore.getState().logout();
-  if (!window.location.pathname.startsWith('/login')) {
-    window.location.replace('/login');
-  }
+  clearSessionAndMaybeRedirectToLogin();
+}
+
+function isPublicAuthRequest(url?: string) {
+  if (!url) return false;
+  return (
+    url.includes('/auth/tenantLogin') ||
+    url.includes('/auth/tenantRefresh') ||
+    url.includes('/auth/tenantInfo')
+  );
 }
 
 function kickToLoginForTenantDisabled(error?: unknown) {
@@ -202,10 +226,8 @@ api.interceptors.response.use(
     }
 
     if (status === 401 && !originalRequest._retry) {
-      if (
-        originalRequest.url?.includes('/auth/tenantLogin') ||
-        originalRequest.url?.includes('/auth/tenantRefresh')
-      ) {
+      // Public auth endpoints: never refresh / never force-navigate
+      if (isPublicAuthRequest(originalRequest.url)) {
         return Promise.reject(error);
       }
 
@@ -228,7 +250,7 @@ api.interceptors.response.use(
       const refreshToken = Cookies.get('refresh_token');
       if (!refreshToken) {
         isRefreshing = false;
-        window.location.replace('/login');
+        clearSessionAndMaybeRedirectToLogin();
         return Promise.reject(error);
       }
 
@@ -260,9 +282,7 @@ api.interceptors.response.use(
         } else if (isBranchNotFoundError(refreshError)) {
           kickToLoginForBranchNotFound(refreshError);
         } else {
-          Cookies.remove('access_token', { path: '/' });
-          Cookies.remove('refresh_token', { path: '/' });
-          window.location.replace('/login');
+          clearSessionAndMaybeRedirectToLogin();
         }
         return Promise.reject(refreshError);
       }

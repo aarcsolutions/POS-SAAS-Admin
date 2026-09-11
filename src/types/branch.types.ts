@@ -17,7 +17,6 @@ export interface BranchModuleOption {
 /** Payload for branch create bootstrap (UI → later API). */
 export interface BranchCreateBootstrapPayload {
   name: string;
-  code: string;
   address: string;
   phone: string;
   status: BranchStatus;
