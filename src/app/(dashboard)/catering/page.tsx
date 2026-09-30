@@ -14,6 +14,7 @@ import {
   MapPin,
 } from 'lucide-react';
 import CateringForm from '@/components/catering/CateringForm';
+import CateringDetailsModal from '@/components/catering/CateringDetailsModal';
 import RowActionsMenu from '@/components/ui/RowActionsMenu';
 import ListPager from '@/components/ui/ListPager';
 import { Select } from '@/components/ui/Select';
@@ -26,7 +27,7 @@ import {
   useUpdateCateringEventMutation,
   useDeleteCateringEventMutation,
 } from '@/hooks/catering';
-import { useBranchesQuery } from '@/hooks/branches';
+import { useTenantBranchScope } from '@/hooks/branches';
 import { useCustomersQuery } from '@/hooks/customers';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { useAuthStore } from '@/store/authStore';
@@ -38,6 +39,7 @@ import {
   VENUE_TYPE_OPTIONS,
 } from '@/types/catering.types';
 import { confirmDialog } from '@/store/dialogStore';
+import { notifyError } from '@/utils/notify';
 
 const LIMIT = 10;
 
@@ -57,7 +59,7 @@ function formatMoney(value?: number | null) {
 
 export default function CateringPage() {
   const user = useAuthStore((s) => s.user);
-  const isTenantAdmin = !user?.branchId;
+  const { isTenantAdmin, showBranchFilter, branchOptions } = useTenantBranchScope();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [branchFilter, setBranchFilter] = useState('');
@@ -70,6 +72,10 @@ export default function CateringPage() {
     null
   );
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [reviewId, setReviewId] = useState<string | null>(null);
+  const [decisionAction, setDecisionAction] = useState<
+    'quote' | 'confirm' | 'decline' | 'complete' | null
+  >(null);
   const [formBranchId, setFormBranchId] = useState('');
   const [dropdownOpen, setDropdownOpen] = useState<string | null>(null);
 
@@ -82,23 +88,6 @@ export default function CateringPage() {
   useEffect(() => {
     setPage(1);
   }, [debouncedSearch, branchFilter, statusFilter, venueFilter, dateFrom, dateTo]);
-
-  const { data: branchesRes } = useBranchesQuery(
-    { page: 1, limit: 100 },
-    isTenantAdmin
-  );
-
-  const branchOptions = useMemo(() => {
-    const rows =
-      branchesRes?.data?.data ||
-      branchesRes?.data?.branches ||
-      (Array.isArray(branchesRes?.data) ? branchesRes.data : []) ||
-      [];
-    return (rows as { id: string; name: string; code?: string }[]).map((b) => ({
-      value: b.id,
-      label: b.name || b.code || b.id,
-    }));
-  }, [branchesRes]);
 
   const effectiveFormBranch =
     formBranchId || branchFilter || user?.branchId || '';
@@ -130,8 +119,10 @@ export default function CateringPage() {
 
   const { data: detailRes, isLoading: detailLoading } =
     useCateringEventByIdQuery(
-      selectedId,
-      Boolean(formMode && selectedId && formMode !== 'create')
+      selectedId || reviewId,
+      Boolean(
+        (formMode && selectedId && formMode !== 'create') || !!reviewId
+      )
     );
 
   const createMutation = useCreateCateringEventMutation();
@@ -140,7 +131,7 @@ export default function CateringPage() {
 
   const events = extractListItems<CateringEvent>(data);
   const pagination = extractPagination(data, LIMIT);
-  const colSpan = isTenantAdmin ? 8 : 7;
+  const colSpan = showBranchFilter ? 8 : 7;
 
   const statusFilterOptions = useMemo(
     () => [
@@ -168,10 +159,23 @@ export default function CateringPage() {
     mode: 'create' | 'edit' | 'view',
     event?: CateringEvent
   ) => {
+    setReviewId(null);
     setFormMode(mode);
     setSelectedId(event?.id || null);
     setFormBranchId(event?.branch_id || branchFilter || '');
     setDropdownOpen(null);
+  };
+
+  const handleOpenReview = (event: CateringEvent) => {
+    setFormMode(null);
+    setSelectedId(null);
+    setReviewId(event.id);
+    setDropdownOpen(null);
+  };
+
+  const closeReview = () => {
+    setReviewId(null);
+    setDecisionAction(null);
   };
 
   const handleDelete = async (id: string) => {
@@ -187,6 +191,36 @@ export default function CateringPage() {
   };
 
   const selectedEvent = detailRes?.data;
+  const reviewEvent =
+    reviewId && selectedEvent?.id === reviewId ? selectedEvent : null;
+
+  const runStatusUpdate = async (
+    action: 'quote' | 'confirm' | 'decline' | 'complete',
+    payload: {
+      status: CateringEvent['status'];
+      estimated_total?: number | null;
+    }
+  ) => {
+    if (!reviewEvent) return;
+    setDecisionAction(action);
+    try {
+      await updateMutation.mutateAsync({
+        id: reviewEvent.id,
+        status: payload.status,
+        ...(payload.estimated_total !== undefined
+          ? { estimated_total: payload.estimated_total }
+          : {}),
+      });
+      closeReview();
+    } catch (err: unknown) {
+      const message =
+        (err as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message ?? 'Could not update catering event';
+      notifyError('Update failed', message);
+    } finally {
+      setDecisionAction(null);
+    }
+  };
 
   if (formMode) {
     if (detailLoading && selectedId && formMode !== 'create') {
@@ -203,6 +237,7 @@ export default function CateringPage() {
           customer_id: selectedEvent.customer_id || '',
           contact_name: selectedEvent.contact_name,
           contact_phone: selectedEvent.contact_phone || '',
+          contact_email: selectedEvent.contact_email || '',
           event_name: selectedEvent.event_name || '',
           event_at: selectedEvent.event_at,
           party_size: String(selectedEvent.party_size),
@@ -222,7 +257,7 @@ export default function CateringPage() {
     return (
       <CateringForm
         mode={formMode}
-        showBranchSelect={isTenantAdmin}
+        showBranchSelect={showBranchFilter}
         branchOptions={branchOptions}
         customerOptions={customerOptions}
         initialData={initialData}
@@ -309,7 +344,7 @@ export default function CateringPage() {
           className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-[var(--brand-primary)]"
           aria-label="To date"
         />
-        {isTenantAdmin && (
+        {showBranchFilter && (
           <div className="w-full sm:w-56">
             <Select
               value={branchFilter}
@@ -336,7 +371,7 @@ export default function CateringPage() {
               <th className="px-5 py-3 font-bold">Venue</th>
               <th className="px-5 py-3 font-bold">Quote</th>
               <th className="px-5 py-3 font-bold">Status</th>
-              {isTenantAdmin && (
+              {showBranchFilter && (
                 <th className="px-5 py-3 font-bold">Branch</th>
               )}
               <th className="px-5 py-3 font-bold text-right">Actions</th>
@@ -407,7 +442,7 @@ export default function CateringPage() {
                         {badge.label}
                       </span>
                     </td>
-                    {isTenantAdmin && (
+                    {showBranchFilter && (
                       <td className="px-5 py-4">
                         <span className="inline-flex rounded-full bg-[var(--brand-primary-soft)] px-2.5 py-1 text-xs font-semibold text-[var(--brand-primary)]">
                           {ev.branch_name || 'Branch'}
@@ -423,10 +458,10 @@ export default function CateringPage() {
                       >
                         <button
                           type="button"
-                          onClick={() => handleOpenForm('view', ev)}
+                          onClick={() => handleOpenReview(ev)}
                           className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
                         >
-                          <Eye className="h-4 w-4" /> View
+                          <Eye className="h-4 w-4" /> View details
                         </button>
                         {canUpdate && (
                           <button
@@ -465,6 +500,34 @@ export default function CateringPage() {
         label="events"
         disabled={isLoading || isFetching}
       />
+
+      {reviewId && (
+        <CateringDetailsModal
+          event={reviewEvent}
+          loading={detailLoading && !reviewEvent}
+          quoting={decisionAction === 'quote'}
+          confirming={decisionAction === 'confirm'}
+          declining={decisionAction === 'decline'}
+          completing={decisionAction === 'complete'}
+          canDecide={canUpdate}
+          onClose={closeReview}
+          onSendQuote={(amount) =>
+            void runStatusUpdate('quote', {
+              status: 'quoted',
+              estimated_total: amount,
+            })
+          }
+          onConfirm={() =>
+            void runStatusUpdate('confirm', { status: 'confirmed' })
+          }
+          onDecline={() =>
+            void runStatusUpdate('decline', { status: 'cancelled' })
+          }
+          onMarkCompleted={() =>
+            void runStatusUpdate('complete', { status: 'completed' })
+          }
+        />
+      )}
     </div>
   );
 }

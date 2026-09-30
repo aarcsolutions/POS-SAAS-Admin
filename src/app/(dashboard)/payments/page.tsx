@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react'
 import Link from 'next/link';
 import {
   CreditCard,
@@ -14,9 +14,8 @@ import ListPager from '@/components/ui/ListPager';
 import { Select } from '@/components/ui/Select';
 import RowActionsMenu from '@/components/ui/RowActionsMenu';
 import { usePaymentsQuery, usePaymentDetailQuery } from '@/hooks/payments';
-import { useBranchesQuery } from '@/hooks/branches';
+import { useTenantBranchScope } from '@/hooks/branches';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
-import { useAuthStore } from '@/store/authStore';
 import { extractListItems, extractPagination, formatDate } from '@/utils/helpers';
 import { PaymentListItem, PaymentTab } from '@/types/payment.types';
 
@@ -59,8 +58,7 @@ function statusLabel(row: PaymentListItem) {
 }
 
 export default function PaymentsPage() {
-  const user = useAuthStore((s) => s.user);
-  const isTenantAdmin = !user?.branchId;
+  const { isTenantAdmin, showBranchFilter, branchOptions } = useTenantBranchScope();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [branchFilter, setBranchFilter] = useState('');
@@ -74,23 +72,6 @@ export default function PaymentsPage() {
   useEffect(() => {
     setPage(1);
   }, [debouncedSearch, branchFilter, tab]);
-
-  const { data: branchesRes } = useBranchesQuery(
-    { page: 1, limit: 100 },
-    isTenantAdmin
-  );
-
-  const branchOptions = useMemo(() => {
-    const rows =
-      branchesRes?.data?.data ||
-      branchesRes?.data?.branches ||
-      (Array.isArray(branchesRes?.data) ? branchesRes.data : []) ||
-      [];
-    return (rows as { id: string; name: string; code?: string }[]).map((b) => ({
-      value: b.id,
-      label: b.name || b.code || b.id,
-    }));
-  }, [branchesRes]);
 
   const { data, isLoading, isFetching, isError, refetch } = usePaymentsQuery({
     page,
@@ -106,7 +87,7 @@ export default function PaymentsPage() {
 
   const payments = extractListItems<PaymentListItem>(data, 'payments');
   const pagination = extractPagination(data, LIMIT);
-  const colSpan = isTenantAdmin ? 8 : 7;
+  const colSpan = showBranchFilter ? 8 : 7;
 
   const selectedRow = payments.find((p) => p.id === selectedId);
 
@@ -148,7 +129,7 @@ export default function PaymentsPage() {
             className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm outline-none focus:border-[var(--brand-primary)] focus:ring-4 focus:ring-[var(--brand-primary-soft)]"
           />
         </div>
-        {isTenantAdmin && (
+        {showBranchFilter && (
           <div className="w-full sm:w-56">
             <Select
               value={branchFilter}
@@ -177,7 +158,7 @@ export default function PaymentsPage() {
               <th className="px-5 py-3 font-bold">Amount</th>
               <th className="px-5 py-3 font-bold">Status</th>
               <th className="px-5 py-3 font-bold">Date</th>
-              {isTenantAdmin && (
+              {showBranchFilter && (
                 <th className="px-5 py-3 font-bold">Branch</th>
               )}
               <th className="px-5 py-3 font-bold text-right">Actions</th>
@@ -245,7 +226,7 @@ export default function PaymentsPage() {
                   <td className="px-5 py-4 text-slate-600">
                     {formatDate(row.created_at)}
                   </td>
-                  {isTenantAdmin && (
+                  {showBranchFilter && (
                     <td className="px-5 py-4">
                       <span className="inline-flex rounded-full bg-[var(--brand-primary-soft)] px-2.5 py-1 text-xs font-semibold text-[var(--brand-primary)]">
                         {row.branch_name || 'Branch'}

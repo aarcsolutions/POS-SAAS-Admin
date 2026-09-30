@@ -52,6 +52,8 @@ export interface OrderListItem {
   order_number: string;
   order_type: OrderType;
   branch_id?: string | null;
+  branch_name?: string | null;
+  is_archived?: boolean;
   table_name?: string | null;
   table_id?: string | null;
   delivery_address?: string | null;
@@ -70,6 +72,7 @@ export interface OrderListItem {
   tracking_token?: string | null;
   driver?: OrderDriver | null;
   created_at: string;
+  has_review?: boolean;
 }
 
 export interface OrderDetail extends OrderListItem {
@@ -123,6 +126,7 @@ export interface CreateOrderPayload {
   order_type: OrderType;
   table_id?: string;
   table_name?: string;
+  reservation_id?: string;
   delivery_address?: string;
   delivery_city?: string;
   delivery_phone?: string;

@@ -24,9 +24,8 @@ import {
   useUpdateReviewMutation,
   useDeleteReviewMutation,
 } from '@/hooks/reviews';
-import { useBranchesQuery } from '@/hooks/branches';
+import { useTenantBranchScope } from '@/hooks/branches';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
-import { useAuthStore } from '@/store/authStore';
 import { extractListItems, extractPagination } from '@/utils/helpers';
 import { Review } from '@/types/review.types';
 import { confirmDialog } from '@/store/dialogStore';
@@ -60,8 +59,7 @@ function RatingStars({ rating }: { rating: number }) {
 }
 
 export default function ReviewsPage() {
-  const user = useAuthStore((s) => s.user);
-  const isTenantAdmin = !user?.branchId;
+  const { showBranchFilter, branchOptions } = useTenantBranchScope();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [branchFilter, setBranchFilter] = useState('');
@@ -85,23 +83,6 @@ export default function ReviewsPage() {
   useEffect(() => {
     setPage(1);
   }, [debouncedSearch, branchFilter, ratingFilter, dateFrom, dateTo]);
-
-  const { data: branchesRes } = useBranchesQuery(
-    { page: 1, limit: 100 },
-    isTenantAdmin
-  );
-
-  const branchOptions = useMemo(() => {
-    const rows =
-      branchesRes?.data?.data ||
-      branchesRes?.data?.branches ||
-      (Array.isArray(branchesRes?.data) ? branchesRes.data : []) ||
-      [];
-    return (rows as { id: string; name: string; code?: string }[]).map((b) => ({
-      value: b.id,
-      label: b.name || b.code || b.id,
-    }));
-  }, [branchesRes]);
 
   const effectiveFormBranch = formBranchId || branchFilter || '';
 
@@ -175,7 +156,7 @@ export default function ReviewsPage() {
     return (
       <ReviewForm
         mode={formMode}
-        showBranchSelect={isTenantAdmin && formMode === 'create'}
+        showBranchSelect={showBranchFilter && formMode === 'create'}
         branchFilterOptional
         branchOptions={branchOptions}
         orderOptions={
@@ -290,7 +271,7 @@ export default function ReviewsPage() {
           className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-[var(--brand-primary)]"
           aria-label="To date"
         />
-        {isTenantAdmin && (
+        {showBranchFilter && (
           <div className="w-full sm:w-56">
             <Select
               value={branchFilter}

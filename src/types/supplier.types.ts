@@ -1,5 +1,13 @@
 export type PurchaseStatus = 'draft' | 'ordered' | 'received' | 'cancelled';
 
+export type SupplierItemLineType =
+  | 'raw_material'
+  | 'product_variant'
+  | 'inventory_item';
+
+/** @deprecated Prefer SupplierItemLineType — same union */
+export type PurchaseLineType = SupplierItemLineType;
+
 export interface SupplierRow {
   id: string;
   name: string;
@@ -43,6 +51,38 @@ export interface AssignRawMaterialPayload {
   notes?: string;
 }
 
+/** Phase 2 — polymorphic supplier catalog assign */
+export interface AssignSupplierItemPayload {
+  supplier_id: string;
+  line_type: SupplierItemLineType;
+  raw_material_id?: string;
+  product_variant_id?: string;
+  inventory_item_id?: string;
+  unit_price: number;
+  min_order_qty?: number;
+  lead_time_days?: number;
+  notes?: string;
+}
+
+export interface SupplierAssignedItemRow {
+  id: string;
+  supplier_id: string;
+  line_type: SupplierItemLineType;
+  raw_material_id?: string | null;
+  product_variant_id?: string | null;
+  inventory_item_id?: string | null;
+  item_name?: string | null;
+  unit?: string | null;
+  /** Legacy RM fields (when present) */
+  raw_material_name?: string | null;
+  raw_material_unit?: string | null;
+  unit_price: number;
+  min_order_qty?: number | null;
+  lead_time_days?: number | null;
+  notes?: string | null;
+  is_active?: boolean;
+}
+
 export interface MatchedSupplier {
   id: string;
   name: string;
@@ -65,8 +105,39 @@ export interface MatchByMaterialsResponse {
   };
 }
 
+export interface MatchByItemsPayload {
+  line_type: SupplierItemLineType;
+  item_ids: string[];
+}
+
+export interface MatchedSupplierItem {
+  id: string;
+  name: string;
+  phone?: string | null;
+  email?: string | null;
+  matched_item_ids: string[];
+  mappings: Array<{
+    item_id: string;
+    unit_price: number;
+    min_order_qty?: number | null;
+    lead_time_days?: number | null;
+  }>;
+}
+
+export interface MatchByItemsResponse {
+  status: boolean;
+  message?: string;
+  data?: {
+    full_match: MatchedSupplierItem[];
+    partial_match: MatchedSupplierItem[];
+  };
+}
+
 export interface PurchaseItemPayload {
-  raw_material_id: string;
+  line_type: PurchaseLineType;
+  raw_material_id?: string;
+  product_variant_id?: string;
+  inventory_item_id?: string;
   quantity: number;
   price: number;
 }
@@ -78,9 +149,14 @@ export interface CreatePurchasePayload {
 
 export interface PurchaseItemRow {
   id: string;
-  raw_material_id: string;
+  line_type?: PurchaseLineType;
+  raw_material_id?: string | null;
+  product_variant_id?: string | null;
+  inventory_item_id?: string | null;
   raw_material_name?: string | null;
   raw_material_unit?: string | null;
+  item_name?: string | null;
+  item_unit?: string | null;
   quantity: number;
   price: number;
   received_quantity?: number | null;

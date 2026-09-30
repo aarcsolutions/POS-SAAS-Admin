@@ -32,9 +32,8 @@ import {
   useSetProductActiveMutation,
 } from '@/hooks/products';
 import { useCategoriesQuery } from '@/hooks/categories';
-import { useBranchesQuery } from '@/hooks/branches';
+import { useTenantBranchScope } from '@/hooks/branches';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
-import { useAuthStore } from '@/store/authStore';
 import { extractListItems, extractPagination } from '@/utils/helpers';
 import { Product } from '@/types/product.types';
 import { Category } from '@/types/category.types';
@@ -136,8 +135,7 @@ function CategoryCard({
 }
 
 export default function ProductsPage() {
-  const user = useAuthStore((s) => s.user);
-  const isTenantAdmin = !user?.branchId;
+  const { isTenantAdmin, showBranchFilter, branchOptions } = useTenantBranchScope();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [branchFilter, setBranchFilter] = useState('');
@@ -173,23 +171,6 @@ export default function ProductsPage() {
     }),
     [isTenantAdmin, branchFilter],
   );
-
-  const { data: branchesRes } = useBranchesQuery(
-    { page: 1, limit: 100 },
-    isTenantAdmin,
-  );
-
-  const branchOptions = useMemo(() => {
-    const rows =
-      branchesRes?.data?.data ||
-      branchesRes?.data?.branches ||
-      (Array.isArray(branchesRes?.data) ? branchesRes.data : []) ||
-      [];
-    return (rows as { id: string; name: string; code?: string }[]).map((b) => ({
-      value: b.id,
-      label: b.name || b.code || b.id,
-    }));
-  }, [branchesRes]);
 
   // Unfiltered fetch (capped) used only to badge each category card with a product count.
   const { data: countsData } = useProductsQuery({ page: 1, limit: 100, ...branchQueryParams });
@@ -404,7 +385,7 @@ export default function ProductsPage() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {isTenantAdmin && canSync && (
+          {showBranchFilter && canSync && (
             <Link
               href="/products/sync"
               className="flex items-center gap-2 rounded-xl border border-[var(--admin-border)] bg-white px-4 py-2.5 text-sm font-bold text-[var(--brand-primary)] shadow-sm transition hover:bg-[color-mix(in_srgb,var(--brand-primary)_6%,white)]"
@@ -465,7 +446,7 @@ export default function ProductsPage() {
             className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm outline-none focus:border-[var(--brand-primary)] focus:ring-4 focus:ring-[var(--brand-primary-soft)]"
           />
         </div>
-        {isTenantAdmin && (
+        {showBranchFilter && (
           <div className="w-full lg:w-56">
             <Select
               value={branchFilter}
@@ -598,7 +579,7 @@ export default function ProductsPage() {
                             <span className="rounded-full bg-white/90 px-2.5 py-1 text-[11px] font-bold text-slate-700 backdrop-blur">
                               {product.has_variant ? 'Variable' : 'Simple'}
                             </span>
-                            {isTenantAdmin && !branchFilter && (
+                            {showBranchFilter && !branchFilter && (
                               <span className="rounded-full bg-slate-900/80 px-2.5 py-1 text-[11px] font-bold text-white backdrop-blur">
                                 {product.branch_name ||
                                   (product.branch_id ? 'Branch' : 'Tenant')}

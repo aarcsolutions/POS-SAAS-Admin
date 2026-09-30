@@ -7,6 +7,16 @@ export type CateringEventStatus =
 
 export type CateringVenueType = 'on_premise' | 'off_premise';
 
+export interface CateringSameDayEvent {
+  id: string;
+  contact_name: string;
+  event_name?: string | null;
+  event_at: string;
+  party_size: number;
+  status: CateringEventStatus;
+  venue_type: CateringVenueType;
+}
+
 export interface CateringEvent {
   id: string;
   branch_id?: string | null;
@@ -15,6 +25,7 @@ export interface CateringEvent {
   customer_name?: string | null;
   contact_name: string;
   contact_phone?: string | null;
+  contact_email?: string | null;
   event_name?: string | null;
   event_at: string;
   party_size: number;
@@ -27,6 +38,7 @@ export interface CateringEvent {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  same_day_events?: CateringSameDayEvent[];
 }
 
 export interface CateringEventsListResponse {
@@ -58,6 +70,7 @@ export type CateringEventPayload = {
   customer_id?: string | null;
   contact_name: string;
   contact_phone?: string | null;
+  contact_email?: string | null;
   event_name?: string | null;
   event_at: string;
   party_size: number;
@@ -79,6 +92,33 @@ export const CATERING_STATUS_OPTIONS: {
   { value: 'cancelled', label: 'Cancelled' },
 ];
 
+export const STATUS_TRANSITIONS: Record<
+  CateringEventStatus,
+  CateringEventStatus[]
+> = {
+  inquiry: ['quoted', 'cancelled'],
+  quoted: ['confirmed', 'cancelled'],
+  confirmed: ['completed', 'cancelled'],
+  completed: [],
+  cancelled: [],
+};
+
+export function allowedStatusOptions(
+  current: CateringEventStatus,
+  mode: 'create' | 'edit'
+): { value: CateringEventStatus; label: string }[] {
+  if (mode === 'create') {
+    return CATERING_STATUS_OPTIONS.filter(
+      (s) => s.value === 'inquiry' || s.value === 'quoted'
+    );
+  }
+  const allowed = new Set<CateringEventStatus>([
+    current,
+    ...(STATUS_TRANSITIONS[current] || []),
+  ]);
+  return CATERING_STATUS_OPTIONS.filter((s) => allowed.has(s.value));
+}
+
 export const VENUE_TYPE_OPTIONS: {
   value: CateringVenueType;
   label: string;
@@ -97,11 +137,11 @@ export const STATUS_BADGE: Record<
   },
   quoted: {
     label: 'Quoted',
-    className: 'bg-[var(--brand-primary-soft)] text-[var(--brand-primary)]',
+    className: 'bg-amber-100 text-amber-800',
   },
   confirmed: {
     label: 'Confirmed',
-    className: 'bg-[var(--brand-primary-soft)] text-[var(--brand-primary)]',
+    className: 'bg-emerald-100 text-emerald-800',
   },
   completed: {
     label: 'Completed',

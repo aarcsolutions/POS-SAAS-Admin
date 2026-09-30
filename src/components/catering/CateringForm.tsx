@@ -14,7 +14,8 @@ import { notifyError } from '@/utils/notify';
 import { blockInvalidSubmit } from '@/utils/form-validation';
 import {
   CateringEventPayload,
-  CATERING_STATUS_OPTIONS,
+  CateringEventStatus,
+  allowedStatusOptions,
   VENUE_TYPE_OPTIONS,
 } from '@/types/catering.types';
 
@@ -23,6 +24,7 @@ interface CateringFormData {
   customer_id: string;
   contact_name: string;
   contact_phone: string;
+  contact_email: string;
   event_name: string;
   event_at: string;
   party_size: string;
@@ -50,6 +52,7 @@ const emptyData: CateringFormData = {
   customer_id: '',
   contact_name: '',
   contact_phone: '',
+  contact_email: '',
   event_name: '',
   event_at: '',
   party_size: '10',
@@ -105,14 +108,16 @@ export default function CateringForm({
     if (errors[key]) setErrors((prev) => ({ ...prev, [key]: '' }));
   };
 
-  const statusOptions = useMemo(
-    () =>
-      CATERING_STATUS_OPTIONS.map((s) => ({
-        value: s.value,
-        label: s.label,
-      })),
-    []
-  );
+  const statusOptions = useMemo(() => {
+    const current = (data.status || 'inquiry') as CateringEventStatus;
+    return allowedStatusOptions(
+      current,
+      mode === 'create' ? 'create' : 'edit'
+    ).map((s) => ({
+      value: s.value,
+      label: s.label,
+    }));
+  }, [data.status, mode]);
 
   const venueOptions = useMemo(
     () =>
@@ -137,6 +142,12 @@ export default function CateringForm({
     if (!data.event_at) {
       e.event_at = 'Event date and time are required';
     }
+    if (
+      data.contact_email.trim() &&
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.contact_email.trim())
+    ) {
+      e.contact_email = 'Enter a valid email';
+    }
     if (data.venue_type === 'off_premise' && !data.venue_address.trim()) {
       e.venue_address = 'Venue address is required for off-premise events';
     }
@@ -155,6 +166,7 @@ export default function CateringForm({
       customer_id: data.customer_id || null,
       contact_name: data.contact_name.trim(),
       contact_phone: data.contact_phone.trim() || null,
+      contact_email: data.contact_email.trim() || null,
       event_name: data.event_name.trim() || null,
       event_at: new Date(data.event_at).toISOString(),
       party_size: Number(data.party_size),
@@ -278,6 +290,23 @@ export default function CateringForm({
                   className="h-11 w-full rounded-xl border border-slate-200 pl-10 pr-3 text-sm outline-none focus:border-[var(--brand-primary)] focus:ring-4 focus:ring-[var(--brand-primary-soft)] disabled:bg-slate-50"
                 />
               </div>
+            </div>
+
+            <div>
+              <label className="mb-1.5 block text-sm font-semibold text-slate-700">
+                Contact email
+              </label>
+              <input
+                type="email"
+                value={data.contact_email}
+                onChange={(e) => update('contact_email', e.target.value)}
+                readOnly={readOnly}
+                placeholder="guest@email.com"
+                className="h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-[var(--brand-primary)] focus:ring-4 focus:ring-[var(--brand-primary-soft)] disabled:bg-slate-50"
+              />
+              {errors.contact_email && (
+                <p className="mt-1 text-xs text-rose-600">{errors.contact_email}</p>
+              )}
             </div>
 
             <div>

@@ -19,10 +19,12 @@ import { blockInvalidSubmit } from '@/utils/form-validation';
 import {
   Product,
   ProductImage,
+  ProductInventoryTracking,
   ProductPayload,
   ProductVariant,
 } from '@/types/product.types';
 import { toast } from 'sonner';
+import { useAuthStore } from '@/store/authStore';
 
 interface Props {
   mode: 'create' | 'edit' | 'view';
@@ -38,6 +40,24 @@ function normalizeImages(images: ProductImage[]): ProductImage[] {
   return images.map((img, idx) => ({ ...img, is_primary: idx === 0 }));
 }
 
+function hasInventoryModule(
+  modules: { module_slug: string }[],
+  permissions: string[]
+): boolean {
+  if (
+    modules.some(
+      (m) =>
+        m.module_slug === 'inventory' ||
+        m.module_slug.replace(/_/g, '-') === 'inventory'
+    )
+  ) {
+    return true;
+  }
+  return permissions.some(
+    (p) => p === 'inventory/getAll' || p.startsWith('inventory/')
+  );
+}
+
 export default function ProductForm({
   mode,
   initial,
@@ -46,6 +66,13 @@ export default function ProductForm({
   saving = false,
 }: Props) {
   const isReadOnly = mode === 'view';
+  const modulesWithPermisssions = useAuthStore((s) => s.modulesWithPermisssions);
+  const permissions = useAuthStore((s) => s.permissions);
+  const inventoryModuleOn = hasInventoryModule(
+    modulesWithPermisssions,
+    permissions
+  );
+
   const { data: categoriesData, isLoading: categoriesLoading } =
     useCategoriesQuery({ page: 1, limit: 100 });
   const categories =
@@ -61,11 +88,24 @@ export default function ProductForm({
     initial?.category_id || null
   );
   const [hasVariant, setHasVariant] = useState(initial?.has_variant || false);
+  const [inventoryTracking, setInventoryTracking] =
+    useState<ProductInventoryTracking>(
+      (initial?.inventory_tracking as ProductInventoryTracking) || 'recipe'
+    );
   const [price, setPrice] = useState<number>(
     Number(initial?.price ?? 0)
   );
   const [costPrice, setCostPrice] = useState<number>(
     Number(initial?.cost_price ?? 0)
+  );
+  const [stockQuantity, setStockQuantity] = useState<number>(
+    Number(initial?.stock_quantity ?? 0)
+  );
+  const [minStockLevel, setMinStockLevel] = useState<number>(
+    Number(initial?.min_stock_level ?? 0)
+  );
+  const [openingStock, setOpeningStock] = useState<number>(
+    Number(initial?.stock_quantity ?? 0)
   );
   const [variants, setVariants] = useState<ProductVariant[]>(
     initial?.has_variant
@@ -74,6 +114,9 @@ export default function ProductForm({
           name: v.name,
           price: Number(v.price),
           cost_price: Number(v.cost_price),
+          stock_quantity: Number(v.stock_quantity ?? 0),
+          min_stock_level: Number(v.min_stock_level ?? 0),
+          opening_stock: Number(v.stock_quantity ?? 0),
           images: v.images || [],
         }))
       : []
@@ -84,6 +127,9 @@ export default function ProductForm({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  const showStockFields =
+    inventoryModuleOn && inventoryTracking === 'direct_stock';
 
   const title =
     mode === 'create'
@@ -99,10 +145,23 @@ export default function ProductForm({
     if (!hasVariant) {
       if (price < 0) next.price = 'Invalid selling price';
       if (costPrice < 0) next.cost_price = 'Invalid cost price';
+      if (showStockFields) {
+        if (stockQuantity < 0) next.stock_quantity = 'Stock cannot be negative';
+        if (minStockLevel < 0) next.min_stock_level = 'Min stock cannot be negative';
+        if (openingStock < 0) next.opening_stock = 'Opening stock cannot be negative';
+      }
     } else {
       if (variants.length === 0) next.variants = 'Add at least one variant';
       variants.forEach((v, i) => {
         if (!v.name.trim()) next[`variant_${i}_name`] = 'Variant name required';
+        if (showStockFields) {
+          if (Number(v.stock_quantity ?? 0) < 0) {
+            next[`variant_${i}_stock`] = 'Stock cannot be negative';
+          }
+          if (Number(v.min_stock_level ?? 0) < 0) {
+            next[`variant_${i}_min`] = 'Min stock cannot be negative';
+          }
+        }
       });
     }
     setErrors(next);
@@ -147,6 +206,7 @@ export default function ProductForm({
       name: name.trim(),
       category_id: categoryId!,
       has_variant: hasVariant,
+      inventory_tracking: inventoryTracking,
       description: description.trim() || undefined,
       images: normalizeImages(images).map((img) => ({
         image_url: img.image_url,
@@ -155,21 +215,36 @@ export default function ProductForm({
     };
 
     if (hasVariant) {
-      payload.variants = variants.map((v) => ({
-        ...(v.id ? { id: v.id } : {}),
-        name: v.name.trim(),
-        price: Number(v.price),
-        cost_price: Number(v.cost_price),
-        images: v.images?.length
-          ? normalizeImages(v.images).map((img) => ({
-              image_url: img.image_url,
-              is_primary: !!img.is_primary,
-            }))
-          : undefined,
-      }));
+      payload.variants = variants.map((v) => {
+        const row: ProductVariant = {
+          ...(v.id ? { id: v.id } : {}),
+          name: v.name.trim(),
+          price: Number(v.price),
+          cost_price: Number(v.cost_price),
+          images: v.images?.length
+            ? normalizeImages(v.images).map((img) => ({
+                image_url: img.image_url,
+                is_primary: !!img.is_primary,
+              }))
+            : undefined,
+        };
+        if (showStockFields) {
+          row.stock_quantity = Number(v.stock_quantity ?? 0);
+          row.min_stock_level = Number(v.min_stock_level ?? 0);
+          row.opening_stock = Number(
+            v.opening_stock ?? v.stock_quantity ?? 0
+          );
+        }
+        return row;
+      });
     } else {
       payload.price = Number(price);
       payload.cost_price = Number(costPrice);
+      if (showStockFields) {
+        payload.stock_quantity = Number(stockQuantity);
+        payload.min_stock_level = Number(minStockLevel);
+        payload.opening_stock = Number(openingStock);
+      }
     }
 
     await onSubmit(payload);
@@ -247,6 +322,38 @@ export default function ProductForm({
             <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500">
               Product Type
             </label>
+            <div className="flex flex-wrap gap-4">
+              <label className="flex items-center gap-2 text-sm text-slate-700">
+                <input
+                  type="radio"
+                  name="inventory_tracking"
+                  checked={inventoryTracking === 'recipe'}
+                  disabled={isReadOnly}
+                  onChange={() => setInventoryTracking('recipe')}
+                />
+                Recipe Based
+              </label>
+              <label className="flex items-center gap-2 text-sm text-slate-700">
+                <input
+                  type="radio"
+                  name="inventory_tracking"
+                  checked={inventoryTracking === 'direct_stock'}
+                  disabled={isReadOnly}
+                  onChange={() => setInventoryTracking('direct_stock')}
+                />
+                Direct Stock
+              </label>
+            </div>
+            <p className="mt-1 text-xs text-slate-500">
+              Recipe based items use recipes / KDS. Direct stock tracks sellable
+              quantity on hand.
+            </p>
+          </div>
+
+          <div>
+            <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500">
+              Pricing Structure
+            </label>
             <div className="flex gap-4">
               <label className="flex items-center gap-2 text-sm text-slate-700">
                 <input
@@ -266,8 +373,22 @@ export default function ProductForm({
                     setHasVariant(true);
                     if (variants.length === 0) {
                       setVariants([
-                        { name: 'Small', price: 0, cost_price: 0 },
-                        { name: 'Large', price: 0, cost_price: 0 },
+                        {
+                          name: 'Small',
+                          price: 0,
+                          cost_price: 0,
+                          stock_quantity: 0,
+                          min_stock_level: 0,
+                          opening_stock: 0,
+                        },
+                        {
+                          name: 'Large',
+                          price: 0,
+                          cost_price: 0,
+                          stock_quantity: 0,
+                          min_stock_level: 0,
+                          opening_stock: 0,
+                        },
                       ]);
                     }
                   }}
@@ -316,6 +437,72 @@ export default function ProductForm({
                 />
               </div>
             </div>
+
+            {showStockFields && (
+              <div className="grid gap-4 border-t border-slate-100 pt-5 md:grid-cols-3">
+                <div>
+                  <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500">
+                    Opening Stock
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    value={openingStock}
+                    readOnly={isReadOnly}
+                    onChange={(e) => {
+                      const n = Number(e.target.value);
+                      setOpeningStock(n);
+                      if (mode === 'create') setStockQuantity(n);
+                    }}
+                    className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm outline-none focus:border-[var(--brand-primary)] focus:ring-4 focus:ring-[var(--brand-primary-soft)]"
+                  />
+                  {errors.opening_stock && (
+                    <p className="mt-1 text-xs text-rose-600">
+                      {errors.opening_stock}
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500">
+                    Stock Quantity
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    value={stockQuantity}
+                    readOnly={isReadOnly}
+                    onChange={(e) => setStockQuantity(Number(e.target.value))}
+                    className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm outline-none focus:border-[var(--brand-primary)] focus:ring-4 focus:ring-[var(--brand-primary-soft)]"
+                  />
+                  {errors.stock_quantity && (
+                    <p className="mt-1 text-xs text-rose-600">
+                      {errors.stock_quantity}
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500">
+                    Min Stock Level
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    value={minStockLevel}
+                    readOnly={isReadOnly}
+                    onChange={(e) => setMinStockLevel(Number(e.target.value))}
+                    className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm outline-none focus:border-[var(--brand-primary)] focus:ring-4 focus:ring-[var(--brand-primary-soft)]"
+                  />
+                  {errors.min_stock_level && (
+                    <p className="mt-1 text-xs text-rose-600">
+                      {errors.min_stock_level}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         ) : (
           <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-4">
@@ -329,7 +516,14 @@ export default function ProductForm({
                   onClick={() =>
                     setVariants((prev) => [
                       ...prev,
-                      { name: '', price: 0, cost_price: 0 },
+                      {
+                        name: '',
+                        price: 0,
+                        cost_price: 0,
+                        stock_quantity: 0,
+                        min_stock_level: 0,
+                        opening_stock: 0,
+                      },
                     ])
                   }
                   className="inline-flex items-center gap-1 rounded-lg bg-[var(--brand-primary)] px-3 py-1.5 text-xs font-bold text-white hover:brightness-95"
@@ -342,16 +536,29 @@ export default function ProductForm({
               <p className="text-xs text-rose-600">{errors.variants}</p>
             )}
             <div className="space-y-3">
-              <div className="hidden gap-3 px-1 text-[11px] font-bold uppercase tracking-wider text-slate-400 md:grid md:grid-cols-4">
+              <div
+                className={`hidden gap-3 px-1 text-[11px] font-bold uppercase tracking-wider text-slate-400 md:grid ${
+                  showStockFields ? 'md:grid-cols-7' : 'md:grid-cols-4'
+                }`}
+              >
                 <span>Name</span>
                 <span>Selling Price</span>
                 <span>Cost Price</span>
+                {showStockFields && (
+                  <>
+                    <span>Opening</span>
+                    <span>Stock Qty</span>
+                    <span>Min Stock</span>
+                  </>
+                )}
                 <span className="text-center">Remove</span>
               </div>
               {variants.map((v, idx) => (
                 <div
                   key={v.id || idx}
-                  className="grid gap-3 rounded-xl border border-slate-100 bg-slate-50 p-3 md:grid-cols-4"
+                  className={`grid gap-3 rounded-xl border border-slate-100 bg-slate-50 p-3 ${
+                    showStockFields ? 'md:grid-cols-7' : 'md:grid-cols-4'
+                  }`}
                 >
                   <input
                     value={v.name}
@@ -395,6 +602,65 @@ export default function ProductForm({
                     }}
                     className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none focus:border-[var(--brand-primary)]"
                   />
+                  {showStockFields && (
+                    <>
+                      <input
+                        type="number"
+                        min={0}
+                        step="0.01"
+                        value={v.opening_stock ?? 0}
+                        readOnly={isReadOnly}
+                        placeholder="Opening"
+                        onChange={(e) => {
+                          const n = Number(e.target.value);
+                          const next = [...variants];
+                          next[idx] = {
+                            ...v,
+                            opening_stock: n,
+                            ...(mode === 'create'
+                              ? { stock_quantity: n }
+                              : {}),
+                          };
+                          setVariants(next);
+                        }}
+                        className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none focus:border-[var(--brand-primary)]"
+                      />
+                      <input
+                        type="number"
+                        min={0}
+                        step="0.01"
+                        value={v.stock_quantity ?? 0}
+                        readOnly={isReadOnly}
+                        placeholder="Stock"
+                        onChange={(e) => {
+                          const next = [...variants];
+                          next[idx] = {
+                            ...v,
+                            stock_quantity: Number(e.target.value),
+                          };
+                          setVariants(next);
+                        }}
+                        className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none focus:border-[var(--brand-primary)]"
+                      />
+                      <input
+                        type="number"
+                        min={0}
+                        step="0.01"
+                        value={v.min_stock_level ?? 0}
+                        readOnly={isReadOnly}
+                        placeholder="Min"
+                        onChange={(e) => {
+                          const next = [...variants];
+                          next[idx] = {
+                            ...v,
+                            min_stock_level: Number(e.target.value),
+                          };
+                          setVariants(next);
+                        }}
+                        className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none focus:border-[var(--brand-primary)]"
+                      />
+                    </>
+                  )}
                   {!isReadOnly && (
                     <button
                       type="button"

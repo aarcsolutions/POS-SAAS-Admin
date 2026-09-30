@@ -7,6 +7,8 @@ import { Check, ChevronDown, Search } from 'lucide-react';
 export type SelectOption = {
   value: string;
   label: string;
+  /** Secondary text shown on the right (e.g. branch name) */
+  meta?: string;
   disabled?: boolean;
 };
 
@@ -116,9 +118,10 @@ export function Select({
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
     if (!searchable || !needle) return options;
-    return options.filter((option) =>
-      option.label.toLowerCase().includes(needle)
-    );
+    return options.filter((option) => {
+      const haystack = `${option.label} ${option.meta ?? ''}`.toLowerCase();
+      return haystack.includes(needle);
+    });
   }, [options, query, searchable]);
 
   useEffect(() => {
@@ -263,7 +266,11 @@ export function Select({
 
   const displayLabel = loading
     ? 'Loading…'
-    : selected?.label ?? placeholder;
+    : selected
+      ? selected.meta
+        ? `${selected.label} · ${selected.meta}`
+        : selected.label
+      : placeholder;
 
   const showClearOption = showEmpty && Boolean(value) && options.length > 0;
 
@@ -355,10 +362,23 @@ export function Select({
                       if (!opt.disabled) pick(opt.value);
                     }}
                   >
-                    <span className="truncate">{opt.label}</span>
-                    {isSelected ? (
-                      <Check className="h-3.5 w-3.5 shrink-0" />
-                    ) : null}
+                    <span className="min-w-0 flex-1 truncate">{opt.label}</span>
+                    <span className="flex shrink-0 items-center gap-2">
+                      {opt.meta ? (
+                        <span
+                          className={`max-w-[9rem] truncate text-[11px] font-medium ${
+                            isSelected
+                              ? 'text-[var(--brand-primary)]/80'
+                              : 'text-[var(--admin-muted)]'
+                          }`}
+                        >
+                          {opt.meta}
+                        </span>
+                      ) : null}
+                      {isSelected ? (
+                        <Check className="h-3.5 w-3.5 shrink-0" />
+                      ) : null}
+                    </span>
                   </li>
                 );
               })

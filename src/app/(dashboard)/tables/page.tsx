@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react'
 import {
   LayoutGrid,
   Plus,
@@ -9,8 +9,10 @@ import {
   Trash2,
   Eye,
   Loader2,
+  CalendarPlus,
 } from 'lucide-react';
 import TableForm from '@/components/tables/TableForm';
+import QuickReserveModal from '@/components/reservations/QuickReserveModal';
 import RowActionsMenu from '@/components/ui/RowActionsMenu';
 import ListPager from '@/components/ui/ListPager';
 import { Select } from '@/components/ui/Select';
@@ -22,9 +24,9 @@ import {
   useUpdateTableMutation,
   useDeleteTableMutation,
 } from '@/hooks/tables';
-import { useBranchesQuery } from '@/hooks/branches';
+import { useQuickCreateReservationMutation } from '@/hooks/reservations';
+import { useTenantBranchScope } from '@/hooks/branches';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
-import { useAuthStore } from '@/store/authStore';
 import { extractListItems, extractPagination } from '@/utils/helpers';
 import { RestaurantTableRow } from '@/types/table.types';
 import { confirmDialog } from '@/store/dialogStore';
@@ -38,8 +40,7 @@ const STATUS_BADGE: Record<string, string> = {
 };
 
 export default function TablesPage() {
-  const user = useAuthStore((s) => s.user);
-  const isTenantAdmin = !user?.branchId;
+  const { isTenantAdmin, showBranchFilter, branchOptions } = useTenantBranchScope();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [branchFilter, setBranchFilter] = useState('');
@@ -50,32 +51,18 @@ export default function TablesPage() {
   const [selectedTable, setSelectedTable] =
     useState<RestaurantTableRow | null>(null);
   const [dropdownOpen, setDropdownOpen] = useState<string | null>(null);
+  const [quickReserveTable, setQuickReserveTable] =
+    useState<RestaurantTableRow | null>(null);
 
   const canCreate = usePermission(ENTITY_PERMS.tables.create);
   const canUpdate = usePermission(ENTITY_PERMS.tables.update);
   const canDelete = usePermission(ENTITY_PERMS.tables.delete);
+  const canQuickReserve = usePermission(ENTITY_PERMS.reservations.create);
 
   const debouncedSearch = useDebouncedValue(searchTerm.trim(), 300);
   useEffect(() => {
     setPage(1);
   }, [debouncedSearch, branchFilter]);
-
-  const { data: branchesRes } = useBranchesQuery(
-    { page: 1, limit: 100 },
-    isTenantAdmin
-  );
-
-  const branchOptions = useMemo(() => {
-    const rows =
-      branchesRes?.data?.data ||
-      branchesRes?.data?.branches ||
-      (Array.isArray(branchesRes?.data) ? branchesRes.data : []) ||
-      [];
-    return (rows as { id: string; name: string; code?: string }[]).map((b) => ({
-      value: b.id,
-      label: b.name || b.code || b.id,
-    }));
-  }, [branchesRes]);
 
   const { data, isLoading, isFetching } = useTablesQuery({
     page,
@@ -86,10 +73,11 @@ export default function TablesPage() {
   const createMutation = useCreateTableMutation();
   const updateMutation = useUpdateTableMutation();
   const deleteMutation = useDeleteTableMutation();
+  const quickReserveMutation = useQuickCreateReservationMutation();
 
   const tables = extractListItems<RestaurantTableRow>(data, 'tables');
   const pagination = extractPagination(data, LIMIT);
-  const colSpan = isTenantAdmin ? 6 : 5;
+  const colSpan = showBranchFilter ? 6 : 5;
 
   const handleOpenForm = (
     mode: 'create' | 'edit' | 'view',
@@ -98,6 +86,11 @@ export default function TablesPage() {
     setFormMode(mode);
     setSelectedTable(table || null);
     setDropdownOpen(null);
+  };
+
+  const handleQuickReserve = (table: RestaurantTableRow) => {
+    setDropdownOpen(null);
+    setQuickReserveTable(table);
   };
 
   const handleDelete = async (id: string) => {
@@ -116,7 +109,7 @@ export default function TablesPage() {
     return (
       <TableForm
         mode={formMode}
-        showBranchSelect={isTenantAdmin}
+        showBranchSelect={showBranchFilter}
         branchOptions={branchOptions}
         initialData={
           selectedTable
@@ -181,7 +174,7 @@ export default function TablesPage() {
             className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm outline-none focus:border-[var(--brand-primary)] focus:ring-4 focus:ring-[var(--brand-primary-soft)]"
           />
         </div>
-        {isTenantAdmin && (
+        {showBranchFilter && (
           <div className="w-full sm:w-56">
             <Select
               value={branchFilter}
@@ -204,7 +197,7 @@ export default function TablesPage() {
               <th className="px-5 py-3 font-bold">Table</th>
               <th className="px-5 py-3 font-bold">Code</th>
               <th className="px-5 py-3 font-bold">Capacity</th>
-              {isTenantAdmin && (
+              {showBranchFilter && (
                 <th className="px-5 py-3 font-bold">Branch</th>
               )}
               <th className="px-5 py-3 font-bold">Status</th>
@@ -237,7 +230,7 @@ export default function TablesPage() {
                   <td className="px-5 py-4 text-slate-600">
                     {t.capacity ?? <span className="text-slate-300">—</span>}
                   </td>
-                  {isTenantAdmin && (
+                  {showBranchFilter && (
                     <td className="px-5 py-4">
                       <span className="inline-flex rounded-full bg-[var(--brand-primary-soft)] px-2.5 py-1 text-xs font-semibold text-[var(--brand-primary)]">
                         {t.branch_name || 'Branch'}
@@ -267,6 +260,15 @@ export default function TablesPage() {
                       >
                         <Eye className="h-4 w-4" /> View
                       </button>
+                      {canQuickReserve && t.status === 'available' && (
+                        <button
+                          type="button"
+                          onClick={() => handleQuickReserve(t)}
+                          className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
+                        >
+                          <CalendarPlus className="h-4 w-4" /> Quick Reserve
+                        </button>
+                      )}
                       {canUpdate && (
                         <button
                           type="button"
@@ -300,6 +302,18 @@ export default function TablesPage() {
         total={pagination.total}
         limit={LIMIT}
         onPageChange={setPage}
+      />
+
+      <QuickReserveModal
+        open={Boolean(quickReserveTable)}
+        initialTableId={quickReserveTable?.id}
+        initialBranchId={quickReserveTable?.branch_id}
+        saving={quickReserveMutation.isPending}
+        onClose={() => setQuickReserveTable(null)}
+        onSubmit={async (payload) => {
+          await quickReserveMutation.mutateAsync(payload);
+          setQuickReserveTable(null);
+        }}
       />
     </div>
   );

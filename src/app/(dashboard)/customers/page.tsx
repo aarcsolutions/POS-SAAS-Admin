@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Users,
   Plus,
@@ -26,9 +26,8 @@ import {
   useUpdateCustomerMutation,
   useDeleteCustomerMutation,
 } from '@/hooks/customers';
-import { useBranchesQuery } from '@/hooks/branches';
+import { useTenantBranchScope } from '@/hooks/branches';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
-import { useAuthStore } from '@/store/authStore';
 import { extractListItems, extractPagination, formatDate } from '@/utils/helpers';
 import { Customer } from '@/types/customer.types';
 import { confirmDialog } from '@/store/dialogStore';
@@ -54,8 +53,7 @@ function mapCustomerToFormData(customer: Customer) {
 }
 
 export default function CustomersPage() {
-  const user = useAuthStore((s) => s.user);
-  const isTenantAdmin = !user?.branchId;
+  const { isTenantAdmin, showBranchFilter, branchOptions } = useTenantBranchScope();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [branchFilter, setBranchFilter] = useState('');
@@ -78,23 +76,6 @@ export default function CustomersPage() {
     setPage(1);
   }, [debouncedSearch, branchFilter]);
 
-  const { data: branchesRes } = useBranchesQuery(
-    { page: 1, limit: 100 },
-    isTenantAdmin
-  );
-
-  const branchOptions = useMemo(() => {
-    const rows =
-      branchesRes?.data?.data ||
-      branchesRes?.data?.branches ||
-      (Array.isArray(branchesRes?.data) ? branchesRes.data : []) ||
-      [];
-    return (rows as { id: string; name: string; code?: string }[]).map((b) => ({
-      value: b.id,
-      label: b.name || b.code || b.id,
-    }));
-  }, [branchesRes]);
-
   const { data, isLoading, isFetching } = useCustomersQuery({
     page,
     limit: LIMIT,
@@ -107,7 +88,7 @@ export default function CustomersPage() {
 
   const customers = extractListItems<Customer>(data, 'customers');
   const pagination = extractPagination(data, LIMIT);
-  const colSpan = isTenantAdmin ? 9 : 8;
+  const colSpan = showBranchFilter ? 9 : 8;
 
   const handleOpenForm = async (
     mode: 'create' | 'edit' | 'view',
@@ -218,7 +199,7 @@ export default function CustomersPage() {
             className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm outline-none focus:border-[var(--brand-primary)] focus:ring-4 focus:ring-[var(--brand-primary-soft)]"
           />
         </div>
-        {isTenantAdmin && (
+        {showBranchFilter && (
           <div className="w-full sm:w-56">
             <Select
               value={branchFilter}
@@ -247,7 +228,7 @@ export default function CustomersPage() {
               <th className="px-5 py-3 font-bold">DOB</th>
               <th className="px-5 py-3 font-bold">Marketing</th>
               <th className="px-5 py-3 font-bold">Location</th>
-              {isTenantAdmin && (
+              {showBranchFilter && (
                 <th className="px-5 py-3 font-bold">Branch</th>
               )}
               <th className="px-5 py-3 font-bold">Status</th>
@@ -326,7 +307,7 @@ export default function CustomersPage() {
                       <span className="text-slate-300">—</span>
                     )}
                   </td>
-                  {isTenantAdmin && (
+                  {showBranchFilter && (
                     <td className="px-5 py-4">
                       <span
                         className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${

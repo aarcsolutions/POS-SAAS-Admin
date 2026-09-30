@@ -22,9 +22,8 @@ import {
   useUpdateTaxMutation,
   useDeleteTaxMutation,
 } from '@/hooks/taxes';
-import { useBranchesQuery } from '@/hooks/branches';
+import { useTenantBranchScope } from '@/hooks/branches';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
-import { useAuthStore } from '@/store/authStore';
 import { extractListItems, extractPagination } from '@/utils/helpers';
 import { TaxRow } from '@/types/tax.types';
 import { confirmDialog } from '@/store/dialogStore';
@@ -32,8 +31,7 @@ import { confirmDialog } from '@/store/dialogStore';
 const LIMIT = 10;
 
 export default function TaxesPage() {
-  const user = useAuthStore((s) => s.user);
-  const isTenantAdmin = !user?.branchId;
+  const { isTenantAdmin, showBranchFilter, branchOptions } = useTenantBranchScope();
 
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
@@ -52,15 +50,6 @@ export default function TaxesPage() {
   useEffect(() => {
     setPage(1);
   }, [debouncedSearch, branchFilter]);
-
-  const { data: branchesRes } = useBranchesQuery(
-    { page: 1, limit: 100 },
-    isTenantAdmin
-  );
-  const branchOptions = extractListItems<{ id: string; name: string }>(
-    branchesRes,
-    'branches'
-  ).map((b) => ({ value: b.id, label: b.name }));
 
   const { data, isLoading } = useTaxesQuery({
     page,
@@ -135,7 +124,7 @@ export default function TaxesPage() {
               className="h-11 w-[220px] rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm outline-none transition focus:border-[var(--brand-primary)] focus:ring-4 focus:ring-[var(--brand-primary-soft)]"
             />
           </div>
-          {isTenantAdmin && (
+          {showBranchFilter && (
             <Select
               value={branchFilter}
               onChange={setBranchFilter}

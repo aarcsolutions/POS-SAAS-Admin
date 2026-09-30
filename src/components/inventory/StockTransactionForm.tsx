@@ -93,7 +93,7 @@ export default function StockTransactionForm({ type, inventory, reasons, onClose
           Back to Inventory
         </button>
         <div className="flex items-center gap-3">
-          <div className={`flex h-12 w-12 items-center justify-center rounded-2xl ${type === 'in' ? 'bg-[var(--brand-icon-soft)] text-[var(--brand-icon)]' : 'bg-amber-100 text-amber-700'}`}>
+          <div className={`flex h-12 w-12 items-center justify-center rounded-2xl ${type === 'in' ? 'bg-[var(--brand-icon-soft)] text-[var(--brand-icon)]' : 'bg-[var(--brand-primary-soft)] text-[var(--brand-primary)]'}`}>
             {type === 'in' ? <ArrowDownLeft className="h-6 w-6" /> : <ArrowUpRight className="h-6 w-6" />}
           </div>
           <div>
@@ -111,7 +111,7 @@ export default function StockTransactionForm({ type, inventory, reasons, onClose
             {/* Product Selection */}
             <div className="md:col-span-2">
               <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500">
-                Select Product <span className="text-rose-500">*</span>
+                Select Product <span className="text-[var(--brand-primary)]">*</span>
               </label>
               <Select
                 value={selectedSku}
@@ -124,7 +124,7 @@ export default function StockTransactionForm({ type, inventory, reasons, onClose
                 variant="form"
                 size="lg"
                 placeholder="Choose a product..."
-                triggerClassName={errors.selectedSku ? 'border-rose-400' : undefined}
+                triggerClassName={errors.selectedSku ? 'border-[var(--brand-primary)]' : undefined}
                 options={inventory.map((item) => ({
                   value: item.sku,
                   label: `${item.productName} (${item.sku}) — Current: ${item.currentStock} ${item.unit}`,
@@ -133,7 +133,7 @@ export default function StockTransactionForm({ type, inventory, reasons, onClose
                 searchPlaceholder="Search products…"
               />
               {errors.selectedSku && (
-                <p className="mt-1 text-xs text-rose-600">{errors.selectedSku}</p>
+                <p className="mt-1 text-xs text-[var(--brand-primary-dark)]">{errors.selectedSku}</p>
               )}
               {selectedItem && (
                 <div className="mt-2 flex items-center gap-4 rounded-xl bg-slate-50 p-3 text-xs text-slate-600">
@@ -147,7 +147,7 @@ export default function StockTransactionForm({ type, inventory, reasons, onClose
             {/* Quantity */}
             <div>
               <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500">
-                Quantity <span className="text-rose-500">*</span>
+                Quantity <span className="text-[var(--brand-primary)]">*</span>
               </label>
               <input
                 type="number"
@@ -159,18 +159,18 @@ export default function StockTransactionForm({ type, inventory, reasons, onClose
                 min={1}
                 placeholder="Enter quantity"
                 className={`h-12 w-full rounded-xl border bg-slate-50 px-4 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-[var(--brand-primary)] focus:bg-white focus:ring-4 focus:ring-[var(--brand-primary-soft)] ${
-                  errors.quantity ? 'border-rose-400' : 'border-slate-200'
+                  errors.quantity ? 'border-[var(--brand-primary)]' : 'border-slate-200'
                 }`}
               />
               {errors.quantity && (
-                <p className="mt-1 text-xs text-rose-600">{errors.quantity}</p>
+                <p className="mt-1 text-xs text-[var(--brand-primary-dark)]">{errors.quantity}</p>
               )}
             </div>
 
             {/* Reason */}
             <div>
               <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500">
-                Reason <span className="text-rose-500">*</span>
+                Reason <span className="text-[var(--brand-primary)]">*</span>
               </label>
               <Select
                 value={reason}
@@ -201,7 +201,7 @@ export default function StockTransactionForm({ type, inventory, reasons, onClose
             {/* Reference */}
             <div>
               <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500">
-                Reference No <span className="text-rose-500">*</span>
+                Reference No <span className="text-[var(--brand-primary)]">*</span>
               </label>
               <input
                 type="text"
@@ -212,11 +212,11 @@ export default function StockTransactionForm({ type, inventory, reasons, onClose
                 }}
                 placeholder="e.g. PO-2024-0012"
                 className={`h-12 w-full rounded-xl border bg-slate-50 px-4 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-[var(--brand-primary)] focus:bg-white focus:ring-4 focus:ring-[var(--brand-primary-soft)] ${
-                  errors.reference ? 'border-rose-400' : 'border-slate-200'
+                  errors.reference ? 'border-[var(--brand-primary)]' : 'border-slate-200'
                 }`}
               />
               {errors.reference && (
-                <p className="mt-1 text-xs text-rose-600">{errors.reference}</p>
+                <p className="mt-1 text-xs text-[var(--brand-primary-dark)]">{errors.reference}</p>
               )}
             </div>
 
@@ -250,7 +250,7 @@ export default function StockTransactionForm({ type, inventory, reasons, onClose
               className={`inline-flex items-center justify-center gap-2 rounded-xl px-6 py-2.5 text-sm font-bold text-white shadow-lg transition disabled:opacity-60 disabled:cursor-not-allowed ${
                 type === 'in'
                   ? 'bg-[var(--brand-primary)] shadow-[color-mix(in_srgb,var(--brand-primary)_20%,transparent)] hover:brightness-95'
-                  : 'bg-amber-600 shadow-amber-600/20 hover:bg-amber-700'
+                  : 'bg-[var(--brand-chart-secondary)] shadow-[color-mix(in_srgb,var(--brand-chart-secondary)_20%,transparent)] hover:brightness-95'
               }`}
             >
               {saving && <Loader2 className="h-4 w-4 animate-spin" />}

@@ -74,6 +74,42 @@ export const branchesApi = {
     return data;
   },
 
+  deactivate: async (id: string) => {
+    const { data } = await api.put('/branches/update', {
+      id,
+      is_active: false,
+    });
+    return data;
+  },
+
+  activate: async (id: string) => {
+    const { data } = await api.put('/branches/update', {
+      id,
+      is_active: true,
+    });
+    return data;
+  },
+
+  purgeCheck: async (id: string) => {
+    const { data } = await api.get('/branches/purgeCheck', { params: { id } });
+    return data;
+  },
+
+  listHistory: async (params: { page?: number; limit?: number } = {}) => {
+    const { data } = await api.get('/branches/history', { params });
+    return data;
+  },
+
+  getHistory: async (id: string) => {
+    const { data } = await api.get(`/branches/history/${id}`);
+    return data;
+  },
+
+  getHistoryReport: async (id: string) => {
+    const { data } = await api.get(`/branches/history/${id}/report`);
+    return data;
+  },
+
   requestBranches: async (payload: { requestedCount: number; message?: string }) => {
     const { data } = await api.post('/branches/requestBranches', payload);
     return data;

@@ -28,6 +28,8 @@ export interface RecipeProductCard {
   name: string;
   has_variant: boolean;
   description?: string | null;
+  branch_id?: string | null;
+  branch_name?: string | null;
   variants_with_recipe?: Array<{ id: string; name: string; price: number }>;
   variants_without_recipe?: Array<{ id: string; name: string; price: number }>;
   recipe_variant_count?: number;

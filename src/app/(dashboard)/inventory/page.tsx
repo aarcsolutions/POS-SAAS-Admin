@@ -1,260 +1,266 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+import Link from 'next/link';
 import {
   Boxes,
-  ArrowDownLeft,
-  ArrowUpRight,
   AlertTriangle,
   Search,
-  Plus,
-  Filter,
   Package,
-  Truck,
-  Calendar,
-  User,
   FileText,
-  Check,
-  X,
   TrendingUp,
   TrendingDown,
   Warehouse,
+  Loader2,
+  ClipboardList,
 } from 'lucide-react';
-import StockTransactionForm from '@/components/inventory/StockTransactionForm';
 import LowStockPanel from '@/components/inventory/LowStockPanel';
-import RowActionsMenu from '@/components/ui/RowActionsMenu';
 import { Select } from '@/components/ui/Select';
+import {
+  useInventoryBalancesQuery,
+  useStockMovementsQuery,
+} from '@/hooks/inventory';
+import { extractListItems, formatDate } from '@/utils/helpers';
+import {
+  InventoryBalance,
+  InventoryBalanceItemType,
+  StockMovementRow,
+} from '@/types/inventory.types';
+import { createPoHref } from '@/utils/inventory-po-links';
 
-interface InventoryItem {
-  id: string;
-  productName: string;
-  sku: string;
-  category: string;
-  currentStock: number;
-  minStock: number;
-  maxStock: number;
-  unit: string;
-  supplier: string;
-  lastUpdated: string;
-  status: 'optimal' | 'low' | 'critical' | 'out';
+const TYPE_LABELS: Record<InventoryBalanceItemType, string> = {
+  raw_material: 'Raw Material',
+  product_variant: 'Product (Direct Stock)',
+  inventory_item: 'Inventory Item',
+};
+
+function isInbound(movementType: string) {
+  const t = (movementType || '').toLowerCase();
+  return (
+    t.includes('in') ||
+    t.includes('receive') ||
+    t.includes('purchase') ||
+    t.includes('adjust_in') ||
+    t === 'opening'
+  );
 }
 
-interface StockTransaction {
-  id: string;
-  type: 'in' | 'out';
-  productName: string;
-  sku: string;
-  quantity: number;
-  unit: string;
-  reason: string;
-  supplier?: string;
-  reference: string;
-  date: string;
-  performedBy: string;
-  notes: string;
+function formatQty(n: number) {
+  if (!Number.isFinite(n)) return '0';
+  const rounded = Math.round(n * 1000) / 1000;
+  return Number.isInteger(rounded)
+    ? String(rounded)
+    : String(parseFloat(rounded.toFixed(3)));
 }
-
-const initialInventory: InventoryItem[] = [
-  { id: '1', productName: 'Premium Coffee Beans', sku: 'COF-001', category: 'Beverages', currentStock: 45, minStock: 20, maxStock: 100, unit: 'kg', supplier: 'Al-Rashid Traders', lastUpdated: '2024-06-15', status: 'optimal' },
-  { id: '2', productName: 'Whole Wheat Flour', sku: 'FLR-002', category: 'Raw Materials', currentStock: 8, minStock: 15, maxStock: 80, unit: 'kg', supplier: 'Faisalabad Mills', lastUpdated: '2024-06-14', status: 'low' },
-  { id: '3', productName: 'Chocolate Syrup', sku: 'CHS-003', category: 'Desserts', currentStock: 0, minStock: 10, maxStock: 50, unit: 'bottles', supplier: 'Sweet Imports Co.', lastUpdated: '2024-06-10', status: 'out' },
-  { id: '4', productName: 'Disposable Cups (500ml)', sku: 'CUP-004', category: 'Packaging', currentStock: 3, minStock: 25, maxStock: 200, unit: 'packs', supplier: 'Karachi Packaging', lastUpdated: '2024-06-13', status: 'critical' },
-  { id: '5', productName: 'Fresh Milk Cartons', sku: 'MLK-005', category: 'Beverages', currentStock: 120, minStock: 30, maxStock: 150, unit: 'liters', supplier: 'Al-Rashid Traders', lastUpdated: '2024-06-15', status: 'optimal' },
-  { id: '6', productName: 'Sugar (Refined)', sku: 'SUG-006', category: 'Raw Materials', currentStock: 12, minStock: 20, maxStock: 100, unit: 'kg', supplier: 'Faisalabad Mills', lastUpdated: '2024-06-12', status: 'low' },
-  { id: '7', productName: 'Green Tea Bags', sku: 'TEA-007', category: 'Beverages', currentStock: 250, minStock: 50, maxStock: 300, unit: 'boxes', supplier: 'Sweet Imports Co.', lastUpdated: '2024-06-15', status: 'optimal' },
-  { id: '8', productName: 'Burger Patties', sku: 'BGR-008', category: 'Food Items', currentStock: 60, minStock: 20, maxStock: 80, unit: 'pcs', supplier: 'Karachi Packaging', lastUpdated: '2024-06-14', status: 'optimal' },
-];
-
-const initialTransactions: StockTransaction[] = [
-  { id: '1', type: 'in', productName: 'Premium Coffee Beans', sku: 'COF-001', quantity: 50, unit: 'kg', reason: 'Purchase Order', supplier: 'Al-Rashid Traders', reference: 'PO-2024-0842', date: '2024-06-15', performedBy: 'Ahmed Khan', notes: 'Fresh batch from Ethiopia' },
-  { id: '2', type: 'out', productName: 'Whole Wheat Flour', sku: 'FLR-002', quantity: 12, unit: 'kg', reason: 'Production Usage', reference: 'PRD-2024-1203', date: '2024-06-14', performedBy: 'Fatima Ali', notes: 'Used for daily bread production' },
-  { id: '3', type: 'out', productName: 'Chocolate Syrup', sku: 'CHS-003', quantity: 5, unit: 'bottles', reason: 'Sales', reference: 'INV-2024-5521', date: '2024-06-10', performedBy: 'Hassan Raza', notes: 'Sold to customer' },
-  { id: '4', type: 'in', productName: 'Fresh Milk Cartons', sku: 'MLK-005', quantity: 100, unit: 'liters', reason: 'Purchase Order', supplier: 'Al-Rashid Traders', reference: 'PO-2024-0840', date: '2024-06-15', performedBy: 'Ahmed Khan', notes: 'Daily delivery' },
-  { id: '5', type: 'out', productName: 'Disposable Cups (500ml)', sku: 'CUP-004', quantity: 45, unit: 'packs', reason: 'Damaged', reference: 'ADJ-2024-0045', date: '2024-06-13', performedBy: 'Zainab Bibi', notes: 'Water damage during storage' },
-];
-
-const reasonsIn = ['Purchase Order', 'Return from Customer', 'Transfer from Branch', 'Stock Adjustment', 'Opening Stock'];
-const reasonsOut = ['Sales', 'Production Usage', 'Damaged/Expired', 'Transfer to Branch', 'Stock Adjustment', 'Internal Use'];
 
 export default function InventoryPage() {
-  const [inventory, setInventory] = useState<InventoryItem[]>(initialInventory);
-  const [transactions, setTransactions] = useState<StockTransaction[]>(initialTransactions);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [typeFilter, setTypeFilter] = useState<string>('all');
-  const [activeTab, setActiveTab] = useState<'overview' | 'transactions' | 'alerts'>('overview');
-  const [showTransactionForm, setShowTransactionForm] = useState(false);
-  const [transactionType, setTransactionType] = useState<'in' | 'out'>('in');
-  const [dropdownOpen, setDropdownOpen] = useState<string | null>(null);
+  const [itemTypeFilter, setItemTypeFilter] = useState<string>('all');
+  const [movementDirFilter, setMovementDirFilter] = useState<string>('all');
+  const [activeTab, setActiveTab] = useState<
+    'overview' | 'transactions' | 'alerts'
+  >('overview');
 
-  const filteredInventory = inventory.filter((item) => {
-    const matchesSearch =
-      item.productName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.sku.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.supplier.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || item.status === statusFilter;
-    return matchesSearch && matchesStatus;
+  const balancesQuery = useInventoryBalancesQuery({
+    page: 1,
+    limit: 200,
+    search: searchQuery || undefined,
+    item_type: itemTypeFilter === 'all' ? undefined : itemTypeFilter,
   });
 
-  const filteredTransactions = transactions.filter((t) => {
-    const matchesSearch =
-      t.productName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      t.sku.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      t.reference.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesType = typeFilter === 'all' || t.type === typeFilter;
-    return matchesSearch && matchesType;
-  });
+  const movementsQuery = useStockMovementsQuery(
+    {
+      page: 1,
+      limit: 100,
+      item_type: itemTypeFilter === 'all' ? undefined : itemTypeFilter,
+    },
+    activeTab === 'transactions' || activeTab === 'overview'
+  );
 
-  const lowStockItems = inventory.filter((item) => item.status === 'low' || item.status === 'critical' || item.status === 'out');
-  const criticalItems = inventory.filter((item) => item.status === 'critical' || item.status === 'out');
+  const inventory = extractListItems<InventoryBalance>(balancesQuery.data);
+  const movements = extractListItems<StockMovementRow>(movementsQuery.data);
 
-  const totalStockValue = inventory.reduce((sum, item) => sum + item.currentStock, 0);
-  const totalTransactions = transactions.length;
-  const stockInCount = transactions.filter((t) => t.type === 'in').reduce((sum, t) => sum + t.quantity, 0);
-  const stockOutCount = transactions.filter((t) => t.type === 'out').reduce((sum, t) => sum + t.quantity, 0);
+  const filteredInventory = useMemo(() => {
+    return inventory.filter((item) => {
+      const matchesSearch =
+        !searchQuery ||
+        item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.item_type.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesStatus =
+        statusFilter === 'all' || item.status === statusFilter;
+      return matchesSearch && matchesStatus;
+    });
+  }, [inventory, searchQuery, statusFilter]);
+
+  const filteredMovements = useMemo(() => {
+    return movements.filter((m) => {
+      const matchesSearch =
+        !searchQuery ||
+        (m.item_name || '')
+          .toLowerCase()
+          .includes(searchQuery.toLowerCase()) ||
+        (m.reference_id || '')
+          .toLowerCase()
+          .includes(searchQuery.toLowerCase());
+      const inbound = isInbound(m.movement_type);
+      const matchesDir =
+        movementDirFilter === 'all' ||
+        (movementDirFilter === 'in' && inbound) ||
+        (movementDirFilter === 'out' && !inbound);
+      return matchesSearch && matchesDir;
+    });
+  }, [movements, searchQuery, movementDirFilter]);
+
+  const lowStockItems = inventory.filter(
+    (item) =>
+      item.status === 'low' ||
+      item.status === 'critical' ||
+      item.status === 'out'
+  );
+  const criticalItems = inventory.filter(
+    (item) => item.status === 'critical' || item.status === 'out'
+  );
+
+  const totalStockUnits = inventory.reduce(
+    (sum, item) => sum + Number(item.stock_quantity || 0),
+    0
+  );
+  const stockInCount = movements
+    .filter((t) => isInbound(t.movement_type))
+    .reduce((sum, t) => sum + Math.abs(Number(t.qty || 0)), 0);
+  const stockOutCount = movements
+    .filter((t) => !isInbound(t.movement_type))
+    .reduce((sum, t) => sum + Math.abs(Number(t.qty || 0)), 0);
 
   const getStatusStyle = (status: string) => {
     switch (status) {
-      case 'optimal': return 'bg-[var(--brand-icon-soft)] text-[var(--brand-icon)]';
-      case 'low': return 'bg-amber-100 text-amber-700';
-      case 'critical': return 'bg-rose-100 text-rose-700';
-      case 'out': return 'bg-slate-100 text-slate-500';
-      default: return 'bg-slate-100 text-slate-500';
+      case 'optimal':
+        return 'bg-[var(--brand-icon-soft)] text-[var(--brand-icon)]';
+      case 'low':
+        return 'bg-[var(--brand-primary-soft)] text-[var(--brand-primary)]';
+      case 'critical':
+        return 'bg-[color-mix(in_srgb,var(--brand-primary)_22%,white)] text-[var(--brand-primary-dark)]';
+      case 'out':
+        return 'bg-[color-mix(in_srgb,var(--brand-primary-dark)_10%,white)] text-[var(--brand-primary-dark)]';
+      default:
+        return 'bg-slate-100 text-slate-500';
     }
   };
 
   const getStatusLabel = (status: string) => {
     switch (status) {
-      case 'optimal': return 'Optimal';
-      case 'low': return 'Low Stock';
-      case 'critical': return 'Critical';
-      case 'out': return 'Out of Stock';
-      default: return status;
+      case 'optimal':
+        return 'Optimal';
+      case 'low':
+        return 'Low Stock';
+      case 'critical':
+        return 'Critical';
+      case 'out':
+        return 'Out of Stock';
+      default:
+        return status;
     }
   };
 
-  const handleTransactionSubmit = (data: Omit<StockTransaction, 'id' | 'date' | 'performedBy'>) => {
-    const newTransaction: StockTransaction = {
-      ...data,
-      id: Math.random().toString(36).substr(2, 9),
-      date: new Date().toISOString().split('T')[0],
-      performedBy: 'Current User',
-    };
-    setTransactions([newTransaction, ...transactions]);
-
-    // Update inventory stock
-    setInventory(inventory.map((item) => {
-      if (item.sku === data.sku) {
-        const newStock = data.type === 'in' ? item.currentStock + data.quantity : item.currentStock - data.quantity;
-        let newStatus: InventoryItem['status'] = 'optimal';
-        if (newStock === 0) newStatus = 'out';
-        else if (newStock <= item.minStock * 0.3) newStatus = 'critical';
-        else if (newStock <= item.minStock) newStatus = 'low';
-        return { ...item, currentStock: newStock, status: newStatus, lastUpdated: newTransaction.date };
-      }
-      return item;
-    }));
-
-    setShowTransactionForm(false);
-  };
-
-  if (showTransactionForm) {
-    return (
-      <StockTransactionForm
-        type={transactionType}
-        inventory={inventory}
-        reasons={transactionType === 'in' ? reasonsIn : reasonsOut}
-        onClose={() => setShowTransactionForm(false)}
-        onSubmit={handleTransactionSubmit}
-      />
-    );
-  }
+  const loading = balancesQuery.isLoading;
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Inventory Management</h1>
-          <p className="mt-1 text-sm text-slate-500">Track stock levels, manage transactions, and monitor low stock alerts.</p>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+            Stock Overview
+          </h1>
+          <p className="mt-1 text-sm text-slate-500">
+            Live balances and movements for raw materials, direct-stock
+            products, and inventory items.
+          </p>
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => { setTransactionType('in'); setShowTransactionForm(true); }}
-            className="flex items-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-[color-mix(in_srgb,var(--brand-primary)_20%,transparent)] transition hover:brightness-95"
-          >
-            <ArrowDownLeft className="h-4 w-4" />
-            Stock In
-          </button>
-          <button
-            onClick={() => { setTransactionType('out'); setShowTransactionForm(true); }}
-            className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-          >
-            <ArrowUpRight className="h-4 w-4" />
-            Stock Out
-          </button>
-        </div>
+        <Link
+          href="/suppliers?createPo=1"
+          className="inline-flex items-center justify-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-[color-mix(in_srgb,var(--brand-primary)_20%,transparent)] transition hover:brightness-95"
+        >
+          <ClipboardList className="h-4 w-4" />
+          Create purchase order
+        </Link>
       </div>
 
-      {/* Stats */}
       <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-5">
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-[var(--brand-icon-soft)] text-[var(--brand-icon)]">
             <Boxes className="h-5 w-5" />
           </div>
           <div className="text-sm font-medium text-slate-500">Total Items</div>
-          <div className="mt-1 text-2xl font-bold text-slate-900">{inventory.length}</div>
+          <div className="mt-1 text-2xl font-bold text-slate-900">
+            {inventory.length}
+          </div>
         </div>
-
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-[var(--brand-icon-soft)] text-[var(--brand-icon)]">
             <Warehouse className="h-5 w-5" />
           </div>
-          <div className="text-sm font-medium text-slate-500">Total Stock Units</div>
-          <div className="mt-1 text-2xl font-bold text-slate-900">{totalStockValue}</div>
+          <div className="text-sm font-medium text-slate-500">
+            Total Stock Units
+          </div>
+          <div className="mt-1 text-2xl font-bold text-slate-900">
+            {formatQty(totalStockUnits)}
+          </div>
         </div>
-
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-[var(--brand-icon-soft)] text-[var(--brand-icon)]">
             <AlertTriangle className="h-5 w-5" />
           </div>
-          <div className="text-sm font-medium text-slate-500">Low Stock Alerts</div>
-          <div className="mt-1 text-2xl font-bold text-rose-700">{lowStockItems.length}</div>
+          <div className="text-sm font-medium text-slate-500">
+            Low Stock Alerts
+          </div>
+          <div className="mt-1 text-2xl font-bold text-[var(--brand-primary-dark)]">
+            {lowStockItems.length}
+          </div>
         </div>
-
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-[var(--brand-icon-soft)] text-[var(--brand-icon)]">
             <TrendingUp className="h-5 w-5" />
           </div>
-          <div className="text-sm font-medium text-slate-500">Stock In (Total)</div>
-          <div className="mt-1 text-2xl font-bold text-[var(--brand-primary)]">{stockInCount}</div>
+          <div className="text-sm font-medium text-slate-500">
+            Recent Stock In
+          </div>
+          <div className="mt-1 text-2xl font-bold text-[var(--brand-primary)]">
+            {formatQty(stockInCount)}
+          </div>
         </div>
-
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-[var(--brand-icon-soft)] text-[var(--brand-icon)]">
             <TrendingDown className="h-5 w-5" />
           </div>
-          <div className="text-sm font-medium text-slate-500">Stock Out (Total)</div>
-          <div className="mt-1 text-2xl font-bold text-amber-700">{stockOutCount}</div>
+          <div className="text-sm font-medium text-slate-500">
+            Recent Stock Out
+          </div>
+          <div className="mt-1 text-2xl font-bold text-[var(--brand-chart-secondary)]">
+            {formatQty(stockOutCount)}
+          </div>
         </div>
       </div>
 
-      {/* Low Stock Alert Banner */}
       {criticalItems.length > 0 && (
-        <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 shadow-sm">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-rose-100 text-rose-600">
+        <div className="rounded-2xl border border-[var(--brand-primary-soft)] bg-[var(--brand-primary-soft)] p-4 shadow-sm">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[color-mix(in_srgb,var(--brand-primary)_22%,white)] text-[var(--brand-primary)]">
               <AlertTriangle className="h-5 w-5" />
             </div>
             <div className="flex-1">
-              <h3 className="text-sm font-bold text-rose-700">Critical Stock Alert</h3>
-              <p className="text-xs text-rose-600">
-                {criticalItems.length} item(s) are critically low or out of stock. Immediate restock required.
+              <h3 className="text-sm font-bold text-[var(--brand-primary-dark)]">
+                Critical Stock Alert
+              </h3>
+              <p className="text-xs text-[var(--brand-primary-dark)]/80">
+                {criticalItems.length} item(s) are critically low or out of
+                stock.
               </p>
             </div>
             <button
+              type="button"
               onClick={() => setActiveTab('alerts')}
-              className="rounded-xl bg-rose-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-rose-700"
+              className="rounded-xl bg-[var(--brand-primary)] px-4 py-2 text-sm font-bold text-white transition hover:brightness-95"
             >
               View Alerts
             </button>
@@ -262,20 +268,32 @@ export default function InventoryPage() {
         </div>
       )}
 
-      {/* Tabs */}
       <div className="flex gap-1 rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
         {[
-          { id: 'overview', label: 'Inventory Overview', icon: Package },
-          { id: 'transactions', label: 'Stock Transactions', icon: FileText },
-          { id: 'alerts', label: 'Low Stock Alerts', icon: AlertTriangle },
+          { id: 'overview' as const, label: 'Inventory Overview', icon: Package },
+          {
+            id: 'transactions' as const,
+            label: 'Stock Movements',
+            icon: FileText,
+          },
+          {
+            id: 'alerts' as const,
+            label: 'Low Stock Alerts',
+            icon: AlertTriangle,
+          },
         ].map((tab) => {
           const TabIcon = tab.icon;
           return (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id as typeof activeTab)}
+              type="button"
+              onClick={() => setActiveTab(tab.id)}
               className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition
-                ${activeTab === tab.id ? 'bg-[var(--brand-primary)] text-white shadow-md shadow-[color-mix(in_srgb,var(--brand-primary)_20%,transparent)]' : 'text-slate-600 hover:bg-slate-50'}`}
+                ${
+                  activeTab === tab.id
+                    ? 'bg-[var(--brand-primary)] text-white shadow-md shadow-[color-mix(in_srgb,var(--brand-primary)_20%,transparent)]'
+                    : 'text-slate-600 hover:bg-slate-50'
+                }`}
             >
               <TabIcon className="h-4 w-4" />
               {tab.label}
@@ -284,7 +302,6 @@ export default function InventoryPage() {
         })}
       </div>
 
-      {/* Filters */}
       <div className="flex flex-col gap-3 sm:flex-row">
         <div className="relative flex-1">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
@@ -292,10 +309,22 @@ export default function InventoryPage() {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search by product name, SKU, or supplier..."
+            placeholder="Search by name or type..."
             className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm outline-none transition focus:border-[var(--brand-primary)] focus:ring-4 focus:ring-[var(--brand-primary-soft)]"
           />
         </div>
+        <Select
+          value={itemTypeFilter}
+          onChange={setItemTypeFilter}
+          size="lg"
+          allowEmpty={false}
+          options={[
+            { value: 'all', label: 'All Types' },
+            { value: 'raw_material', label: 'Raw Material' },
+            { value: 'product_variant', label: 'Product (Direct Stock)' },
+            { value: 'inventory_item', label: 'Inventory Item' },
+          ]}
+        />
         {activeTab === 'overview' && (
           <Select
             value={statusFilter}
@@ -313,12 +342,12 @@ export default function InventoryPage() {
         )}
         {activeTab === 'transactions' && (
           <Select
-            value={typeFilter}
-            onChange={setTypeFilter}
+            value={movementDirFilter}
+            onChange={setMovementDirFilter}
             size="lg"
             allowEmpty={false}
             options={[
-              { value: 'all', label: 'All Transactions' },
+              { value: 'all', label: 'All Movements' },
               { value: 'in', label: 'Stock In' },
               { value: 'out', label: 'Stock Out' },
             ]}
@@ -326,164 +355,169 @@ export default function InventoryPage() {
         )}
       </div>
 
-      {/* Tab Content */}
-      {activeTab === 'overview' && (
+      {loading ? (
+        <div className="flex justify-center py-16 text-slate-400">
+          <Loader2 className="h-6 w-6 animate-spin" />
+        </div>
+      ) : activeTab === 'overview' ? (
         <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
           <table className="w-full text-left text-sm">
             <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
               <tr>
-                <th className="px-5 py-4">Product</th>
-                <th className="px-5 py-4">SKU</th>
-                <th className="px-5 py-4">Current Stock</th>
-                <th className="px-5 py-4">Min / Max</th>
-                <th className="px-5 py-4">Supplier</th>
+                <th className="px-5 py-4">Item</th>
+                <th className="px-5 py-4">Type</th>
+                <th className="px-5 py-4">On Hand</th>
+                <th className="px-5 py-4">Min Level</th>
                 <th className="px-5 py-4">Status</th>
-                <th className="px-5 py-4">Last Updated</th>
                 <th className="px-5 py-4 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 bg-white">
-              {filteredInventory.map((item) => (
-                <tr key={item.id} className="transition hover:bg-slate-50">
-                  <td className="px-5 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--brand-icon-soft)] text-sm font-bold text-[var(--brand-icon)]">
-                        {item.productName.charAt(0)}
-                      </div>
-                      <div>
-                        <div className="font-semibold text-slate-800">{item.productName}</div>
-                        <div className="text-xs text-slate-400">{item.category}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-5 py-4 text-slate-600">{item.sku}</td>
-                  <td className="px-5 py-4">
-                    <div className="text-sm font-bold text-slate-800">{item.currentStock} {item.unit}</div>
-                  </td>
-                  <td className="px-5 py-4">
-                    <div className="text-xs text-slate-500">{item.minStock} / {item.maxStock} {item.unit}</div>
-                    <div className="mt-1 h-1.5 w-24 overflow-hidden rounded-full bg-slate-100">
-                      <div
-                        className={`h-full rounded-full transition-all ${
-                          item.status === 'optimal' ? 'bg-[var(--brand-icon-soft)]0' :
-                          item.status === 'low' ? 'bg-amber-500' :
-                          item.status === 'critical' ? 'bg-rose-500' : 'bg-slate-300'
-                        }`}
-                        style={{ width: `${Math.min(100, (item.currentStock / item.maxStock) * 100)}%` }}
-                      />
-                    </div>
-                  </td>
-                  <td className="px-5 py-4">
-                    <div className="flex items-center gap-1.5 text-slate-600">
-                      <Truck className="h-3.5 w-3.5 text-slate-400" />
-                      {item.supplier}
-                    </div>
-                  </td>
-                  <td className="px-5 py-4">
-                    <span className={`rounded-full px-3 py-1 text-xs font-bold ${getStatusStyle(item.status)}`}>
-                      {getStatusLabel(item.status)}
-                    </span>
-                  </td>
-                  <td className="px-5 py-4 text-xs text-slate-500">{item.lastUpdated}</td>
-                  <td className="px-5 py-4 text-right">
-                    <RowActionsMenu
-                      open={dropdownOpen === item.id}
-                      onOpenChange={(open) =>
-                        setDropdownOpen(open ? item.id : null)
-                      }
-                    >
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setDropdownOpen(null);
-                          setTransactionType('in');
-                          setShowTransactionForm(true);
-                        }}
-                        className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-slate-700 transition hover:bg-slate-50"
-                      >
-                        <ArrowDownLeft className="h-4 w-4 text-[var(--brand-primary)]" />
-                        Stock In
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setDropdownOpen(null);
-                          setTransactionType('out');
-                          setShowTransactionForm(true);
-                        }}
-                        className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-slate-700 transition hover:bg-slate-50"
-                      >
-                        <ArrowUpRight className="h-4 w-4 text-amber-600" />
-                        Stock Out
-                      </button>
-                    </RowActionsMenu>
+              {filteredInventory.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={6}
+                    className="px-5 py-12 text-center text-sm text-slate-400"
+                  >
+                    No inventory balances found.
                   </td>
                 </tr>
-              ))}
+              ) : (
+                filteredInventory.map((item) => (
+                  <tr
+                    key={`${item.item_type}-${item.id}`}
+                    className="transition hover:bg-slate-50"
+                  >
+                    <td className="px-5 py-4">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--brand-icon-soft)] text-sm font-bold text-[var(--brand-icon)]">
+                          {item.name.charAt(0)}
+                        </div>
+                        <div>
+                          <div className="font-semibold text-slate-800">
+                            {item.name}
+                          </div>
+                          <div className="text-xs text-slate-400">
+                            {item.unit || '—'}
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-5 py-4 text-slate-600">
+                      {TYPE_LABELS[item.item_type] || item.item_type}
+                    </td>
+                    <td className="px-5 py-4 font-semibold text-slate-800">
+                      {formatQty(Number(item.stock_quantity || 0))}
+                      {item.unit ? (
+                        <span className="ml-1 text-xs font-medium text-slate-500">
+                          {item.unit}
+                        </span>
+                      ) : null}
+                    </td>
+                    <td className="px-5 py-4 text-slate-600">
+                      {item.min_stock_level}
+                    </td>
+                    <td className="px-5 py-4">
+                      <span
+                        className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-bold ${getStatusStyle(item.status)}`}
+                      >
+                        {getStatusLabel(item.status)}
+                      </span>
+                    </td>
+                    <td className="px-5 py-4 text-right">
+                      <Link
+                        href={createPoHref({
+                          lineType: item.item_type,
+                          ids: [item.id],
+                        })}
+                        className="text-sm font-semibold text-[var(--brand-primary)] hover:underline"
+                      >
+                        Create PO
+                      </Link>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
-          {filteredInventory.length === 0 && (
-            <div className="py-12 text-center text-sm text-slate-400">No inventory items found matching your criteria.</div>
-          )}
         </div>
-      )}
-
-      {activeTab === 'transactions' && (
+      ) : activeTab === 'transactions' ? (
         <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
           <table className="w-full text-left text-sm">
             <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
               <tr>
-                <th className="px-5 py-4">Type</th>
-                <th className="px-5 py-4">Product</th>
-                <th className="px-5 py-4">Quantity</th>
-                <th className="px-5 py-4">Reason</th>
-                <th className="px-5 py-4">Reference</th>
-                <th className="px-5 py-4">Supplier</th>
                 <th className="px-5 py-4">Date</th>
-                <th className="px-5 py-4">By</th>
+                <th className="px-5 py-4">Item</th>
+                <th className="px-5 py-4">Type</th>
+                <th className="px-5 py-4">Movement</th>
+                <th className="px-5 py-4">Qty</th>
+                <th className="px-5 py-4">Balance After</th>
+                <th className="px-5 py-4">Reference</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-200 bg-white">
-              {filteredTransactions.map((t) => (
-                <tr key={t.id} className="transition hover:bg-slate-50">
-                  <td className="px-5 py-4">
-                    <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold ${
-                      t.type === 'in' ? 'bg-[var(--brand-icon-soft)] text-[var(--brand-icon)]' : 'bg-amber-100 text-amber-700'
-                    }`}>
-                      {t.type === 'in' ? <ArrowDownLeft className="h-3 w-3" /> : <ArrowUpRight className="h-3 w-3" />}
-                      {t.type === 'in' ? 'IN' : 'OUT'}
-                    </span>
-                  </td>
-                  <td className="px-5 py-4">
-                    <div className="font-semibold text-slate-800">{t.productName}</div>
-                    <div className="text-xs text-slate-400">{t.sku}</div>
-                  </td>
-                  <td className="px-5 py-4 font-bold text-slate-800">{t.quantity} {t.unit}</td>
-                  <td className="px-5 py-4 text-slate-600">{t.reason}</td>
-                  <td className="px-5 py-4 text-xs text-slate-500">{t.reference}</td>
-                  <td className="px-5 py-4 text-xs text-slate-500">{t.supplier || '—'}</td>
-                  <td className="px-5 py-4 text-xs text-slate-500">{t.date}</td>
-                  <td className="px-5 py-4">
-                    <div className="flex items-center gap-1.5 text-xs text-slate-600">
-                      <User className="h-3 w-3 text-slate-400" />
-                      {t.performedBy}
-                    </div>
+            <tbody className="divide-y divide-slate-200">
+              {movementsQuery.isLoading ? (
+                <tr>
+                  <td colSpan={7} className="px-5 py-12 text-center">
+                    <Loader2 className="mx-auto h-5 w-5 animate-spin text-slate-400" />
                   </td>
                 </tr>
-              ))}
+              ) : filteredMovements.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={7}
+                    className="px-5 py-12 text-center text-sm text-slate-400"
+                  >
+                    No stock movements yet.
+                  </td>
+                </tr>
+              ) : (
+                filteredMovements.map((m) => {
+                  const inbound = isInbound(m.movement_type);
+                  return (
+                    <tr key={m.id} className="transition hover:bg-slate-50">
+                      <td className="px-5 py-4 text-slate-600">
+                        {formatDate(m.created_at)}
+                      </td>
+                      <td className="px-5 py-4 font-semibold text-slate-800">
+                        {m.item_name || m.item_id}
+                      </td>
+                      <td className="px-5 py-4 text-slate-600">
+                        {TYPE_LABELS[m.item_type as InventoryBalanceItemType] ||
+                          m.item_type}
+                      </td>
+                      <td className="px-5 py-4">
+                        <span
+                          className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-bold ${
+                            inbound
+                              ? 'bg-[var(--brand-icon-soft)] text-[var(--brand-icon)]'
+                              : 'bg-[var(--brand-primary-soft)] text-[var(--brand-primary)]'
+                          }`}
+                        >
+                          {m.movement_type}
+                        </span>
+                      </td>
+                      <td className="px-5 py-4 font-semibold text-slate-800">
+                        {inbound ? '+' : '-'}
+                        {Math.abs(Number(m.qty || 0))}
+                      </td>
+                      <td className="px-5 py-4 text-slate-600">
+                        {m.balance_after ?? '—'}
+                      </td>
+                      <td className="px-5 py-4 text-xs text-slate-500">
+                        {m.reference_type
+                          ? `${m.reference_type}${m.reference_id ? ` · ${m.reference_id.slice(0, 8)}` : ''}`
+                          : '—'}
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
-          {filteredTransactions.length === 0 && (
-            <div className="py-12 text-center text-sm text-slate-400">No transactions found matching your criteria.</div>
-          )}
         </div>
-      )}
-
-      {activeTab === 'alerts' && (
-        <LowStockPanel items={lowStockItems} onStockIn={(_item: InventoryItem) => {
-          setTransactionType('in');
-          setShowTransactionForm(true);
-        }} />
+      ) : (
+        <LowStockPanel items={lowStockItems} />
       )}
     </div>
   );

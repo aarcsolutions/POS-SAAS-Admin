@@ -4,7 +4,12 @@ import { RecipePayload } from '@/types/recipe.types';
 import { toast } from 'sonner';
 
 export const useRecipesWithProductsQuery = (
-  params: { page?: number; limit?: number; search?: string } = {}
+  params: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    branch_id?: string;
+  } = {}
 ) =>
   useQuery({
     queryKey: ['recipes', 'with', params],
@@ -12,10 +17,13 @@ export const useRecipesWithProductsQuery = (
     placeholderData: (previousData) => previousData,
   });
 
-export const useRecipesWithoutProductsQuery = (enabled = true) =>
+export const useRecipesWithoutProductsQuery = (
+  enabled = true,
+  params: { branch_id?: string } = {}
+) =>
   useQuery({
-    queryKey: ['recipes', 'without'],
-    queryFn: () => recipesApi.getProductsWithoutRecipes(),
+    queryKey: ['recipes', 'without', params],
+    queryFn: () => recipesApi.getProductsWithoutRecipes(params),
     enabled,
   });
 
@@ -38,6 +46,28 @@ export const useCreateRecipeMutation = () => {
     },
     onError: (error: any) => {
       toast.error(error?.response?.data?.message || 'Failed to create recipe');
+    },
+  });
+};
+
+export const useCreateRecipesBulkMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (items: RecipePayload[]) => recipesApi.createBulk(items),
+    onSuccess: (response) => {
+      if (response.status) {
+        const count = response?.data?.count ?? 0;
+        toast.success(
+          response.message ||
+            `${count} recipe${count === 1 ? '' : 's'} created successfully`
+        );
+        queryClient.invalidateQueries({ queryKey: ['recipes'] });
+      }
+    },
+    onError: (error: any) => {
+      toast.error(
+        error?.response?.data?.message || 'Failed to create recipes'
+      );
     },
   });
 };

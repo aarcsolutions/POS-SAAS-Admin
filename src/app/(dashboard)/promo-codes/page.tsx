@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Ticket,
   Plus,
@@ -23,9 +23,8 @@ import {
   useDeletePromoCodeMutation,
   useTogglePromoCodeMutation,
 } from '@/hooks/promo-codes';
-import { useBranchesQuery } from '@/hooks/branches';
+import { useTenantBranchScope } from '@/hooks/branches';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
-import { useAuthStore } from '@/store/authStore';
 import { extractListItems, extractPagination, formatDate } from '@/utils/helpers';
 import { PromoCode } from '@/types/promo-code.types';
 import { confirmDialog } from '@/store/dialogStore';
@@ -68,8 +67,7 @@ function formatValidity(p: PromoCode) {
 }
 
 export default function PromoCodesPage() {
-  const user = useAuthStore((s) => s.user);
-  const isTenantAdmin = !user?.branchId;
+  const { isTenantAdmin, showBranchFilter, branchOptions } = useTenantBranchScope();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [branchFilter, setBranchFilter] = useState('');
@@ -90,23 +88,6 @@ export default function PromoCodesPage() {
     setPage(1);
   }, [debouncedSearch, branchFilter]);
 
-  const { data: branchesRes } = useBranchesQuery(
-    { page: 1, limit: 100 },
-    isTenantAdmin
-  );
-
-  const branchOptions = useMemo(() => {
-    const rows =
-      branchesRes?.data?.data ||
-      branchesRes?.data?.branches ||
-      (Array.isArray(branchesRes?.data) ? branchesRes.data : []) ||
-      [];
-    return (rows as { id: string; name: string; code?: string }[]).map((b) => ({
-      value: b.id,
-      label: b.name || b.code || b.id,
-    }));
-  }, [branchesRes]);
-
   const { data, isLoading, isFetching } = usePromoCodesQuery({
     page,
     limit: LIMIT,
@@ -120,7 +101,7 @@ export default function PromoCodesPage() {
 
   const promoCodes = extractListItems<PromoCode>(data, 'promo_codes');
   const pagination = extractPagination(data, LIMIT);
-  const colSpan = isTenantAdmin ? 10 : 9;
+  const colSpan = showBranchFilter ? 10 : 9;
 
   const handleOpenForm = (
     mode: 'create' | 'edit' | 'view',
@@ -160,7 +141,7 @@ export default function PromoCodesPage() {
     return (
       <PromoCodeForm
         mode={formMode}
-        showBranchSelect={isTenantAdmin}
+        showBranchSelect={showBranchFilter}
         branchOptions={branchOptions}
         initialData={
           selectedPromo
@@ -235,7 +216,7 @@ export default function PromoCodesPage() {
             className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm outline-none focus:border-[var(--brand-primary)] focus:ring-4 focus:ring-[var(--brand-primary-soft)]"
           />
         </div>
-        {isTenantAdmin && (
+        {showBranchFilter && (
           <div className="w-full sm:w-56">
             <Select
               value={branchFilter}
@@ -261,7 +242,7 @@ export default function PromoCodesPage() {
               <th className="px-5 py-3 font-bold">Min order</th>
               <th className="px-5 py-3 font-bold">Usage</th>
               <th className="px-5 py-3 font-bold">Validity</th>
-              {isTenantAdmin && (
+              {showBranchFilter && (
                 <th className="px-5 py-3 font-bold">Branch</th>
               )}
               <th className="px-5 py-3 font-bold">Active</th>
@@ -309,7 +290,7 @@ export default function PromoCodesPage() {
                     <td className="px-5 py-4 text-xs text-slate-500">
                       {formatValidity(p)}
                     </td>
-                    {isTenantAdmin && (
+                    {showBranchFilter && (
                       <td className="px-5 py-4">
                         <span className="inline-flex rounded-full bg-sky-50 px-2.5 py-1 text-xs font-semibold text-sky-700">
                           {p.branch_name || 'All branches'}

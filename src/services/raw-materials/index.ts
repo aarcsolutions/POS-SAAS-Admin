@@ -28,6 +28,11 @@ export const rawMaterialsApi = {
     return data;
   },
 
+  createBulk: async (items: RawMaterialPayload[]) => {
+    const { data } = await api.post('/raw-materials/createBulk', { items });
+    return data;
+  },
+
   update: async (id: string, payload: Partial<RawMaterialPayload>) => {
     const { data } = await api.put('/raw-materials/update', { id, ...payload });
     return data;

@@ -14,6 +14,10 @@ import { useOpenInvoicesSummaryQuery } from '@/hooks/tenant-billing';
 import { usePermission } from '@/hooks/use-permission';
 import { ENTITY_PERMS } from '@/rbac/permissions-map';
 import { defaultLastDaysRange } from '@/components/ui/DateRangePicker';
+import {
+  createPoHref,
+  itemTypeLabel,
+} from '@/utils/inventory-po-links';
 
 export default function NotificationBell() {
   const [open, setOpen] = useState(false);
@@ -64,7 +68,20 @@ export default function NotificationBell() {
     );
   }
 
-  const materialsParam = lowStockItems.map((i) => i.id).filter(Boolean).join(',');
+  const bulkPoHref = (() => {
+    const types = [
+      ...new Set(
+        lowStockItems.map((i) => i.item_type || 'raw_material')
+      ),
+    ];
+    if (types.length === 1) {
+      return createPoHref({
+        lineType: types[0],
+        ids: lowStockItems.map((i) => i.id),
+      });
+    }
+    return '/suppliers?createPo=1';
+  })();
 
   return (
     <div ref={rootRef} className="relative">
@@ -146,9 +163,12 @@ export default function NotificationBell() {
                   </li>
                 ))}
                 {lowStockItems.map((item) => (
-                  <li key={item.id}>
+                  <li key={`${item.item_type || 'raw_material'}-${item.id}`}>
                     <Link
-                      href={`/suppliers?createPo=1&materials=${item.id}`}
+                      href={createPoHref({
+                        lineType: item.item_type || 'raw_material',
+                        ids: [item.id],
+                      })}
                       onClick={() => setOpen(false)}
                       className="block px-4 py-3 transition hover:bg-amber-50/70"
                     >
@@ -161,7 +181,7 @@ export default function NotificationBell() {
                             {item.name}
                           </div>
                           <div className="mt-0.5 text-xs text-slate-500">
-                            On hand{' '}
+                            {itemTypeLabel(item.item_type)} · On hand{' '}
                             <span className="font-semibold text-amber-800">
                               {item.stock_quantity}
                               {item.unit ? ` ${item.unit}` : ''}
@@ -206,7 +226,7 @@ export default function NotificationBell() {
             )}
             {lowStockItems.length > 0 && (
               <Link
-                href={`/suppliers?createPo=1&materials=${materialsParam}`}
+                href={bulkPoHref}
                 onClick={() => setOpen(false)}
                 className="inline-flex flex-1 items-center justify-center gap-1 rounded-xl bg-[var(--brand-primary)] px-3 py-2 text-xs font-semibold text-white hover:brightness-95"
               >

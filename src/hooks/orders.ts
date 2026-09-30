@@ -40,6 +40,7 @@ export const useCreateOrderMutation = () => {
       if (response.status) {
         toast.success(response.message || 'Order created');
         queryClient.invalidateQueries({ queryKey: ['orders'] });
+        queryClient.invalidateQueries({ queryKey: ['menu-pending-counts'] });
       }
     },
     onError: (error: any) => {
@@ -57,6 +58,7 @@ export const useUpdateOrderStatusMutation = () => {
       if (response.status) {
         toast.success(response.message || 'Status updated');
         queryClient.invalidateQueries({ queryKey: ['orders'] });
+        queryClient.invalidateQueries({ queryKey: ['menu-pending-counts'] });
         queryClient.invalidateQueries({ queryKey: ['kds'] });
       }
     },
@@ -82,6 +84,7 @@ export const useDispatchOrderMutation = () => {
       if (response.status) {
         toast.success(response.message || 'Order dispatched');
         queryClient.invalidateQueries({ queryKey: ['orders'] });
+        queryClient.invalidateQueries({ queryKey: ['menu-pending-counts'] });
         queryClient.invalidateQueries({ queryKey: ['kds'] });
       }
     },
@@ -105,6 +108,7 @@ export const useRecordPaymentMutation = () => {
       if (response.status) {
         toast.success(response.message || 'Payment recorded');
         queryClient.invalidateQueries({ queryKey: ['orders'] });
+        queryClient.invalidateQueries({ queryKey: ['menu-pending-counts'] });
       }
     },
     onError: (error: any) => {

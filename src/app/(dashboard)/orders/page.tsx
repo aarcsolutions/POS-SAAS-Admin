@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import {
   Search,
   Plus,
@@ -13,10 +14,16 @@ import {
   CreditCard,
   Banknote,
   Truck,
+  Star,
+  CalendarPlus,
 } from 'lucide-react';
-import OrderCreateWizard from '@/components/orders/OrderCreateWizard';
+import OrderCreateWizard, {
+  OrderCreatePrefill,
+} from '@/components/orders/OrderCreateWizard';
 import OrderSlip from '@/components/orders/OrderSlip';
 import DispatchModal from '@/components/orders/DispatchModal';
+import OrderReviewModal from '@/components/orders/OrderReviewModal';
+import QuickReserveModal from '@/components/reservations/QuickReserveModal';
 import RowActionsMenu from '@/components/ui/RowActionsMenu';
 import { Select } from '@/components/ui/Select';
 import { usePermission } from '@/hooks/use-permission';
@@ -27,6 +34,11 @@ import {
   useUpdateOrderStatusMutation,
   useRecordPaymentMutation,
 } from '@/hooks/orders';
+import {
+  useQuickCreateReservationMutation,
+  useMarkSeatedForOrderMutation,
+} from '@/hooks/reservations';
+import { useCreateReviewMutation } from '@/hooks/reviews';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { useOrderSocketConnected } from '@/components/realtime/OrderSocketProvider';
 import { useAuthStore } from '@/store/authStore';
@@ -36,7 +48,8 @@ import {
   OrderStatus,
   OrderType,
 } from '@/types/order.types';
-
+import { useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 const STATUS_LABEL: Record<string, string> = {
   pending: 'Pending',
   accepted: 'Accepted',
@@ -96,8 +109,11 @@ function statusBadgeClass(status: OrderStatus) {
 export default function OrdersPage() {
   const { user } = useAuthStore();
   const restaurantName = user?.tenantName || 'Restaurant';
+  const searchParams = useSearchParams();
+  const router = useRouter();
 
   const canCreate = usePermission(ENTITY_PERMS.orders.create);
+  const canQuickReserve = usePermission(ENTITY_PERMS.reservations.create);
   const canUpdateStatus = usePermission(
     ENTITY_PERMS.orders.extras.updateStatus
   );
@@ -107,8 +123,19 @@ export default function OrdersPage() {
   );
   const canUpdateOrder = usePermission(ENTITY_PERMS.orders.update);
   const canPay = canRecordPayment || canUpdateOrder;
+  const canCreateReview = usePermission(ENTITY_PERMS.reviews.create);
+  const queryClient = useQueryClient();
+  const createReviewMutation = useCreateReviewMutation();
+  const quickReserveMutation = useQuickCreateReservationMutation();
+  const markSeatedMutation = useMarkSeatedForOrderMutation();
 
   const [screen, setScreen] = useState<'list' | 'create'>('list');
+  const [orderPrefill, setOrderPrefill] = useState<OrderCreatePrefill | null>(
+    null
+  );
+  const [quickReserveOpen, setQuickReserveOpen] = useState(false);
+  const [reservationBootstrapping, setReservationBootstrapping] =
+    useState(false);
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState<OrderType | ''>('');
   const [statusFilter, setStatusFilter] = useState<OrderStatus | ''>('');
@@ -117,6 +144,7 @@ export default function OrdersPage() {
   const [slipOpen, setSlipOpen] = useState(false);
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
   const [dispatchOrder, setDispatchOrder] = useState<OrderListItem | null>(null);
+  const [reviewOrder, setReviewOrder] = useState<OrderListItem | null>(null);
 
   const debouncedSearch = useDebouncedValue(search.trim(), 300);
   const socketConnected = useOrderSocketConnected();
@@ -168,11 +196,77 @@ export default function OrdersPage() {
     statusMutation.mutate({ id: orderId, status: 'cancelled' });
   };
 
+  useEffect(() => {
+    const searchFromUrl = searchParams.get('search');
+    if (searchFromUrl) {
+      setSearch(searchFromUrl);
+      router.replace('/orders');
+    }
+  }, [searchParams, router]);
+
+  useEffect(() => {
+    const reservationParam = searchParams.get('reservation');
+    if (!reservationParam || !canCreate) return;
+
+    let cancelled = false;
+    setReservationBootstrapping(true);
+
+    (async () => {
+      try {
+        const seated = await markSeatedMutation.mutateAsync(reservationParam);
+        if (cancelled) return;
+        const r = seated?.data;
+        if (!r?.customer_id || !r?.restaurant_table_id) {
+          toast.error('Reservation is missing customer or table');
+          return;
+        }
+        setOrderPrefill({
+          reservationId: r.id,
+          customerId: r.customer_id,
+          customerLabel:
+            r.customer_name || r.guest_name || 'Guest',
+          tableId: r.restaurant_table_id,
+          tableLabel: r.table_name || 'Table',
+        });
+        setScreen('create');
+      } catch {
+        /* toast in mutation */
+      } finally {
+        if (!cancelled) {
+          setReservationBootstrapping(false);
+          router.replace('/orders');
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, canCreate]);
+
+  if (reservationBootstrapping) {
+    return (
+      <div className="flex min-h-[40vh] items-center justify-center text-slate-400">
+        <Loader2 className="h-6 w-6 animate-spin" />
+      </div>
+    );
+  }
+
   if (screen === 'create') {
     return (
       <OrderCreateWizard
-        onClose={() => setScreen('list')}
-        onCreated={() => setScreen('list')}
+        prefill={orderPrefill}
+        onClose={() => {
+          setOrderPrefill(null);
+          setScreen('list');
+        }}
+        onCreated={() => {
+          setOrderPrefill(null);
+          setScreen('list');
+          queryClient.invalidateQueries({ queryKey: ['reservations'] });
+          queryClient.invalidateQueries({ queryKey: ['tables'] });
+        }}
       />
     );
   }
@@ -193,10 +287,22 @@ export default function OrdersPage() {
           {statusFilter === 'pending' && ordersQuery.isFetching && !ordersQuery.isLoading && (
             <Loader2 className="h-5 w-5 animate-spin text-[var(--brand-icon)]" aria-label="Refreshing" />
           )}
+        {canQuickReserve && (
+          <button
+            type="button"
+            onClick={() => setQuickReserveOpen(true)}
+            className="inline-flex items-center gap-2 rounded-md border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+          >
+            <CalendarPlus className="h-4 w-4" /> Quick Reserve
+          </button>
+        )}
         {canCreate && (
           <button
             type="button"
-            onClick={() => setScreen('create')}
+            onClick={() => {
+              setOrderPrefill(null);
+              setScreen('create');
+            }}
             className="inline-flex items-center gap-2 rounded-md bg-[var(--brand-primary)] px-4 py-2 text-sm font-semibold text-white hover:brightness-95"
           >
             <Plus className="h-4 w-4" /> Create Order
@@ -279,18 +385,42 @@ export default function OrdersPage() {
                 </tr>
               ) : (
                 orders.map((order) => {
-                  const nxt = nextStatus(order.status, order.order_type);
+                  const archived = !!order.is_archived;
+                  const nxt = archived
+                    ? null
+                    : nextStatus(order.status, order.order_type);
                   const showCancel =
-                    canUpdateStatus && canCancelOrder(order.status);
+                    !archived &&
+                    canUpdateStatus &&
+                    canCancelOrder(order.status);
                   const showDispatch =
+                    !archived &&
                     (canDispatch || canUpdateStatus) &&
                     order.status === 'ready' &&
                     order.order_type === 'delivery';
 
                 return (
-                    <tr key={order.id} className="border-t border-slate-100">
+                    <tr
+                      key={`${archived ? 'hist' : 'live'}-${order.id}`}
+                      className={`border-t border-slate-100 ${
+                        archived ? 'bg-slate-50/80' : ''
+                      }`}
+                    >
                       <td className="px-4 py-3 font-semibold text-slate-800">
-                        {order.order_number}
+                        <div className="flex flex-wrap items-center gap-2">
+                          {order.order_number}
+                          {archived && (
+                            <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-600">
+                              Archived
+                            </span>
+                          )}
+                        </div>
+                        {order.branch_name && (
+                          <div className="mt-0.5 text-xs font-normal text-slate-500">
+                            {order.branch_name}
+                            {archived ? ' (deleted branch)' : ''}
+                          </div>
+                        )}
                       </td>
                       <td className="px-4 py-3">
                         <div className="font-medium text-slate-800">
@@ -358,7 +488,8 @@ export default function OrdersPage() {
                       </td>
                       <td className="px-4 py-3 text-right">
                         <div className="flex items-center justify-end gap-2">
-                          {canUpdateStatus &&
+                          {!archived &&
+                            canUpdateStatus &&
                             order.status === 'pending' &&
                             order.order_type !== 'dine_in' && (
                             <button
@@ -389,6 +520,19 @@ export default function OrdersPage() {
                               <XCircle className="h-3.5 w-3.5" /> Cancel
                             </button>
                           )}
+                          {!archived &&
+                            canCreateReview &&
+                            order.order_type === 'dine_in' &&
+                            order.status === 'completed' &&
+                            !order.has_review && (
+                              <button
+                                type="button"
+                                onClick={() => setReviewOrder(order)}
+                                className="inline-flex items-center gap-1 rounded-md bg-[var(--brand-primary)] px-2.5 py-1.5 text-xs font-semibold text-white hover:brightness-95"
+                              >
+                                <Star className="h-3.5 w-3.5" /> Review
+                              </button>
+                            )}
                           <RowActionsMenu
                             open={menuOpenId === order.id}
                             onOpenChange={(open) =>
@@ -406,7 +550,7 @@ export default function OrdersPage() {
                           >
                             <Eye className="h-4 w-4" /> View / Slip
                           </button>
-                          {canUpdateStatus && nxt && nxt !== 'accepted' && (
+                          {!archived && canUpdateStatus && nxt && nxt !== 'accepted' && (
                             <button
                               type="button"
                               onClick={() => {
@@ -432,7 +576,7 @@ export default function OrdersPage() {
                                     : 'Update Status'}
                             </button>
                           )}
-                          {canPay && order.payment_status !== 'paid' && (
+                          {!archived && canPay && order.payment_status !== 'paid' && (
                             <>
                               <button
                                 type="button"
@@ -544,6 +688,43 @@ export default function OrdersPage() {
           onClose={() => setDispatchOrder(null)}
         />
       )}
+
+      {reviewOrder && (
+        <OrderReviewModal
+          key={reviewOrder.id}
+          open
+          orderLabel={`Order ${reviewOrder.order_number}`}
+          customerName={reviewOrder.customer?.name}
+          saving={createReviewMutation.isPending}
+          onClose={() => setReviewOrder(null)}
+          onSubmit={async ({ rating, comment }) => {
+            try {
+              const res = await createReviewMutation.mutateAsync({
+                order_id: reviewOrder.id,
+                branch_id: reviewOrder.branch_id || undefined,
+                rating,
+                comment: comment || null,
+              });
+              if (res?.status) {
+                setReviewOrder(null);
+                queryClient.invalidateQueries({ queryKey: ['orders'] });
+              }
+            } catch {
+              // toast handled in mutation
+            }
+          }}
+        />
+      )}
+
+      <QuickReserveModal
+        open={quickReserveOpen}
+        saving={quickReserveMutation.isPending}
+        onClose={() => setQuickReserveOpen(false)}
+        onSubmit={async (payload) => {
+          await quickReserveMutation.mutateAsync(payload);
+          setQuickReserveOpen(false);
+        }}
+      />
     </div>
   );
 }

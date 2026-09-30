@@ -1,5 +1,6 @@
 import api from '../lib/api';
 import {
+  QuickCreateReservationPayload,
   ReservationDetailResponse,
   ReservationPayload,
   ReservationsListResponse,
@@ -44,6 +45,18 @@ export const reservationsApi = {
 
   create: async (payload: ReservationPayload) => {
     const { data } = await api.post('/reservations/create', payload);
+    return data;
+  },
+
+  quickCreate: async (payload: QuickCreateReservationPayload) => {
+    const { data } = await api.post('/reservations/quickCreate', payload);
+    return data;
+  },
+
+  markSeatedForOrder: async (id: string) => {
+    const { data } = await api.post('/reservations/markSeatedForOrder', {
+      id,
+    });
     return data;
   },
 

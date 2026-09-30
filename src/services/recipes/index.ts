@@ -14,7 +14,12 @@ type ApiEnvelope<T> = {
 
 export const recipesApi = {
   getAll: async (
-    params: { page?: number; limit?: number; search?: string } = {}
+    params: {
+      page?: number;
+      limit?: number;
+      search?: string;
+      branch_id?: string;
+    } = {}
   ) => {
     const { data } = await api.get<RecipesListResponse>('/recipes/getAll', {
       params,
@@ -22,9 +27,10 @@ export const recipesApi = {
     return data;
   },
 
-  getProductsWithoutRecipes: async () => {
+  getProductsWithoutRecipes: async (params: { branch_id?: string } = {}) => {
     const { data } = await api.get<ApiEnvelope<RecipeProductCard[]>>(
-      '/recipes/getProductsWithoutRecipes'
+      '/recipes/getProductsWithoutRecipes',
+      { params }
     );
     return data;
   },
@@ -38,6 +44,11 @@ export const recipesApi = {
 
   create: async (payload: RecipePayload) => {
     const { data } = await api.post('/recipes/create', payload);
+    return data;
+  },
+
+  createBulk: async (items: RecipePayload[]) => {
+    const { data } = await api.post('/recipes/createBulk', { items });
     return data;
   },
 

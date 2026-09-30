@@ -11,16 +11,21 @@ import {
   Pencil,
   Trash2,
   Package,
+  Rows3,
 } from 'lucide-react';
 import RecipeIngredientEditor from '@/components/recipes/RecipeIngredientEditor';
+import RecipeBulkCreateForm from '@/components/recipes/RecipeBulkCreateForm';
 import ListPager from '@/components/ui/ListPager';
+import { Select } from '@/components/ui/Select';
 import { usePermission } from '@/hooks/use-permission';
+import { useTenantBranchScope } from '@/hooks/branches';
 import { ENTITY_PERMS } from '@/rbac/permissions-map';
 import {
   useRecipesWithProductsQuery,
   useRecipesWithoutProductsQuery,
   useRecipeByVariantQuery,
   useCreateRecipeMutation,
+  useCreateRecipesBulkMutation,
   useUpdateRecipeMutation,
   useDeleteRecipeMutation,
 } from '@/hooks/recipes';
@@ -34,6 +39,7 @@ const LIMIT = 10;
 type Screen =
   | { type: 'list' }
   | { type: 'add-list' }
+  | { type: 'bulk-create' }
   | {
       type: 'pick-variant';
       mode: 'create' | 'edit';
@@ -48,9 +54,12 @@ type Screen =
     };
 
 export default function RecipesPage() {
+  const { isTenantAdmin, showBranchFilter, branchOptions } = useTenantBranchScope();
+
   const [screen, setScreen] = useState<Screen>({ type: 'list' });
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
+  const [branchFilter, setBranchFilter] = useState('');
 
   const canCreate = usePermission(ENTITY_PERMS.recipes.create);
   const canUpdate = usePermission(ENTITY_PERMS.recipes.update);
@@ -59,19 +68,31 @@ export default function RecipesPage() {
   const debouncedSearch = useDebouncedValue(search.trim(), 300);
   useEffect(() => {
     setPage(1);
-  }, [debouncedSearch]);
+  }, [debouncedSearch, branchFilter]);
+
+  const branchQueryParams = useMemo(
+    () => ({
+      branch_id: isTenantAdmin && branchFilter ? branchFilter : undefined,
+    }),
+    [isTenantAdmin, branchFilter]
+  );
 
   const withQuery = useRecipesWithProductsQuery({
     page,
     limit: LIMIT,
     search: debouncedSearch || undefined,
+    ...branchQueryParams,
   });
-  const withoutQuery = useRecipesWithoutProductsQuery(screen.type === 'add-list');
+  const withoutQuery = useRecipesWithoutProductsQuery(
+    screen.type === 'add-list' || screen.type === 'bulk-create',
+    branchQueryParams
+  );
   const editorVariantId =
     screen.type === 'editor' && screen.mode === 'edit' ? screen.variantId : null;
   const recipeQuery = useRecipeByVariantQuery(editorVariantId);
 
   const createMutation = useCreateRecipeMutation();
+  const createBulkMutation = useCreateRecipesBulkMutation();
   const updateMutation = useUpdateRecipeMutation();
   const deleteMutation = useDeleteRecipeMutation();
 
@@ -84,6 +105,24 @@ export default function RecipesPage() {
     if (!q) return withoutProducts;
     return withoutProducts.filter((p) => p.name.toLowerCase().includes(q));
   }, [withoutProducts, search]);
+
+  const branchFilterControl = showBranchFilter ? (
+    <div className="w-full lg:w-56">
+      <Select
+        value={branchFilter}
+        onChange={setBranchFilter}
+        variant="filter"
+        size="lg"
+        allowEmpty
+        placeholder="All branches"
+        aria-label="Filter by branch"
+        options={[
+          { value: 'tenant', label: 'Tenant-level' },
+          ...branchOptions,
+        ]}
+      />
+    </div>
+  ) : null;
 
   const openProductForCreate = (product: RecipeProductCard) => {
     const variants = product.variants_without_recipe || [];
@@ -208,6 +247,22 @@ export default function RecipesPage() {
     );
   }
 
+  if (screen.type === 'bulk-create') {
+    return (
+      <RecipeBulkCreateForm
+        productsWithoutRecipes={withoutProducts}
+        loadingProducts={withoutQuery.isLoading || withoutQuery.isFetching}
+        saving={createBulkMutation.isPending}
+        onClose={() => setScreen({ type: 'add-list' })}
+        onSubmit={async (payloads) => {
+          await createBulkMutation.mutateAsync(payloads);
+          setSearch('');
+          setScreen({ type: 'list' });
+        }}
+      />
+    );
+  }
+
   if (screen.type === 'add-list') {
     return (
       <div className="space-y-6">
@@ -221,20 +276,32 @@ export default function RecipesPage() {
         >
           <ArrowLeft className="h-4 w-4" /> Back to Recipes
         </button>
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">Add Recipe</h1>
-          <p className="mt-1 text-sm text-slate-500">
-            Products that still need a recipe
-          </p>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900">Add Recipe</h1>
+            <p className="mt-1 text-sm text-slate-500">
+              Products that still need a recipe
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setScreen({ type: 'bulk-create' })}
+            className="inline-flex items-center gap-2 rounded-xl border border-[var(--brand-primary)] bg-[var(--brand-icon-soft)] px-4 py-2 text-sm font-semibold text-[var(--brand-icon)] transition hover:brightness-95"
+          >
+            <Rows3 className="h-4 w-4" /> Add multiple
+          </button>
         </div>
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search products..."
-            className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm outline-none focus:border-[var(--brand-primary)] focus:ring-4 focus:ring-[var(--brand-primary-soft)]"
-          />
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search products..."
+              className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm outline-none focus:border-[var(--brand-primary)] focus:ring-4 focus:ring-[var(--brand-primary-soft)]"
+            />
+          </div>
+          {branchFilterControl}
         </div>
         {withoutQuery.isLoading ? (
           <div className="flex justify-center py-16 text-slate-400">
@@ -262,6 +329,12 @@ export default function RecipesPage() {
                   {(product.pending_variant_count || 0) === 1 ? '' : 's'} without
                   recipe
                 </p>
+                {showBranchFilter ? (
+                  <p className="mt-1 text-[11px] font-semibold text-[var(--brand-primary)]">
+                    {product.branch_name ||
+                      (product.branch_id ? 'Branch' : 'Tenant')}
+                  </p>
+                ) : null}
               </button>
             ))}
           </div>
@@ -293,14 +366,17 @@ export default function RecipesPage() {
         )}
       </div>
 
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-        <input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search recipes..."
-          className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm outline-none focus:border-[var(--brand-primary)] focus:ring-4 focus:ring-[var(--brand-primary-soft)]"
-        />
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search recipes..."
+            className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm outline-none focus:border-[var(--brand-primary)] focus:ring-4 focus:ring-[var(--brand-primary-soft)]"
+          />
+        </div>
+        {branchFilterControl}
       </div>
 
       {withQuery.isLoading || withQuery.isFetching ? (
@@ -332,6 +408,12 @@ export default function RecipesPage() {
                   {product.recipe_variant_count || 0} recipe
                   {(product.recipe_variant_count || 0) === 1 ? '' : 's'}
                 </p>
+                {showBranchFilter ? (
+                  <p className="mt-1 text-[11px] font-semibold text-[var(--brand-primary)]">
+                    {product.branch_name ||
+                      (product.branch_id ? 'Branch' : 'Tenant')}
+                  </p>
+                ) : null}
               </button>
               <div className="mt-4 flex gap-2">
                 {canUpdate && (

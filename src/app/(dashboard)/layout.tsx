@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   Search,
   Store,
@@ -11,11 +11,20 @@ import {
   PanelLeftOpen,
   Menu,
   X,
+  ChevronDown,
+  Boxes,
+  Wallet,
 } from 'lucide-react';
 import {
   MODULE_ICON_MAP,
   MODULE_HREF_BY_SLUG,
   getTenantSidebarOrderIndex,
+  SIDEBAR_HIDDEN_MODULE_SLUGS,
+  INVENTORY_GROUP_SLUGS,
+  INVENTORY_SIDEBAR_CHILDREN,
+  FINANCE_GROUP_SLUGS,
+  FINANCE_SIDEBAR_CHILDREN,
+  normalizeSidebarSlug,
 } from '@/data/sidebar';
 import { useAuthStore } from '@/store/authStore';
 import { PermissionBoundary } from '@/components/rbac/PermissionBoundary';
@@ -26,8 +35,16 @@ import { OrderSocketProvider } from '@/components/realtime/OrderSocketProvider';
 import NotificationBell from '@/components/notifications/NotificationBell';
 import HeaderAccountMenu from '@/components/layout/HeaderAccountMenu';
 import { useAdminTheme } from '@/components/providers/ThemeProvider';
+import { useMenuPendingCountsQuery } from '@/hooks/dashboard';
+import { usePermission } from '@/hooks/use-permission';
+import { ENTITY_PERMS } from '@/rbac/permissions-map';
 
 const SECTIONED_MODULES = new Set(['roles', 'permissions', 'modules']);
+
+function formatMenuCount(n: number) {
+  if (n <= 0) return null;
+  return n > 99 ? '99+' : String(n);
+}
 
 /** Map API module_slug → Next.js page path (never use permission.route as href) */
 function resolveModuleHref(moduleSlug: string): string {
@@ -42,7 +59,14 @@ type NavItem = {
   slug: string;
   icon: React.ComponentType<{ className?: string }>;
   section?: string;
+  count?: number;
+  children?: NavItem[];
 };
+
+function pathMatchesHref(pathname: string, href: string) {
+  const pathOnly = href.split('?')[0];
+  return pathname === pathOnly || pathname.startsWith(`${pathOnly}/`);
+}
 
 function SidebarNav({
   modules,
@@ -54,10 +78,12 @@ function SidebarNav({
   onNavigate?: () => void;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
 
-  const navClasses = (path: string) =>
+  const navClasses = (active: boolean) =>
     `flex items-center gap-3 rounded-[26px] text-sm font-medium transition-all ${
-      pathname === path || pathname.startsWith(`${path}/`)
+      active
         ? 'bg-[var(--brand-primary)] text-white shadow-[0_20px_45px_color-mix(in_srgb,var(--brand-primary)_18%,transparent)]'
         : 'text-[var(--admin-sidebar-text)] hover:bg-[#ffffff1a] hover:text-white'
     } ${collapsed ? 'justify-center px-2 py-3' : 'px-4 py-3'}`;
@@ -67,6 +93,15 @@ function SidebarNav({
 
   modules.forEach((item) => {
     const Icon = item.icon;
+    const countLabel = formatMenuCount(item.count || 0);
+    const childActive = (item.children || []).some((c) =>
+      pathMatchesHref(pathname, c.href)
+    );
+    const isActive = pathMatchesHref(pathname, item.href) || childActive;
+    const groupKey = item.slug;
+    const expanded =
+      openGroups[groupKey] ?? (childActive || isActive);
+
     if (!collapsed && item.section && item.section !== lastSection) {
       lastSection = item.section;
       elements.push(
@@ -78,16 +113,119 @@ function SidebarNav({
         </div>
       );
     }
+
+    if (item.children && item.children.length > 0) {
+      elements.push(
+        <div key={`group-${item.slug}`} className="space-y-1">
+          <button
+            type="button"
+            title={collapsed ? item.label : undefined}
+            className={`${navClasses(isActive && collapsed)} w-full`}
+            onClick={() => {
+              if (collapsed) {
+                const target = item.children?.[0]?.href || item.href;
+                router.push(target);
+                onNavigate?.();
+                return;
+              }
+              setOpenGroups((prev) => ({
+                ...prev,
+                [groupKey]: !(prev[groupKey] ?? expanded),
+              }));
+            }}
+          >
+            <span className="relative shrink-0">
+              <Icon className="h-4 w-4" />
+            </span>
+            {!collapsed && (
+              <>
+                <span className="min-w-0 flex-1 truncate text-left">
+                  {item.label}
+                </span>
+                <ChevronDown
+                  className={`h-4 w-4 shrink-0 transition-transform ${
+                    expanded ? 'rotate-180' : ''
+                  }`}
+                />
+              </>
+            )}
+          </button>
+          {!collapsed && expanded && (
+            <div className="ml-3 space-y-0.5 border-l border-white/15 pl-2">
+              {item.children.map((child) => {
+                const ChildIcon = child.icon;
+                const childIsActive = pathMatchesHref(pathname, child.href);
+                const childCount = formatMenuCount(child.count || 0);
+                return (
+                  <Link
+                    key={`${child.href}-${child.label}`}
+                    href={child.href}
+                    className={navClasses(childIsActive)}
+                    onClick={onNavigate}
+                  >
+                    <ChildIcon className="h-3.5 w-3.5 shrink-0" />
+                    <span className="min-w-0 flex-1 truncate">
+                      {child.label}
+                    </span>
+                    {childCount && (
+                      <span
+                        className={`ml-auto inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full px-1.5 text-[10px] font-bold ${
+                          childIsActive
+                            ? 'bg-white/20 text-white'
+                            : 'bg-white text-[var(--brand-primary-dark)]'
+                        }`}
+                      >
+                        {childCount}
+                      </span>
+                    )}
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      );
+      return;
+    }
+
     elements.push(
       <Link
         key={item.href}
         href={item.href}
-        title={collapsed ? item.label : undefined}
-        className={navClasses(item.href)}
+        title={
+          collapsed
+            ? countLabel
+              ? `${item.label} (${countLabel})`
+              : item.label
+            : undefined
+        }
+        className={navClasses(isActive)}
         onClick={onNavigate}
       >
-        <Icon className="h-4 w-4 shrink-0" />
-        {!collapsed && <span className="truncate">{item.label}</span>}
+        <span className="relative shrink-0">
+          <Icon className="h-4 w-4" />
+          {collapsed && countLabel && (
+            <span className="absolute -right-2 -top-2 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-white px-0.5 text-[9px] font-bold text-[var(--brand-primary-dark)]">
+              {countLabel}
+            </span>
+          )}
+        </span>
+        {!collapsed && (
+          <>
+            <span className="min-w-0 flex-1 truncate">{item.label}</span>
+            {countLabel && (
+              <span
+                className={`ml-auto inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full px-1.5 text-[10px] font-bold ${
+                  isActive
+                    ? 'bg-white/20 text-white'
+                    : 'bg-white text-[var(--brand-primary-dark)]'
+                }`}
+              >
+                {countLabel}
+              </span>
+            )}
+          </>
+        )}
       </Link>
     );
   });
@@ -208,7 +346,7 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const { user, modulesWithPermisssions } = useAuthStore();
+  const { user, modulesWithPermisssions, permissions } = useAuthStore();
   const [headerReady, setHeaderReady] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [resolvedTenantName, setResolvedTenantName] = useState(
@@ -251,8 +389,23 @@ export default function DashboardLayout({
     document.title = portalName;
   }, [portalName]);
 
-  const visibleModules: NavItem[] = useMemo(() => {
+  const baseModules: NavItem[] = useMemo(() => {
+    const hasPerm = (perm: string) => permissions.includes(perm);
+
     const items = modulesWithPermisssions.reduce<NavItem[]>((acc, module) => {
+      const slug = normalizeSidebarSlug(module.module_slug);
+
+      if (SIDEBAR_HIDDEN_MODULE_SLUGS.has(slug)) {
+        return acc;
+      }
+      // Inventory / Finance parents are injected below from child permissions
+      if ((INVENTORY_GROUP_SLUGS as readonly string[]).includes(slug)) {
+        return acc;
+      }
+      if ((FINANCE_GROUP_SLUGS as readonly string[]).includes(slug)) {
+        return acc;
+      }
+
       const menuPermission = module.permissions.find(
         (permission) =>
           permission.is_Show_in_menu &&
@@ -266,15 +419,79 @@ export default function DashboardLayout({
 
       acc.push({
         label: module.module_name,
-        slug: module.module_slug,
-        href: resolveModuleHref(module.module_slug),
-        icon: MODULE_ICON_MAP[module.module_slug] ?? LayoutDashboard,
-        section: SECTIONED_MODULES.has(module.module_slug)
-          ? 'Access Control'
-          : undefined,
+        slug,
+        href: resolveModuleHref(slug),
+        icon: MODULE_ICON_MAP[slug] ?? MODULE_ICON_MAP[module.module_slug] ?? LayoutDashboard,
+        section: SECTIONED_MODULES.has(slug) ? 'Access Control' : undefined,
       });
       return acc;
     }, []);
+
+    const inventoryChildren = INVENTORY_SIDEBAR_CHILDREN.filter((child) => {
+      if (hasPerm(child.permission)) return true;
+      // Purchase Orders falls back to suppliers list if getAllPurchases missing
+      if (
+        child.href.includes('tab=purchases') &&
+        hasPerm(ENTITY_PERMS.suppliers.list)
+      ) {
+        return true;
+      }
+      return false;
+    }).map((child) => ({
+      label: child.label,
+      href: child.href,
+      slug: child.slug,
+      icon: child.icon,
+    }));
+
+    const showInventoryParent =
+      hasPerm('inventory/getAll') ||
+      hasPerm('raw-materials/getAll') ||
+      hasPerm('inventory-items/getAll') ||
+      hasPerm('suppliers/getAll') ||
+      inventoryChildren.length > 0;
+
+    if (showInventoryParent && inventoryChildren.length > 0) {
+      items.push({
+        label: 'Inventory Management',
+        slug: 'inventory',
+        href: '/inventory',
+        icon: Boxes,
+        children: inventoryChildren,
+      });
+    }
+
+    const financeChildren = FINANCE_SIDEBAR_CHILDREN.filter((child) =>
+      hasPerm(child.permission)
+    ).map((child) => ({
+      label: child.label,
+      href: child.href,
+      slug: child.slug,
+      icon: child.icon,
+    }));
+
+    const showFinanceParent =
+      hasPerm('finance/getAll') ||
+      hasPerm('finance-accounts/getAll') ||
+      hasPerm('cash-registers/getAll') ||
+      hasPerm('finance-transactions/getAll') ||
+      hasPerm('expenses/getAll') ||
+      hasPerm('finance-reports/getAll') ||
+      hasPerm('finance-payables/getAll') ||
+      hasPerm('finance-receivables/getAll') ||
+      hasPerm('finance-reconciliation/getAll') ||
+      hasPerm('finance-periods/getAll') ||
+      financeChildren.length > 0;
+
+    if (showFinanceParent && financeChildren.length > 0) {
+      items.push({
+        label: 'Finance Management',
+        slug: 'finance',
+        href: '/finance',
+        icon: Wallet,
+        children: financeChildren,
+      });
+    }
 
     return items.sort(
       (a, b) =>
@@ -282,11 +499,86 @@ export default function DashboardLayout({
           getTenantSidebarOrderIndex(b.slug) ||
         a.label.localeCompare(b.label)
     );
-  }, [modulesWithPermisssions]);
+  }, [modulesWithPermisssions, permissions]);
 
   return (
     <AuthGuard>
-    <OrderSocketProvider>
+      <OrderSocketProvider>
+        <DashboardShell
+          pathname={pathname}
+          portalName={portalName}
+          logoUrl={logoUrl}
+          userName={user?.name}
+          userRole={user?.role}
+          collapsed={collapsed}
+          setSidebarCollapsed={setSidebarCollapsed}
+          mobileOpen={mobileOpen}
+          setMobileOpen={setMobileOpen}
+          headerReady={headerReady}
+          baseModules={baseModules}
+        >
+          {children}
+        </DashboardShell>
+      </OrderSocketProvider>
+    </AuthGuard>
+  );
+}
+
+/** Mounted only after AuthGuard — pending counts query lives here. */
+function DashboardShell({
+  children,
+  pathname,
+  portalName,
+  logoUrl,
+  userName,
+  userRole,
+  collapsed,
+  setSidebarCollapsed,
+  mobileOpen,
+  setMobileOpen,
+  headerReady,
+  baseModules,
+}: {
+  children: React.ReactNode;
+  pathname: string;
+  portalName: string;
+  logoUrl?: string | null;
+  userName?: string;
+  userRole?: string;
+  collapsed: boolean;
+  setSidebarCollapsed: (v: boolean) => void;
+  mobileOpen: boolean;
+  setMobileOpen: (v: boolean) => void;
+  headerReady: boolean;
+  baseModules: NavItem[];
+}) {
+  const canDashboard = usePermission(ENTITY_PERMS.dashboard.overview);
+  const { data: pendingCountsRes } = useMenuPendingCountsQuery(canDashboard);
+  const pendingCounts = pendingCountsRes?.data;
+
+  const visibleModules = useMemo(() => {
+    if (!pendingCounts) return baseModules;
+    return baseModules.map((item) => ({
+      ...item,
+      count:
+        Number(
+          pendingCounts[item.slug] ??
+            pendingCounts[item.slug.replace(/_/g, '-')] ??
+            0
+        ) || 0,
+      children: item.children?.map((child) => ({
+        ...child,
+        count:
+          Number(
+            pendingCounts[child.slug] ??
+              pendingCounts[child.slug.replace(/_/g, '-')] ??
+              0
+          ) || 0,
+      })),
+    }));
+  }, [baseModules, pendingCounts]);
+
+  return (
     <div className="min-h-screen overflow-x-hidden bg-[var(--admin-bg)] text-[var(--brand-primary-dark)]">
       {/* Desktop sidebar */}
       <aside
@@ -294,9 +586,7 @@ export default function DashboardLayout({
           collapsed ? 'w-20' : 'w-[280px]'
         }`}
       >
-        <div
-          className={`pt-7 pb-2 ${collapsed ? 'px-2' : 'px-6'}`}
-        >
+        <div className={`pt-7 pb-2 ${collapsed ? 'px-2' : 'px-6'}`}>
           <SidebarBrand
             portalName={portalName}
             collapsed={collapsed}
@@ -315,8 +605,8 @@ export default function DashboardLayout({
 
         <SidebarUserCard
           collapsed={collapsed}
-          userName={user?.name}
-          userRole={user?.role}
+          userName={userName}
+          userRole={userRole}
         />
       </aside>
 
@@ -440,15 +730,13 @@ export default function DashboardLayout({
               />
               <SidebarUserCard
                 collapsed={false}
-                userName={user?.name}
-                userRole={user?.role}
+                userName={userName}
+                userRole={userRole}
               />
             </div>
           </div>
         </div>
       )}
     </div>
-    </OrderSocketProvider>
-    </AuthGuard>
   );
 }

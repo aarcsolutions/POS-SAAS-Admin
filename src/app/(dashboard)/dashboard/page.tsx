@@ -21,6 +21,10 @@ import DateRangePicker, {
   defaultLastDaysRange,
 } from '@/components/ui/DateRangePicker';
 import { useDashboardQuery } from '@/hooks/dashboard';
+import {
+  createPoHref,
+  itemTypeLabel,
+} from '@/utils/inventory-po-links';
 
 function formatChange(percent: number): string {
   const sign = percent > 0 ? '+' : '';
@@ -86,6 +90,9 @@ export default function DashboardPage() {
           </h1>
           <p className="mt-1 text-sm text-slate-500">
             Live overview of sales, orders, and performance
+            {overview?.includes_archived_branches
+              ? ' · includes deleted-branch history'
+              : ''}
             {isFetching ? ' · updating…' : ''}
           </p>
         </div>
@@ -222,9 +229,21 @@ export default function DashboardPage() {
               </div>
               {(overview?.low_stock_items || []).length > 0 && (
                 <Link
-                  href={`/suppliers?createPo=1&materials=${(overview?.low_stock_items || [])
-                    .map((i) => i.id)
-                    .join(',')}`}
+                  href={(() => {
+                    const items = overview?.low_stock_items || [];
+                    const types = [
+                      ...new Set(
+                        items.map((i) => i.item_type || 'raw_material')
+                      ),
+                    ];
+                    if (types.length === 1) {
+                      return createPoHref({
+                        lineType: types[0],
+                        ids: items.map((i) => i.id),
+                      });
+                    }
+                    return '/suppliers?createPo=1';
+                  })()}
                   className="inline-flex items-center gap-1.5 self-start rounded-xl bg-[var(--brand-primary)] px-3.5 py-2 text-sm font-semibold text-white hover:brightness-95 sm:self-auto"
                 >
                   Create PO
@@ -236,7 +255,8 @@ export default function DashboardPage() {
               {(overview?.low_stock_items || []).length === 0 ? (
                 <p className="col-span-full rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-500">
                   No low stock items right now. Stock is managed via Raw
-                  Materials and supplier purchase orders.
+                  Materials, Direct Stock products, Inventory Items, and
+                  supplier purchase orders.
                 </p>
               ) : (
                 overview?.low_stock_items.map((item) => {
@@ -246,14 +266,15 @@ export default function DashboardPage() {
                     10;
                   return (
                     <div
-                      key={item.id}
+                      key={`${item.item_type || 'raw_material'}-${item.id}`}
                       className="rounded-xl border border-[var(--brand-primary-soft)] bg-gradient-to-br from-[var(--brand-primary-soft)] to-white p-4"
                     >
                       <div className="font-semibold text-slate-800">
                         {item.name}
                       </div>
                       <div className="mt-0.5 text-xs text-slate-500">
-                        {item.unit || 'Raw material'}
+                        {itemTypeLabel(item.item_type)}
+                        {item.unit ? ` · ${item.unit}` : ''}
                       </div>
                       <div className="mt-3 flex items-end justify-between gap-2">
                         <div>
@@ -283,7 +304,10 @@ export default function DashboardPage() {
                           {item.stock_label}
                         </span>
                         <Link
-                          href={`/suppliers?createPo=1&materials=${item.id}`}
+                          href={createPoHref({
+                            lineType: item.item_type || 'raw_material',
+                            ids: [item.id],
+                          })}
                           className="text-xs font-bold text-[var(--brand-primary)] hover:brightness-90"
                         >
                           Create PO →

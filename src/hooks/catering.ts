@@ -59,7 +59,7 @@ export const useUpdateCateringEventMutation = () => {
     mutationFn: ({
       id,
       ...payload
-    }: CateringEventPayload & { id: string }) =>
+    }: Partial<CateringEventPayload> & { id: string }) =>
       cateringApi.update(id, payload),
     onSuccess: (response) => {
       if (response.status) {

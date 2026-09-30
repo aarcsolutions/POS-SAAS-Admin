@@ -4,11 +4,16 @@ export interface ProductImage {
   is_primary: boolean;
 }
 
+export type ProductInventoryTracking = 'recipe' | 'direct_stock';
+
 export interface ProductVariant {
   id?: string;
   name: string;
   price: number;
   cost_price: number;
+  stock_quantity?: number;
+  min_stock_level?: number;
+  opening_stock?: number;
   images?: ProductImage[];
 }
 
@@ -19,11 +24,14 @@ export interface Product {
   category?: { id: string; name: string } | null;
   description?: string | null;
   has_variant: boolean;
+  inventory_tracking?: ProductInventoryTracking | string;
   is_active: boolean;
   branch_id?: string | null;
   branch_name?: string | null;
   price?: number;
   cost_price?: number;
+  stock_quantity?: number;
+  min_stock_level?: number;
   variants?: ProductVariant[];
   images?: ProductImage[];
   created_at: string;
@@ -59,9 +67,13 @@ export interface ProductPayload {
   name: string;
   category_id: string;
   has_variant: boolean;
+  inventory_tracking: ProductInventoryTracking;
   description?: string;
   price?: number;
   cost_price?: number;
+  stock_quantity?: number;
+  min_stock_level?: number;
+  opening_stock?: number;
   variants?: ProductVariant[];
   images?: ProductImage[];
 }

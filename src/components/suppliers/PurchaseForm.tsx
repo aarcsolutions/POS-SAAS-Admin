@@ -13,15 +13,24 @@ import {
 } from 'lucide-react';
 import {
   useCreatePurchaseMutation,
-  useMatchByMaterialsMutation,
+  useMatchByItemsMutation,
 } from '@/hooks/suppliers';
 import { useRawMaterialsQuery } from '@/hooks/raw-materials';
+import { useInventoryItemsQuery } from '@/hooks/inventory-items';
+import { useProductsQuery } from '@/hooks/products';
 import { extractListItems } from '@/utils/helpers';
 import { RawMaterial } from '@/types/raw-material.types';
-import { MatchedSupplier, PurchaseRow } from '@/types/supplier.types';
+import { InventoryItem } from '@/types/inventory-item.types';
+import { Product } from '@/types/product.types';
+import {
+  MatchedSupplierItem,
+  PurchaseLineType,
+  PurchaseRow,
+} from '@/types/supplier.types';
 
 interface LineDraft {
-  raw_material_id: string;
+  line_type: PurchaseLineType;
+  item_id: string;
   name: string;
   unit: string;
   quantity: string;
@@ -32,59 +41,195 @@ interface Props {
   onClose: () => void;
   onCreated?: (purchase: PurchaseRow) => void;
   initialMaterialIds?: string[];
+  initialLineType?: PurchaseLineType;
 }
+
+const LINE_TYPE_OPTIONS: { value: PurchaseLineType; label: string }[] = [
+  { value: 'raw_material', label: 'Raw Material' },
+  { value: 'product_variant', label: 'Product (Direct Stock)' },
+  { value: 'inventory_item', label: 'Inventory Item' },
+];
 
 export default function PurchaseForm({
   onClose,
   onCreated,
   initialMaterialIds = [],
+  initialLineType = 'raw_material',
 }: Props) {
   const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [lineType, setLineType] =
+    useState<PurchaseLineType>(initialLineType);
   const [selectedIds, setSelectedIds] = useState<string[]>(
     () => [...initialMaterialIds]
   );
-  const [fullMatch, setFullMatch] = useState<MatchedSupplier[]>([]);
-  const [partialMatch, setPartialMatch] = useState<MatchedSupplier[]>([]);
-  const [pickedSupplier, setPickedSupplier] = useState<MatchedSupplier | null>(
-    null
-  );
+  const [fullMatch, setFullMatch] = useState<MatchedSupplierItem[]>([]);
+  const [partialMatch, setPartialMatch] = useState<MatchedSupplierItem[]>([]);
+  const [pickedSupplier, setPickedSupplier] =
+    useState<MatchedSupplierItem | null>(null);
   const [lines, setLines] = useState<LineDraft[]>([]);
   const [error, setError] = useState('');
 
   const { data: materialsRes, isLoading: materialsLoading } =
     useRawMaterialsQuery({ page: 1, limit: 100 });
-  const matchMutation = useMatchByMaterialsMutation();
+  const { data: inventoryRes, isLoading: inventoryLoading } =
+    useInventoryItemsQuery(
+      { page: 1, limit: 100 },
+      lineType === 'inventory_item'
+    );
+  const { data: productsRes, isLoading: productsLoading } = useProductsQuery(
+    { page: 1, limit: 100 },
+    lineType === 'product_variant'
+  );
+
+  const matchMutation = useMatchByItemsMutation();
   const createMutation = useCreatePurchaseMutation();
 
   const materials = extractListItems<RawMaterial>(materialsRes);
+  const inventoryItems = extractListItems<InventoryItem>(inventoryRes);
+  const products = extractListItems<Product>(productsRes, 'products').filter(
+    (p) => p.inventory_tracking === 'direct_stock'
+  );
+
   const materialById = useMemo(() => {
     const map = new Map<string, RawMaterial>();
     materials.forEach((m) => map.set(m.id, m));
     return map;
   }, [materials]);
 
-  useEffect(() => {
-    if (initialMaterialIds.length > 0) {
-      setSelectedIds((prev) =>
-        prev.length === 0 ? [...initialMaterialIds] : prev
-      );
-    }
-  }, [initialMaterialIds]);
+  const inventoryById = useMemo(() => {
+    const map = new Map<string, InventoryItem>();
+    inventoryItems.forEach((m) => map.set(m.id, m));
+    return map;
+  }, [inventoryItems]);
 
-  const toggleMaterial = (id: string) => {
+  const variantOptions = useMemo(() => {
+    const rows: {
+      id: string;
+      name: string;
+      unit: string;
+      productName: string;
+    }[] = [];
+    products.forEach((p) => {
+      (p.variants || []).forEach((v) => {
+        if (!v.id) return;
+        rows.push({
+          id: v.id,
+          name: v.name,
+          unit: 'pcs',
+          productName: p.name,
+        });
+      });
+    });
+    return rows;
+  }, [products]);
+
+  const variantById = useMemo(() => {
+    const map = new Map<string, (typeof variantOptions)[0]>();
+    variantOptions.forEach((v) => map.set(v.id, v));
+    return map;
+  }, [variantOptions]);
+
+  useEffect(() => {
+    if (initialLineType) {
+      setLineType(initialLineType);
+    }
+    if (initialMaterialIds.length > 0) {
+      setSelectedIds([...initialMaterialIds]);
+      setStep(1);
+      setError('');
+    }
+  }, [initialMaterialIds, initialLineType]);
+
+  const selectableLoading =
+    lineType === 'raw_material'
+      ? materialsLoading
+      : lineType === 'inventory_item'
+        ? inventoryLoading
+        : productsLoading;
+
+  const toggleItem = (id: string) => {
     setSelectedIds((prev) =>
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
     );
     setError('');
   };
 
+  const changeLineType = (next: PurchaseLineType) => {
+    setLineType(next);
+    setSelectedIds([]);
+    setFullMatch([]);
+    setPartialMatch([]);
+    setPickedSupplier(null);
+    setLines([]);
+    setError('');
+    setStep(1);
+  };
+
+  const buildLinesFromSelection = (
+    ids: string[],
+    priceLookup?: Map<
+      string,
+      { unit_price: number; min_order_qty?: number | null }
+    >
+  ): LineDraft[] => {
+    return ids.map((id) => {
+      const mapping = priceLookup?.get(id);
+      const minQty = mapping?.min_order_qty;
+      const qty =
+        minQty != null && Number(minQty) > 0 ? String(minQty) : '1';
+      const price = String(mapping?.unit_price ?? 0);
+
+      if (lineType === 'raw_material') {
+        const mat = materialById.get(id);
+        return {
+          line_type: 'raw_material' as const,
+          item_id: id,
+          name: mat?.name || id,
+          unit: mat?.unit || '',
+          quantity: qty,
+          price,
+        };
+      }
+      if (lineType === 'inventory_item') {
+        const item = inventoryById.get(id);
+        return {
+          line_type: 'inventory_item' as const,
+          item_id: id,
+          name: item?.name || id,
+          unit: item?.unit || '',
+          quantity: qty,
+          price,
+        };
+      }
+      const variant = variantById.get(id);
+      return {
+        line_type: 'product_variant' as const,
+        item_id: id,
+        name: variant ? `${variant.productName} — ${variant.name}` : id,
+        unit: variant?.unit || 'pcs',
+        quantity: qty,
+        price,
+      };
+    });
+  };
+
   const handleFindSuppliers = async () => {
     if (selectedIds.length === 0) {
-      setError('Select at least one raw material');
+      setError(
+        lineType === 'raw_material'
+          ? 'Select at least one raw material'
+          : lineType === 'inventory_item'
+            ? 'Select at least one inventory item'
+            : 'Select at least one product variant'
+      );
       return;
     }
     setError('');
-    const res = await matchMutation.mutateAsync(selectedIds);
+
+    const res = await matchMutation.mutateAsync({
+      line_type: lineType,
+      item_ids: selectedIds,
+    });
     setFullMatch(res.data?.full_match || []);
     setPartialMatch(res.data?.partial_match || []);
     setPickedSupplier(null);
@@ -92,29 +237,15 @@ export default function PurchaseForm({
     setStep(2);
   };
 
-  const pickSupplier = (supplier: MatchedSupplier) => {
+  const pickMatchedSupplier = (supplier: MatchedSupplierItem) => {
     setPickedSupplier(supplier);
-    const overlapIds = supplier.matched_material_ids.filter((id) =>
+    const overlapIds = supplier.matched_item_ids.filter((id) =>
       selectedIds.includes(id)
     );
     const mappingById = new Map(
-      supplier.mappings.map((m) => [m.raw_material_id, m])
+      supplier.mappings.map((m) => [m.item_id, m])
     );
-    setLines(
-      overlapIds.map((id) => {
-        const mat = materialById.get(id);
-        const mapping = mappingById.get(id);
-        const minQty = mapping?.min_order_qty;
-        return {
-          raw_material_id: id,
-          name: mat?.name || id,
-          unit: mat?.unit || '',
-          quantity:
-            minQty != null && Number(minQty) > 0 ? String(minQty) : '1',
-          price: String(mapping?.unit_price ?? 0),
-        };
-      })
-    );
+    setLines(buildLinesFromSelection(overlapIds, mappingById));
     setStep(3);
     setError('');
   };
@@ -133,9 +264,9 @@ export default function PurchaseForm({
   }, 0);
 
   const handleSubmit = async () => {
-    if (!pickedSupplier) return;
+    if (!pickedSupplier?.id) return;
     if (lines.length === 0) {
-      setError('No overlapping materials for this supplier');
+      setError('Add at least one line item');
       return;
     }
     for (const line of lines) {
@@ -154,11 +285,20 @@ export default function PurchaseForm({
 
     const res = await createMutation.mutateAsync({
       supplier_id: pickedSupplier.id,
-      items: lines.map((line) => ({
-        raw_material_id: line.raw_material_id,
-        quantity: Number(line.quantity),
-        price: Number(line.price),
-      })),
+      items: lines.map((line) => {
+        const base = {
+          line_type: line.line_type,
+          quantity: Number(line.quantity),
+          price: Number(line.price),
+        };
+        if (line.line_type === 'raw_material') {
+          return { ...base, raw_material_id: line.item_id };
+        }
+        if (line.line_type === 'inventory_item') {
+          return { ...base, inventory_item_id: line.item_id };
+        }
+        return { ...base, product_variant_id: line.item_id };
+      }),
     });
 
     if (res?.status) {
@@ -170,10 +310,17 @@ export default function PurchaseForm({
 
   const stepLabel =
     step === 1
-      ? 'Select materials'
+      ? 'Select items'
       : step === 2
         ? 'Choose supplier'
         : 'Review & create draft PO';
+
+  const itemNoun =
+    lineType === 'raw_material'
+      ? 'materials'
+      : lineType === 'inventory_item'
+        ? 'items'
+        : 'variants';
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
@@ -205,51 +352,79 @@ export default function PurchaseForm({
       {step === 1 && (
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="mb-5 flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-slate-400">
-            <ClipboardList className="h-4 w-4" /> Materials needed
+            <ClipboardList className="h-4 w-4" /> Line type &amp; items
           </div>
 
-          {materialsLoading ? (
+          <div className="mb-5 flex flex-wrap gap-2">
+            {LINE_TYPE_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => changeLineType(opt.value)}
+                className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
+                  lineType === opt.value
+                    ? 'bg-[var(--brand-primary)] text-white'
+                    : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+
+          {selectableLoading ? (
             <div className="flex justify-center py-12 text-slate-400">
               <Loader2 className="h-5 w-5 animate-spin" />
             </div>
-          ) : materials.length === 0 ? (
+          ) : lineType === 'raw_material' ? (
+            materials.length === 0 ? (
+              <p className="py-8 text-center text-sm text-slate-400">
+                No raw materials found. Add materials first.
+              </p>
+            ) : (
+              <SelectableList
+                items={materials.map((m) => ({
+                  id: m.id,
+                  title: m.name,
+                  subtitle: `${m.unit} · stock ${m.stock_quantity ?? 0}`,
+                }))}
+                selectedIds={selectedIds}
+                onToggle={toggleItem}
+              />
+            )
+          ) : lineType === 'inventory_item' ? (
+            inventoryItems.length === 0 ? (
+              <p className="py-8 text-center text-sm text-slate-400">
+                No inventory items found. Add items first.
+              </p>
+            ) : (
+              <SelectableList
+                items={inventoryItems.map((m) => ({
+                  id: m.id,
+                  title: m.name,
+                  subtitle: `${m.unit} · stock ${m.stock_quantity ?? 0}`,
+                }))}
+                selectedIds={selectedIds}
+                onToggle={toggleItem}
+              />
+            )
+          ) : variantOptions.length === 0 ? (
             <p className="py-8 text-center text-sm text-slate-400">
-              No raw materials found. Add materials first.
+              No direct-stock product variants found.
             </p>
           ) : (
-            <div className="max-h-96 space-y-2 overflow-y-auto">
-              {materials.map((m) => {
-                const checked = selectedIds.includes(m.id);
-                return (
-                  <label
-                    key={m.id}
-                    className={`flex cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 transition ${
-                      checked
-                        ? 'border-[var(--brand-primary)] bg-[var(--brand-primary-soft)]'
-                        : 'border-slate-100 hover:bg-slate-50'
-                    }`}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      onChange={() => toggleMaterial(m.id)}
-                      className="h-4 w-4 rounded border-slate-300 accent-[var(--brand-primary)]"
-                    />
-                    <div className="min-w-0 flex-1">
-                      <div className="font-semibold text-slate-800">
-                        {m.name}
-                      </div>
-                      <div className="text-xs text-slate-500">
-                        {m.unit} · stock {m.stock_quantity ?? 0}
-                      </div>
-                    </div>
-                  </label>
-                );
-              })}
-            </div>
+            <SelectableList
+              items={variantOptions.map((v) => ({
+                id: v.id,
+                title: `${v.productName} — ${v.name}`,
+                subtitle: v.unit,
+              }))}
+              selectedIds={selectedIds}
+              onToggle={toggleItem}
+            />
           )}
 
-          {error && <p className="mt-3 text-xs text-rose-600">{error}</p>}
+          {error && <p className="mt-3 text-xs text-[var(--brand-primary-dark)]">{error}</p>}
 
           <div className="mt-6 flex justify-end gap-3">
             <button
@@ -262,7 +437,7 @@ export default function PurchaseForm({
             <button
               type="button"
               onClick={handleFindSuppliers}
-              disabled={matchMutation.isPending || materialsLoading}
+              disabled={matchMutation.isPending || selectableLoading}
               className="inline-flex items-center gap-2 rounded-xl bg-[var(--brand-primary)] px-5 py-2.5 text-sm font-semibold text-white hover:brightness-95 disabled:opacity-60"
             >
               {matchMutation.isPending ? (
@@ -280,10 +455,11 @@ export default function PurchaseForm({
         <div className="space-y-6">
           <SupplierMatchSection
             title="Can supply all"
-            empty="No supplier can supply every selected material."
+            empty={`No supplier can supply every selected ${itemNoun.slice(0, -1)}.`}
             suppliers={fullMatch}
             selectedCount={selectedIds.length}
-            onPick={pickSupplier}
+            itemNoun={itemNoun}
+            onPick={pickMatchedSupplier}
             accent="emerald"
           />
           <SupplierMatchSection
@@ -291,10 +467,11 @@ export default function PurchaseForm({
             empty="No partial matches."
             suppliers={partialMatch}
             selectedCount={selectedIds.length}
-            onPick={pickSupplier}
+            itemNoun={itemNoun}
+            onPick={pickMatchedSupplier}
             accent="amber"
           />
-          {error && <p className="text-xs text-rose-600">{error}</p>}
+          {error && <p className="text-xs text-[var(--brand-primary-dark)]">{error}</p>}
           <div className="flex justify-between">
             <button
               type="button"
@@ -316,18 +493,22 @@ export default function PurchaseForm({
 
           {lines.length === 0 ? (
             <p className="py-6 text-center text-sm text-slate-400">
-              No overlapping mapped materials.
+              No line items to create.
             </p>
           ) : (
             <div className="space-y-3">
               {lines.map((line, index) => (
                 <div
-                  key={line.raw_material_id}
+                  key={`${line.line_type}-${line.item_id}`}
                   className="grid gap-3 rounded-xl border border-slate-100 bg-slate-50/60 p-4 sm:grid-cols-12"
                 >
                   <div className="sm:col-span-5">
                     <div className="text-xs font-medium text-slate-500">
-                      Material
+                      {line.line_type === 'raw_material'
+                        ? 'Material'
+                        : line.line_type === 'inventory_item'
+                          ? 'Inventory item'
+                          : 'Product variant'}
                     </div>
                     <div className="mt-1 font-semibold text-slate-800">
                       {line.name}
@@ -387,7 +568,7 @@ export default function PurchaseForm({
             </span>
           </div>
 
-          {error && <p className="mt-3 text-xs text-rose-600">{error}</p>}
+          {error && <p className="mt-3 text-xs text-[var(--brand-primary-dark)]">{error}</p>}
 
           <div className="mt-6 flex justify-between gap-3">
             <button
@@ -418,27 +599,76 @@ export default function PurchaseForm({
   );
 }
 
+function SelectableList({
+  items,
+  selectedIds,
+  onToggle,
+}: {
+  items: { id: string; title: string; subtitle: string }[];
+  selectedIds: string[];
+  onToggle: (id: string) => void;
+}) {
+  const ordered = useMemo(() => {
+    if (selectedIds.length === 0) return items;
+    const selected = new Set(selectedIds);
+    return [
+      ...items.filter((m) => selected.has(m.id)),
+      ...items.filter((m) => !selected.has(m.id)),
+    ];
+  }, [items, selectedIds]);
+
+  return (
+    <div className="max-h-96 space-y-2 overflow-y-auto">
+      {ordered.map((m) => {
+        const checked = selectedIds.includes(m.id);
+        return (
+          <label
+            key={m.id}
+            className={`flex cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 transition ${
+              checked
+                ? 'border-[var(--brand-primary)] bg-[var(--brand-primary-soft)]'
+                : 'border-slate-100 hover:bg-slate-50'
+            }`}
+          >
+            <input
+              type="checkbox"
+              checked={checked}
+              onChange={() => onToggle(m.id)}
+              className="h-4 w-4 rounded border-slate-300 accent-[var(--brand-primary)]"
+            />
+            <div className="min-w-0 flex-1">
+              <div className="font-semibold text-slate-800">{m.title}</div>
+              <div className="text-xs text-slate-500">{m.subtitle}</div>
+            </div>
+          </label>
+        );
+      })}
+    </div>
+  );
+}
+
 function SupplierMatchSection({
   title,
   empty,
   suppliers,
   selectedCount,
+  itemNoun,
   onPick,
   accent,
 }: {
   title: string;
   empty: string;
-  suppliers: MatchedSupplier[];
+  suppliers: MatchedSupplierItem[];
   selectedCount: number;
-  onPick: (s: MatchedSupplier) => void;
+  itemNoun: string;
+  onPick: (s: MatchedSupplierItem) => void;
   accent: 'emerald' | 'amber';
 }) {
   const badge =
     accent === 'emerald'
       ? 'bg-[var(--brand-icon-soft)] text-[var(--brand-icon)]'
       : 'bg-[var(--brand-primary-soft)] text-[var(--brand-primary)]';
-  const border =
-    accent === 'emerald' ? 'border-[var(--brand-primary-soft)]' : 'border-[var(--brand-primary-soft)]';
+  const border = 'border-[var(--brand-primary-soft)]';
 
   return (
     <div className={`overflow-hidden rounded-2xl border ${border} bg-white shadow-sm`}>
@@ -467,7 +697,7 @@ function SupplierMatchSection({
                   className={`mt-2 inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold ${badge}`}
                 >
                   <CheckCircle2 className="h-3 w-3" />
-                  {s.matched_material_ids.length}/{selectedCount} materials
+                  {s.matched_item_ids.length}/{selectedCount} {itemNoun}
                 </span>
               </div>
               <button

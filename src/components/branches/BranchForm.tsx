@@ -174,7 +174,9 @@ export default function BranchForm({
       address: address.trim(),
       phone: phone.trim(),
       status,
-      enabledModuleIds,
+      enabledModuleIds: enabledModuleIds.filter((id) =>
+        licensedModules.some((m) => m.id === id),
+      ),
       roleTitle: roleTitle.trim(),
       permissionIds: syncedPermissionIds,
       adminName: adminName.trim(),
@@ -305,7 +307,11 @@ export default function BranchForm({
           </div>
           <p className="mb-4 text-sm text-slate-500">
             Only modules licensed to your tenant are listed. Selected modules are stored in
-            branch_modules.
+            branch_modules. Enabling{' '}
+            <span className="font-medium text-slate-700">Inventory Management</span> also
+            unlocks Raw Materials, Inventory Items, and Suppliers.{' '}
+            Enabling <span className="font-medium text-slate-700">Finance Management</span> also
+            unlocks Accounts, Cash Registers, Transactions, Expenses, and Finance Reports.
           </p>
           {errors.modules && (
             <p className="mb-3 text-xs text-rose-600">{errors.modules}</p>

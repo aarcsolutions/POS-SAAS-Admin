@@ -33,6 +33,32 @@ export const useCreateRawMaterialMutation = () => {
   });
 };
 
+export const useCreateRawMaterialsBulkMutation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (payloads: RawMaterialPayload[]) =>
+      rawMaterialsApi.createBulk(payloads),
+    onSuccess: (response) => {
+      if (response.status) {
+        const count = response?.data?.count ?? 0;
+        toast.success(
+          response.message ||
+            `${count} raw material${count === 1 ? '' : 's'} created successfully`
+        );
+        queryClient.invalidateQueries({ queryKey: ['raw-materials'] });
+      }
+    },
+    onError: (error: any) => {
+      toast.error(
+        error?.response?.data?.message ||
+          error?.message ||
+          'Failed to create raw materials'
+      );
+    },
+  });
+};
+
 export const useUpdateRawMaterialMutation = () => {
   const queryClient = useQueryClient();
 

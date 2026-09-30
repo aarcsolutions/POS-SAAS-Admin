@@ -131,14 +131,14 @@ export default function SupplierForm({
                   options={branchOptions}
                 />
                 {errors.branch_id && (
-                  <p className="mt-1 text-xs text-rose-600">{errors.branch_id}</p>
+                  <p className="mt-1 text-xs text-[var(--brand-primary-dark)]">{errors.branch_id}</p>
                 )}
               </div>
             )}
 
             <div className="sm:col-span-2">
               <label className="mb-1.5 block text-sm font-semibold text-slate-700">
-                Name <span className="text-rose-500">*</span>
+                Name <span className="text-[var(--brand-primary)]">*</span>
               </label>
               <input
                 value={data.name}
@@ -148,7 +148,7 @@ export default function SupplierForm({
                 className="h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-[var(--brand-primary)] focus:ring-4 focus:ring-[var(--brand-primary-soft)] disabled:bg-slate-50"
               />
               {errors.name && (
-                <p className="mt-1 text-xs text-rose-600">{errors.name}</p>
+                <p className="mt-1 text-xs text-[var(--brand-primary-dark)]">{errors.name}</p>
               )}
             </div>
 
@@ -178,7 +178,7 @@ export default function SupplierForm({
                 className="h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-[var(--brand-primary)] focus:ring-4 focus:ring-[var(--brand-primary-soft)] disabled:bg-slate-50"
               />
               {errors.email && (
-                <p className="mt-1 text-xs text-rose-600">{errors.email}</p>
+                <p className="mt-1 text-xs text-[var(--brand-primary-dark)]">{errors.email}</p>
               )}
             </div>
 

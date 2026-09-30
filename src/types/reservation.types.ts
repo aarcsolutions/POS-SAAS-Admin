@@ -6,6 +6,30 @@ export type ReservationStatus =
   | 'no_show'
   | 'completed';
 
+export interface ReservationConflict {
+  id: string;
+  guest_name: string;
+  guest_phone?: string | null;
+  guest_email?: string | null;
+  reserved_at: string;
+  duration_minutes: number;
+  status: ReservationStatus;
+  table_name?: string | null;
+  restaurant_table_id?: string | null;
+  clash_type: 'table' | 'time';
+}
+
+export interface AvailableReservationTable {
+  id: string;
+  name: string;
+  code?: string | null;
+  capacity?: number | null;
+  status: string;
+  branch_id?: string | null;
+  fits_party: boolean;
+  match: 'exact' | 'larger' | 'smaller' | 'unknown';
+}
+
 export interface Reservation {
   id: string;
   branch_id?: string | null;
@@ -14,6 +38,7 @@ export interface Reservation {
   customer_name?: string | null;
   guest_name: string;
   guest_phone?: string | null;
+  guest_email?: string | null;
   restaurant_table_id?: string | null;
   table_name?: string | null;
   party_size: number;
@@ -22,8 +47,12 @@ export interface Reservation {
   status: ReservationStatus;
   notes?: string | null;
   is_active: boolean;
+  order_id?: string | null;
+  order_number?: string | null;
   created_at: string;
   updated_at: string;
+  conflicts?: ReservationConflict[];
+  available_tables?: AvailableReservationTable[];
 }
 
 export interface RestaurantTableOption {
@@ -65,12 +94,22 @@ export type ReservationPayload = {
   customer_id?: string | null;
   guest_name: string;
   guest_phone?: string | null;
+  guest_email?: string | null;
   restaurant_table_id?: string | null;
   party_size: number;
   reserved_at: string;
   duration_minutes?: number;
   status?: ReservationStatus;
   notes?: string | null;
+};
+
+export type QuickCreateReservationPayload = {
+  guest_name: string;
+  guest_phone: string;
+  party_size: number;
+  restaurant_table_id: string;
+  notes?: string | null;
+  branch_id?: string;
 };
 
 export const RESERVATION_STATUS_OPTIONS: {

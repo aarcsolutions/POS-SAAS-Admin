@@ -7,6 +7,7 @@ export type DashboardDateRange = {
 
 export interface DashboardLowStockItem {
   id: string;
+  item_type?: 'raw_material' | 'product_variant' | 'inventory_item' | string;
   name: string;
   sku?: string;
   unit: string;

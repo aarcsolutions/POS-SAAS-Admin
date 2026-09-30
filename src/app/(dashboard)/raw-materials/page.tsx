@@ -10,12 +10,13 @@ import { ENTITY_PERMS } from '@/rbac/permissions-map';
 import {
   useRawMaterialsQuery,
   useCreateRawMaterialMutation,
+  useCreateRawMaterialsBulkMutation,
   useUpdateRawMaterialMutation,
   useDeleteRawMaterialMutation,
 } from '@/hooks/raw-materials';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { extractListItems, extractPagination } from '@/utils/helpers';
-import { RawMaterial } from '@/types/raw-material.types';
+import { RawMaterial, RawMaterialPayload } from '@/types/raw-material.types';
 import { confirmDialog } from '@/store/dialogStore';
 
 const LIMIT = 10;
@@ -44,6 +45,7 @@ export default function RawMaterialsPage() {
     search: debouncedSearch || undefined,
   });
   const createMutation = useCreateRawMaterialMutation();
+  const createBulkMutation = useCreateRawMaterialsBulkMutation();
   const updateMutation = useUpdateRawMaterialMutation();
   const deleteMutation = useDeleteRawMaterialMutation();
 
@@ -76,12 +78,20 @@ export default function RawMaterialsPage() {
       <RawMaterialForm
         mode={formMode}
         initial={selected}
-        saving={createMutation.isPending || updateMutation.isPending}
+        saving={
+          createMutation.isPending ||
+          createBulkMutation.isPending ||
+          updateMutation.isPending
+        }
         onClose={() => setFormMode(null)}
-        onSubmit={async (payload) => {
+        onSubmit={async (payload: RawMaterialPayload | RawMaterialPayload[]) => {
           if (formMode === 'create') {
-            await createMutation.mutateAsync(payload);
-          } else if (formMode === 'edit' && selected) {
+            if (Array.isArray(payload)) {
+              await createBulkMutation.mutateAsync(payload);
+            } else {
+              await createMutation.mutateAsync(payload);
+            }
+          } else if (formMode === 'edit' && selected && !Array.isArray(payload)) {
             await updateMutation.mutateAsync({
               id: selected.id,
               ...payload,

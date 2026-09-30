@@ -1,4 +1,4 @@
-export type BranchStatus = 'active' | 'inactive';
+export type BranchStatus = 'active' | 'inactive' | 'deleting';
 
 export interface BranchPermissionOption {
   id: string;
@@ -35,6 +35,7 @@ export interface Branch {
   address: string;
   phone: string;
   status: BranchStatus;
+  purgeJobId?: string | null;
   enabledModuleIds: string[];
   enabledModuleTitles: string[];
   roleTitle: string;

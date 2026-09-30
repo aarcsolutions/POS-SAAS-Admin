@@ -106,7 +106,7 @@ export default function RawMaterialTable({
                       <button
                         type="button"
                         onClick={() => onDelete(m.id)}
-                        className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-rose-600 hover:bg-rose-50"
+                        className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[var(--brand-primary-dark)] hover:bg-[var(--brand-primary-soft)]"
                       >
                         <Trash2 className="h-4 w-4" /> Delete
                       </button>

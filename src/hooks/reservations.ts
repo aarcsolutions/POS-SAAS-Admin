@@ -1,6 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { reservationsApi } from '@/services/reservations';
-import { ReservationPayload } from '@/types/reservation.types';
+import {
+  QuickCreateReservationPayload,
+  ReservationPayload,
+} from '@/types/reservation.types';
 import { toast } from 'sonner';
 
 export const useReservationsQuery = (
@@ -50,11 +53,55 @@ export const useCreateReservationMutation = () => {
       if (response.status) {
         toast.success(response.message || 'Reservation created successfully');
         queryClient.invalidateQueries({ queryKey: ['reservations'] });
+        queryClient.invalidateQueries({ queryKey: ['menu-pending-counts'] });
       }
     },
     onError: (error: any) => {
       toast.error(
         error?.response?.data?.message || 'Failed to create reservation'
+      );
+    },
+  });
+};
+
+export const useQuickCreateReservationMutation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (payload: QuickCreateReservationPayload) =>
+      reservationsApi.quickCreate(payload),
+    onSuccess: (response) => {
+      if (response.status) {
+        toast.success(response.message || 'Table reserved');
+        queryClient.invalidateQueries({ queryKey: ['reservations'] });
+        queryClient.invalidateQueries({ queryKey: ['tables'] });
+        queryClient.invalidateQueries({ queryKey: ['reservation-tables'] });
+        queryClient.invalidateQueries({ queryKey: ['menu-pending-counts'] });
+        queryClient.invalidateQueries({ queryKey: ['customers'] });
+      }
+    },
+    onError: (error: any) => {
+      toast.error(
+        error?.response?.data?.message || 'Failed to quick-reserve table'
+      );
+    },
+  });
+};
+
+export const useMarkSeatedForOrderMutation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) => reservationsApi.markSeatedForOrder(id),
+    onSuccess: (response) => {
+      if (response.status) {
+        queryClient.invalidateQueries({ queryKey: ['reservations'] });
+        queryClient.invalidateQueries({ queryKey: ['tables'] });
+      }
+    },
+    onError: (error: any) => {
+      toast.error(
+        error?.response?.data?.message || 'Failed to seat reservation'
       );
     },
   });
@@ -67,12 +114,14 @@ export const useUpdateReservationMutation = () => {
     mutationFn: ({
       id,
       ...payload
-    }: ReservationPayload & { id: string }) =>
+    }: Partial<ReservationPayload> & { id: string }) =>
       reservationsApi.update(id, payload),
     onSuccess: (response) => {
       if (response.status) {
         toast.success(response.message || 'Reservation updated successfully');
         queryClient.invalidateQueries({ queryKey: ['reservations'] });
+        queryClient.invalidateQueries({ queryKey: ['menu-pending-counts'] });
+        queryClient.invalidateQueries({ queryKey: ['tables'] });
       }
     },
     onError: (error: any) => {
@@ -92,6 +141,8 @@ export const useDeleteReservationMutation = () => {
       if (response.status) {
         toast.success(response.message || 'Reservation deleted successfully');
         queryClient.invalidateQueries({ queryKey: ['reservations'] });
+        queryClient.invalidateQueries({ queryKey: ['menu-pending-counts'] });
+        queryClient.invalidateQueries({ queryKey: ['tables'] });
       }
     },
     onError: (error: any) => {

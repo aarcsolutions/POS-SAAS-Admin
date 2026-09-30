@@ -1,10 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
 import { reportsApi } from '@/services/reports';
-import { DashboardPeriod } from '@/types/dashboard.types';
+import { DashboardDateRange } from '@/types/dashboard.types';
 
-export const useReportsQuery = (period: DashboardPeriod = '30d') =>
+export const useReportsQuery = (range: DashboardDateRange) =>
   useQuery({
-    queryKey: ['reports', period],
-    queryFn: () => reportsApi.getAll(period),
+    queryKey: ['reports', range.from, range.to],
+    queryFn: () => reportsApi.getAll(range),
+    enabled: Boolean(range?.from && range?.to),
     placeholderData: (previousData) => previousData,
   });

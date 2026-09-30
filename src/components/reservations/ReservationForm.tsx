@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, Loader2, CalendarDays, Users, Phone } from 'lucide-react';
+import { ArrowLeft, Loader2, CalendarDays, Users, Phone, Mail } from 'lucide-react';
 import { Select } from '@/components/ui/Select';
 import { notifyError } from '@/utils/notify';
 import { blockInvalidSubmit } from '@/utils/form-validation';
@@ -15,6 +15,7 @@ interface ReservationFormData {
   customer_id: string;
   guest_name: string;
   guest_phone: string;
+  guest_email: string;
   restaurant_table_id: string;
   party_size: string;
   reserved_at: string;
@@ -41,6 +42,7 @@ const emptyData: ReservationFormData = {
   customer_id: '',
   guest_name: '',
   guest_phone: '',
+  guest_email: '',
   restaurant_table_id: '',
   party_size: '2',
   reserved_at: '',
@@ -134,6 +136,7 @@ export default function ReservationForm({
       customer_id: data.customer_id || null,
       guest_name: data.guest_name.trim(),
       guest_phone: data.guest_phone.trim() || null,
+      guest_email: data.guest_email.trim() || null,
       restaurant_table_id: data.restaurant_table_id || null,
       party_size: Number(data.party_size),
       reserved_at: reservedAt.toISOString(),
@@ -250,6 +253,23 @@ export default function ReservationForm({
                   value={data.guest_phone}
                   onChange={(e) => update('guest_phone', e.target.value)}
                   readOnly={readOnly}
+                  className="h-11 w-full rounded-xl border border-slate-200 pl-10 pr-3 text-sm outline-none focus:border-[var(--brand-primary)] focus:ring-4 focus:ring-[var(--brand-primary-soft)] disabled:bg-slate-50"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="mb-1.5 block text-sm font-semibold text-slate-700">
+                Guest email
+              </label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="email"
+                  value={data.guest_email}
+                  onChange={(e) => update('guest_email', e.target.value)}
+                  readOnly={readOnly}
+                  placeholder="For confirmation emails"
                   className="h-11 w-full rounded-xl border border-slate-200 pl-10 pr-3 text-sm outline-none focus:border-[var(--brand-primary)] focus:ring-4 focus:ring-[var(--brand-primary-soft)] disabled:bg-slate-50"
                 />
               </div>

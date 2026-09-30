@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react'
 import {
   UserRound,
   Plus,
@@ -24,9 +24,8 @@ import {
   useUpdateDriverMutation,
   useDeleteDriverMutation,
 } from '@/hooks/drivers';
-import { useBranchesQuery } from '@/hooks/branches';
+import { useTenantBranchScope } from '@/hooks/branches';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
-import { useAuthStore } from '@/store/authStore';
 import { extractListItems, extractPagination } from '@/utils/helpers';
 import { Driver } from '@/types/driver.types';
 import { confirmDialog } from '@/store/dialogStore';
@@ -34,8 +33,7 @@ import { confirmDialog } from '@/store/dialogStore';
 const LIMIT = 10;
 
 export default function DriversPage() {
-  const user = useAuthStore((s) => s.user);
-  const isTenantAdmin = !user?.branchId;
+  const { isTenantAdmin, showBranchFilter, branchOptions } = useTenantBranchScope();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [branchFilter, setBranchFilter] = useState('');
@@ -55,23 +53,6 @@ export default function DriversPage() {
     setPage(1);
   }, [debouncedSearch, branchFilter]);
 
-  const { data: branchesRes } = useBranchesQuery(
-    { page: 1, limit: 100 },
-    isTenantAdmin
-  );
-
-  const branchOptions = useMemo(() => {
-    const rows =
-      branchesRes?.data?.data ||
-      branchesRes?.data?.branches ||
-      (Array.isArray(branchesRes?.data) ? branchesRes.data : []) ||
-      [];
-    return (rows as { id: string; name: string; code?: string }[]).map((b) => ({
-      value: b.id,
-      label: b.name || b.code || b.id,
-    }));
-  }, [branchesRes]);
-
   const { data, isLoading, isFetching } = useDriversQuery({
     page,
     limit: LIMIT,
@@ -84,7 +65,7 @@ export default function DriversPage() {
 
   const drivers = extractListItems<Driver>(data, 'drivers');
   const pagination = extractPagination(data, LIMIT);
-  const colSpan = isTenantAdmin ? 6 : 5;
+  const colSpan = showBranchFilter ? 6 : 5;
 
   const handleOpenForm = (
     mode: 'create' | 'edit' | 'view',
@@ -111,7 +92,7 @@ export default function DriversPage() {
     return (
       <DriverForm
         mode={formMode}
-        showBranchSelect={isTenantAdmin}
+        showBranchSelect={showBranchFilter}
         branchOptions={branchOptions}
         initialData={
           selectedDriver
@@ -172,7 +153,7 @@ export default function DriversPage() {
             className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm outline-none focus:border-[var(--brand-primary)] focus:ring-4 focus:ring-[var(--brand-primary-soft)]"
           />
         </div>
-        {isTenantAdmin && (
+        {showBranchFilter && (
           <div className="w-full sm:w-56">
             <Select
               value={branchFilter}
@@ -195,7 +176,7 @@ export default function DriversPage() {
               <th className="px-5 py-3 font-bold">Driver</th>
               <th className="px-5 py-3 font-bold">Phone</th>
               <th className="px-5 py-3 font-bold">Notes</th>
-              {isTenantAdmin && (
+              {showBranchFilter && (
                 <th className="px-5 py-3 font-bold">Branch</th>
               )}
               <th className="px-5 py-3 font-bold">Status</th>
@@ -243,7 +224,7 @@ export default function DriversPage() {
                       <span className="text-slate-300">—</span>
                     )}
                   </td>
-                  {isTenantAdmin && (
+                  {showBranchFilter && (
                     <td className="px-5 py-4">
                       <span className="inline-flex rounded-full bg-[var(--brand-primary-soft)] px-2.5 py-1 text-xs font-semibold text-[var(--brand-primary)]">
                         {d.branch_name || 'Branch'}

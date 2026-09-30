@@ -50,6 +50,7 @@ export const useCreateReviewMutation = () => {
         toast.success(response.message || 'Review created successfully');
         queryClient.invalidateQueries({ queryKey: ['reviews'] });
         queryClient.invalidateQueries({ queryKey: ['review-eligible-orders'] });
+        queryClient.invalidateQueries({ queryKey: ['orders'] });
       }
     },
     onError: (error: any) => {

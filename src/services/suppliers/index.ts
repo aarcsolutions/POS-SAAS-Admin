@@ -1,7 +1,10 @@
 import api from '../lib/api';
 import {
   AssignRawMaterialPayload,
+  AssignSupplierItemPayload,
   CreatePurchasePayload,
+  MatchByItemsPayload,
+  MatchByItemsResponse,
   MatchByMaterialsResponse,
   PurchaseDetailResponse,
   PurchasesListResponse,
@@ -82,6 +85,26 @@ export const suppliersApi = {
     const { data } = await api.post<MatchByMaterialsResponse>(
       '/suppliers/matchByMaterials',
       { raw_material_ids }
+    );
+    return data;
+  },
+
+  assignItem: async (payload: AssignSupplierItemPayload) => {
+    const { data } = await api.post('/suppliers/assignItem', payload);
+    return data;
+  },
+
+  getAssignedItems: async (supplierId: string) => {
+    const { data } = await api.get(
+      `/suppliers/getAssignedItems/${supplierId}`
+    );
+    return data;
+  },
+
+  matchByItems: async (payload: MatchByItemsPayload) => {
+    const { data } = await api.post<MatchByItemsResponse>(
+      '/suppliers/matchByItems',
+      payload
     );
     return data;
   },

@@ -42,6 +42,10 @@ export const ENTITY_PERMS = {
     list:   'theme/getAll',
     update: 'theme/update',
   },
+  notifications: {
+    list:   'notifications/getAll',
+    update: 'notifications/update',
+  },
   tenant_billing: {
     list:   'tenant-billing/myInvoices',
     read:   'tenant-billing/myInvoiceById',
@@ -54,6 +58,10 @@ export const ENTITY_PERMS = {
     read:   'branches/getById',
     update: 'branches/update',
     delete: 'branches/delete',
+    extras: {
+      purgeCheck: 'branches/purgeCheck',
+      history: 'branches/history',
+    },
   },
   users: {
     list:   'users/getAll',
@@ -121,6 +129,13 @@ export const ENTITY_PERMS = {
     read:   'raw-materials/getById',
     update: 'raw-materials/update',
     delete: 'raw-materials/delete',
+  },
+  inventory_items: {
+    list:   'inventory-items/getAll',
+    create: 'inventory-items/create',
+    read:   'inventory-items/getById',
+    update: 'inventory-items/update',
+    delete: 'inventory-items/delete',
   },
   orders: {
     list:   'orders/getAll',
@@ -207,5 +222,89 @@ export const ENTITY_PERMS = {
     read: 'tables/getById',
     update: 'tables/update',
     delete: 'tables/delete',
+  },
+  finance: {
+    list: 'finance/getAll',
+  },
+  finance_accounts: {
+    list: 'finance-accounts/getAll',
+    create: 'finance-accounts/create',
+    read: 'finance-accounts/getById',
+    update: 'finance-accounts/update',
+    delete: 'finance-accounts/delete',
+    extras: {
+      recalculateBalance: 'finance-accounts/recalculateBalance',
+    },
+  },
+  cash_registers: {
+    list: 'cash-registers/getAll',
+    create: 'cash-registers/create',
+    read: 'cash-registers/getById',
+    update: 'cash-registers/update',
+    delete: 'cash-registers/delete',
+    extras: {
+      openShift: 'cash-registers/openShift',
+      closeShift: 'cash-registers/closeShift',
+      getShiftById: 'cash-registers/getShiftById',
+      cashDrop: 'cash-registers/cashDrop',
+      cashAdd: 'cash-registers/cashAdd',
+    },
+  },
+  finance_transactions: {
+    list: 'finance-transactions/getAll',
+    read: 'finance-transactions/getById',
+    extras: {
+      transfer: 'finance-transactions/transfer',
+      void: 'finance-transactions/void',
+    },
+  },
+  expenses: {
+    list: 'expenses/getAll',
+    create: 'expenses/create',
+    read: 'expenses/getById',
+    update: 'expenses/update',
+    delete: 'expenses/delete',
+  },
+  finance_reports: {
+    list: 'finance-reports/getAll',
+    extras: {
+      cogs: 'finance-reports/cogs',
+      profitLoss: 'finance-reports/profitLoss',
+      cashFlow: 'finance-reports/cashFlow',
+      taxSummary: 'finance-reports/taxSummary',
+      registerSummary: 'finance-reports/registerSummary',
+    },
+  },
+  finance_payables: {
+    list: 'finance-payables/getAll',
+    read: 'finance-payables/getById',
+    extras: {
+      pay: 'finance-payables/pay',
+      voidPayment: 'finance-payables/voidPayment',
+    },
+  },
+  finance_receivables: {
+    list: 'finance-receivables/getAll',
+    read: 'finance-receivables/getById',
+  },
+  finance_reconciliation: {
+    list: 'finance-reconciliation/getAll',
+    create: 'finance-reconciliation/create',
+    read: 'finance-reconciliation/getById',
+    extras: {
+      match: 'finance-reconciliation/match',
+      unmatch: 'finance-reconciliation/unmatch',
+      reconcile: 'finance-reconciliation/reconcile',
+      reopen: 'finance-reconciliation/reopen',
+    },
+  },
+  finance_periods: {
+    list: 'finance-periods/getAll',
+    create: 'finance-periods/create',
+    read: 'finance-periods/getById',
+    extras: {
+      close: 'finance-periods/close',
+      reopen: 'finance-periods/reopen',
+    },
   },
 } as const;

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react'
 import {
   Plus,
   Search,
@@ -23,9 +23,8 @@ import {
   useUpdateRoleMutation,
   useDeleteRoleMutation,
 } from '@/hooks/roles';
-import { useBranchesQuery } from '@/hooks/branches';
+import { useTenantBranchScope } from '@/hooks/branches';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
-import { useAuthStore } from '@/store/authStore';
 import { extractListItems, extractPagination } from '@/utils/helpers';
 import { Role } from '@/types/rbac.types';
 import { confirmDialog } from '@/store/dialogStore';
@@ -33,8 +32,7 @@ import { confirmDialog } from '@/store/dialogStore';
 const LIMIT = 10;
 
 export default function RolesPage() {
-  const user = useAuthStore((s) => s.user);
-  const isTenantAdmin = !user?.branchId;
+  const { isTenantAdmin, showBranchFilter, branchOptions } = useTenantBranchScope();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [branchFilter, setBranchFilter] = useState('');
@@ -54,23 +52,6 @@ export default function RolesPage() {
     setPage(1);
   }, [debouncedSearch, branchFilter]);
 
-  const { data: branchesRes } = useBranchesQuery(
-    { page: 1, limit: 100 },
-    isTenantAdmin
-  );
-
-  const branchOptions = useMemo(() => {
-    const rows =
-      branchesRes?.data?.data ||
-      branchesRes?.data?.branches ||
-      (Array.isArray(branchesRes?.data) ? branchesRes.data : []) ||
-      [];
-    return (rows as { id: string; name: string; code?: string }[]).map((b) => ({
-      value: b.id,
-      label: b.name || b.code || b.id,
-    }));
-  }, [branchesRes]);
-
   const { data, isLoading, isFetching } = useRolesQuery({
     page,
     limit: LIMIT,
@@ -83,7 +64,7 @@ export default function RolesPage() {
 
   const roles = extractListItems<Role>(data, 'roles');
   const pagination = extractPagination(data, LIMIT);
-  const colSpan = isTenantAdmin ? 6 : 5;
+  const colSpan = showBranchFilter ? 6 : 5;
 
   const handleOpenForm = (mode: 'create' | 'edit' | 'view', role?: Role) => {
     setFormMode(mode);
@@ -117,7 +98,7 @@ export default function RolesPage() {
     return (
       <RoleForm
         mode="create"
-        showBranchSelect={isTenantAdmin}
+        showBranchSelect={showBranchFilter}
         branchOptions={branchOptions}
         initialBranchId={
           branchFilter && branchFilter !== 'tenant' ? branchFilter : null
@@ -140,7 +121,7 @@ export default function RolesPage() {
       <RoleForm
         mode="edit"
         initialTitle={selectedRole.title}
-        showBranchSelect={isTenantAdmin}
+        showBranchSelect={showBranchFilter}
         initialBranchId={selectedRole.branch_id}
         initialBranchLabel={
           selectedRole.branch_name ||
@@ -161,7 +142,7 @@ export default function RolesPage() {
       <RoleForm
         mode="view"
         initialTitle={selectedRole.title}
-        showBranchSelect={isTenantAdmin}
+        showBranchSelect={showBranchFilter}
         initialBranchId={selectedRole.branch_id}
         initialBranchLabel={
           selectedRole.branch_name ||
@@ -204,7 +185,7 @@ export default function RolesPage() {
             className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm outline-none focus:border-[var(--brand-primary)] focus:ring-4 focus:ring-[var(--brand-primary-soft)]"
           />
         </div>
-        {isTenantAdmin && (
+        {showBranchFilter && (
           <div className="w-full sm:w-56">
             <Select
               value={branchFilter}
@@ -229,7 +210,7 @@ export default function RolesPage() {
             <tr>
               <th className="px-5 py-3 font-bold">Role</th>
               <th className="px-5 py-3 font-bold">Slug</th>
-              {isTenantAdmin && (
+              {showBranchFilter && (
                 <th className="px-5 py-3 font-bold">Branch</th>
               )}
               <th className="px-5 py-3 font-bold">Created</th>
@@ -260,7 +241,7 @@ export default function RolesPage() {
                     </div>
                   </td>
                   <td className="px-5 py-4 text-slate-500">{role.slug}</td>
-                  {isTenantAdmin && (
+                  {showBranchFilter && (
                     <td className="px-5 py-4">
                       <span
                         className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${

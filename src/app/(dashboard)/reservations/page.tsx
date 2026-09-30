@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   CalendarDays,
   Plus,
@@ -11,8 +12,11 @@ import {
   Loader2,
   Users,
   Phone,
+  ShoppingBag,
+  ExternalLink,
 } from 'lucide-react';
 import ReservationForm from '@/components/reservations/ReservationForm';
+import ReservationDetailsModal from '@/components/reservations/ReservationDetailsModal';
 import RowActionsMenu from '@/components/ui/RowActionsMenu';
 import ListPager from '@/components/ui/ListPager';
 import { Select } from '@/components/ui/Select';
@@ -26,7 +30,7 @@ import {
   useUpdateReservationMutation,
   useDeleteReservationMutation,
 } from '@/hooks/reservations';
-import { useBranchesQuery } from '@/hooks/branches';
+import { useTenantBranchScope } from '@/hooks/branches';
 import { useCustomersQuery } from '@/hooks/customers';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { useAuthStore } from '@/store/authStore';
@@ -51,7 +55,9 @@ function formatDateTime(iso: string) {
 
 export default function ReservationsPage() {
   const user = useAuthStore((s) => s.user);
-  const isTenantAdmin = !user?.branchId;
+  const { isTenantAdmin, showBranchFilter, branchOptions } = useTenantBranchScope();
+
+  const router = useRouter();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [branchFilter, setBranchFilter] = useState('');
@@ -62,36 +68,24 @@ export default function ReservationsPage() {
   const [formMode, setFormMode] = useState<'create' | 'edit' | 'view' | null>(
     null
   );
+  const [reviewId, setReviewId] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [formBranchId, setFormBranchId] = useState('');
   const [dropdownOpen, setDropdownOpen] = useState<string | null>(null);
+  const [decisionAction, setDecisionAction] = useState<
+    'accept' | 'reject' | null
+  >(null);
 
   const canCreate = usePermission(ENTITY_PERMS.reservations.create);
   const canUpdate = usePermission(ENTITY_PERMS.reservations.update);
   const canDelete = usePermission(ENTITY_PERMS.reservations.delete);
+  const canCreateOrder = usePermission(ENTITY_PERMS.orders.create);
 
   const debouncedSearch = useDebouncedValue(searchTerm.trim(), 300);
 
   useEffect(() => {
     setPage(1);
   }, [debouncedSearch, branchFilter, statusFilter, dateFrom, dateTo]);
-
-  const { data: branchesRes } = useBranchesQuery(
-    { page: 1, limit: 100 },
-    isTenantAdmin
-  );
-
-  const branchOptions = useMemo(() => {
-    const rows =
-      branchesRes?.data?.data ||
-      branchesRes?.data?.branches ||
-      (Array.isArray(branchesRes?.data) ? branchesRes.data : []) ||
-      [];
-    return (rows as { id: string; name: string; code?: string }[]).map((b) => ({
-      value: b.id,
-      label: b.name || b.code || b.id,
-    }));
-  }, [branchesRes]);
 
   const effectiveFormBranch =
     formBranchId || branchFilter || user?.branchId || '';
@@ -133,9 +127,11 @@ export default function ReservationsPage() {
     date_to: dateTo || undefined,
   });
 
+  const detailId = formMode && formMode !== 'create' ? selectedId : reviewId;
+
   const { data: detailRes, isLoading: detailLoading } = useReservationByIdQuery(
-    selectedId,
-    Boolean(formMode && selectedId && formMode !== 'create')
+    detailId,
+    Boolean(detailId)
   );
 
   const createMutation = useCreateReservationMutation();
@@ -144,7 +140,7 @@ export default function ReservationsPage() {
 
   const reservations = extractListItems<Reservation>(data, 'reservations');
   const pagination = extractPagination(data, LIMIT);
-  const colSpan = isTenantAdmin ? 7 : 6;
+  const colSpan = showBranchFilter ? 7 : 6;
 
   const statusFilterOptions = useMemo(
     () => [
@@ -161,10 +157,64 @@ export default function ReservationsPage() {
     mode: 'create' | 'edit' | 'view',
     reservation?: Reservation
   ) => {
+    setReviewId(null);
     setFormMode(mode);
     setSelectedId(reservation?.id || null);
     setFormBranchId(reservation?.branch_id || branchFilter || '');
     setDropdownOpen(null);
+  };
+
+  const handleOpenReview = (reservation: Reservation) => {
+    setFormMode(null);
+    setSelectedId(null);
+    setReviewId(reservation.id);
+    setDropdownOpen(null);
+  };
+
+  const closeReview = () => {
+    setReviewId(null);
+    setDecisionAction(null);
+  };
+
+  const handleAccept = async (tableId: string | null) => {
+    if (!reviewId || !tableId) return;
+    setDecisionAction('accept');
+    try {
+      await updateMutation.mutateAsync({
+        id: reviewId,
+        status: 'confirmed',
+        restaurant_table_id: tableId,
+      });
+      closeReview();
+    } catch {
+      // toast handled by mutation
+    } finally {
+      setDecisionAction(null);
+    }
+  };
+
+  const handleReject = async () => {
+    if (!reviewId) return;
+    const ok = await confirmDialog({
+      title: 'Reject reservation',
+      message:
+        'Reject this reservation? The guest will be emailed if an address is on file.',
+      confirmLabel: 'Reject',
+      variant: 'danger',
+    });
+    if (!ok) return;
+    setDecisionAction('reject');
+    try {
+      await updateMutation.mutateAsync({
+        id: reviewId,
+        status: 'cancelled',
+      });
+      closeReview();
+    } catch {
+      // toast handled by mutation
+    } finally {
+      setDecisionAction(null);
+    }
   };
 
   const handleDelete = async (id: string) => {
@@ -180,6 +230,7 @@ export default function ReservationsPage() {
   };
 
   const selectedReservation = detailRes?.data;
+  const reviewReservation = reviewId ? selectedReservation || null : null;
 
   if (formMode) {
     if (detailLoading && selectedId && formMode !== 'create') {
@@ -196,6 +247,7 @@ export default function ReservationsPage() {
           customer_id: selectedReservation.customer_id || '',
           guest_name: selectedReservation.guest_name,
           guest_phone: selectedReservation.guest_phone || '',
+          guest_email: selectedReservation.guest_email || '',
           restaurant_table_id: selectedReservation.restaurant_table_id || '',
           party_size: String(selectedReservation.party_size),
           reserved_at: selectedReservation.reserved_at,
@@ -208,7 +260,7 @@ export default function ReservationsPage() {
     return (
       <ReservationForm
         mode={formMode}
-        showBranchSelect={isTenantAdmin}
+        showBranchSelect={showBranchFilter}
         branchOptions={branchOptions}
         customerOptions={customerOptions}
         tableOptions={tableOptions}
@@ -287,7 +339,7 @@ export default function ReservationsPage() {
             aria-label="Filter by status"
           />
         </div>
-        {isTenantAdmin && (
+        {showBranchFilter && (
           <div className="w-full sm:w-56">
             <Select
               value={branchFilter}
@@ -311,7 +363,7 @@ export default function ReservationsPage() {
               <th className="px-5 py-3 font-bold">When</th>
               <th className="px-5 py-3 font-bold">Party</th>
               <th className="px-5 py-3 font-bold">Table</th>
-              {isTenantAdmin && (
+              {showBranchFilter && (
                 <th className="px-5 py-3 font-bold">Branch</th>
               )}
               <th className="px-5 py-3 font-bold">Status</th>
@@ -360,7 +412,7 @@ export default function ReservationsPage() {
                     <td className="px-5 py-4 text-slate-600">
                       {r.table_name || '—'}
                     </td>
-                    {isTenantAdmin && (
+                    {showBranchFilter && (
                       <td className="px-5 py-4">
                         <span className="inline-flex rounded-full bg-[var(--brand-primary-soft)] px-2.5 py-1 text-xs font-semibold text-[var(--brand-primary)]">
                           {r.branch_name || 'Branch'}
@@ -375,38 +427,76 @@ export default function ReservationsPage() {
                       </span>
                     </td>
                     <td className="px-5 py-4 text-right">
-                      <RowActionsMenu
-                        open={dropdownOpen === r.id}
-                        onOpenChange={(open) =>
-                          setDropdownOpen(open ? r.id : null)
-                        }
-                      >
+                      <div className="flex items-center justify-end gap-2">
+                        {r.order_id ? (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              router.push(
+                                `/orders?search=${encodeURIComponent(r.order_number || '')}`
+                              )
+                            }
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+                          >
+                            <ExternalLink className="h-3.5 w-3.5" />
+                            View Order
+                            {r.order_number ? ` #${r.order_number}` : ''}
+                          </button>
+                        ) : (
+                          canCreateOrder &&
+                          (r.status === 'confirmed' ||
+                            r.status === 'seated') &&
+                          r.restaurant_table_id &&
+                          r.customer_id && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setDropdownOpen(null);
+                                router.push(
+                                  `/orders?reservation=${encodeURIComponent(r.id)}`
+                                );
+                              }}
+                              className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--brand-primary)] px-2.5 py-1.5 text-xs font-semibold text-white transition hover:brightness-95"
+                            >
+                              <ShoppingBag className="h-3.5 w-3.5" />
+                              Order
+                            </button>
+                          )
+                        )}
                         <button
                           type="button"
-                          onClick={() => handleOpenForm('view', r)}
-                          className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
+                          onClick={() => handleOpenReview(r)}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
                         >
-                          <Eye className="h-4 w-4" /> View
+                          <Eye className="h-3.5 w-3.5" />
+                          View details
                         </button>
-                        {canUpdate && (
-                          <button
-                            type="button"
-                            onClick={() => handleOpenForm('edit', r)}
-                            className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
-                          >
-                            <Pencil className="h-4 w-4" /> Edit
-                          </button>
-                        )}
-                        {canDelete && (
-                          <button
-                            type="button"
-                            onClick={() => handleDelete(r.id)}
-                            className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-rose-600 hover:bg-rose-50"
-                          >
-                            <Trash2 className="h-4 w-4" /> Delete
-                          </button>
-                        )}
-                      </RowActionsMenu>
+                        <RowActionsMenu
+                          open={dropdownOpen === r.id}
+                          onOpenChange={(open) =>
+                            setDropdownOpen(open ? r.id : null)
+                          }
+                        >
+                          {canUpdate && (
+                            <button
+                              type="button"
+                              onClick={() => handleOpenForm('edit', r)}
+                              className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
+                            >
+                              <Pencil className="h-4 w-4" /> Edit
+                            </button>
+                          )}
+                          {canDelete && !r.order_id && (
+                            <button
+                              type="button"
+                              onClick={() => handleDelete(r.id)}
+                              className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-rose-600 hover:bg-rose-50"
+                            >
+                              <Trash2 className="h-4 w-4" /> Delete
+                            </button>
+                          )}
+                        </RowActionsMenu>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -425,6 +515,19 @@ export default function ReservationsPage() {
         label="reservations"
         disabled={isLoading || isFetching}
       />
+
+      {reviewId && (
+        <ReservationDetailsModal
+          reservation={reviewReservation}
+          loading={detailLoading && !reviewReservation}
+          accepting={decisionAction === 'accept'}
+          rejecting={decisionAction === 'reject'}
+          canDecide={canUpdate}
+          onClose={closeReview}
+          onAccept={handleAccept}
+          onReject={handleReject}
+        />
+      )}
     </div>
   );
 }

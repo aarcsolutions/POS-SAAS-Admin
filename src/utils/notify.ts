@@ -1,31 +1,23 @@
 "use client";
 
-import type { CSSProperties } from "react";
 import { toast } from "sonner";
 
-const brandToastStyle: CSSProperties = {
-  background: "var(--brand-toast)",
-  backgroundColor: "var(--brand-toast)",
-  color: "#ffffff",
-  border: "1px solid var(--brand-primary-dark)",
-  borderRadius: 16,
-  boxShadow:
-    "0 14px 40px color-mix(in srgb, var(--brand-toast) 28%, transparent)",
-};
-
-const base = {
-  duration: 4200,
-  style: brandToastStyle,
-} as const;
+/** Success auto-dismisses; error / warning / info stay until user closes (per toast UI spec). */
+const SUCCESS_MS = 10_000;
+const STICKY = Infinity;
 
 export function notifySuccess(title: string, description?: string) {
-  toast.success(title, { ...base, description });
+  toast.success(title, { description, duration: SUCCESS_MS });
 }
 
 export function notifyError(title: string, description?: string) {
-  toast.error(title, { ...base, description });
+  toast.error(title, { description, duration: STICKY });
+}
+
+export function notifyWarning(title: string, description?: string) {
+  toast.warning(title, { description, duration: STICKY });
 }
 
 export function notifyInfo(title: string, description?: string) {
-  toast.info(title, { ...base, description });
+  toast.info(title, { description, duration: STICKY });
 }

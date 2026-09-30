@@ -32,7 +32,7 @@ const STATUS_BADGE: Record<PurchaseStatus, string> = {
   draft: 'bg-slate-100 text-slate-700',
   ordered: 'bg-[var(--brand-primary-soft)] text-[var(--brand-primary)]',
   received: 'bg-[var(--brand-icon-soft)] text-[var(--brand-icon)]',
-  cancelled: 'bg-rose-100 text-rose-700',
+  cancelled: 'bg-[color-mix(in_srgb,var(--brand-primary-dark)_12%,white)] text-[var(--brand-primary-dark)]',
 };
 
 function formatMoney(n: number) {
@@ -43,12 +43,23 @@ function formatMoney(n: number) {
 }
 
 function materialLabel(item: {
+  item_name?: string | null;
+  item_unit?: string | null;
   raw_material_name?: string | null;
-  raw_material_id: string;
+  raw_material_id?: string | null;
+  product_variant_id?: string | null;
+  inventory_item_id?: string | null;
   raw_material_unit?: string | null;
 }) {
-  const name = item.raw_material_name?.trim() || item.raw_material_id;
-  return item.raw_material_unit ? `${name} (${item.raw_material_unit})` : name;
+  const name =
+    item.item_name?.trim() ||
+    item.raw_material_name?.trim() ||
+    item.raw_material_id ||
+    item.product_variant_id ||
+    item.inventory_item_id ||
+    'Item';
+  const unit = item.item_unit || item.raw_material_unit;
+  return unit ? `${name} (${unit})` : name;
 }
 
 function downloadPurchasePdf(purchase: PurchaseRow) {
@@ -312,7 +323,7 @@ export default function PurchaseReceipt({ purchase: initial, onClose }: Props) {
                   type="button"
                   disabled={busy}
                   onClick={handleCancel}
-                  className="inline-flex items-center gap-2 rounded-xl border border-rose-200 px-3.5 py-2 text-sm font-semibold text-rose-600 hover:bg-rose-50 disabled:opacity-60"
+                  className="inline-flex items-center gap-2 rounded-xl border border-[var(--brand-primary-soft)] px-3.5 py-2 text-sm font-semibold text-[var(--brand-primary-dark)] hover:bg-[var(--brand-primary-soft)] disabled:opacity-60"
                 >
                   {cancelMutation.isPending ? (
                     <Loader2 className="h-4 w-4 animate-spin" />

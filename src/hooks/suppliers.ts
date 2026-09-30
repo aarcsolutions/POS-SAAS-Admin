@@ -2,8 +2,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { suppliersApi } from '@/services/suppliers';
 import {
   AssignRawMaterialPayload,
+  AssignSupplierItemPayload,
   CreatePurchasePayload,
-  PurchaseItemPayload,
+  MatchByItemsPayload,
   SupplierPayload,
 } from '@/types/supplier.types';
 import { toast } from 'sonner';
@@ -129,6 +130,9 @@ export const useUnassignRawMaterialMutation = () => {
         queryClient.invalidateQueries({
           queryKey: ['supplier-materials', vars.supplierId],
         });
+        queryClient.invalidateQueries({
+          queryKey: ['supplier-assigned-items', vars.supplierId],
+        });
       }
     },
     onError: (error: any) => {
@@ -143,6 +147,51 @@ export const useMatchByMaterialsMutation = () => {
   return useMutation({
     mutationFn: (raw_material_ids: string[]) =>
       suppliersApi.matchByMaterials(raw_material_ids),
+    onError: (error: any) => {
+      toast.error(
+        error?.response?.data?.message || 'Failed to match suppliers'
+      );
+    },
+  });
+};
+
+export const useAssignedItemsQuery = (
+  supplierId: string | null,
+  enabled = true
+) => {
+  return useQuery({
+    queryKey: ['supplier-assigned-items', supplierId],
+    queryFn: () => suppliersApi.getAssignedItems(supplierId!),
+    enabled: enabled && !!supplierId,
+  });
+};
+
+export const useAssignItemMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: AssignSupplierItemPayload) =>
+      suppliersApi.assignItem(payload),
+    onSuccess: (response, vars) => {
+      if (response.status) {
+        toast.success(response.message || 'Item assigned');
+        queryClient.invalidateQueries({
+          queryKey: ['supplier-assigned-items', vars.supplier_id],
+        });
+        queryClient.invalidateQueries({
+          queryKey: ['supplier-materials', vars.supplier_id],
+        });
+      }
+    },
+    onError: (error: any) => {
+      toast.error(error?.response?.data?.message || 'Failed to assign item');
+    },
+  });
+};
+
+export const useMatchByItemsMutation = () => {
+  return useMutation({
+    mutationFn: (payload: MatchByItemsPayload) =>
+      suppliersApi.matchByItems(payload),
     onError: (error: any) => {
       toast.error(
         error?.response?.data?.message || 'Failed to match suppliers'

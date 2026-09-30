@@ -17,8 +17,7 @@ import {
   useProductSyncJobQuery,
   useProductSyncMutation,
 } from '@/hooks/products';
-import { useBranchesQuery } from '@/hooks/branches';
-import { useAuthStore } from '@/store/authStore';
+import { useTenantBranchScope } from '@/hooks/branches';
 import { extractListItems } from '@/utils/helpers';
 import { Product } from '@/types/product.types';
 import { toast } from 'sonner';
@@ -45,8 +44,10 @@ type SyncJob = {
 };
 
 export default function ProductSyncPage() {
-  const user = useAuthStore((s) => s.user);
-  const isTenantAdmin = !user?.branchId;
+  const { isTenantAdmin, hasBranches, branchOptions, branchesQuery } =
+    useTenantBranchScope();
+  const branchesLoading = branchesQuery.isLoading;
+
   const canSync = usePermission(ENTITY_PERMS.products.sync);
 
   const [sourceKey, setSourceKey] = useState(TENANT_SOURCE);
@@ -72,23 +73,6 @@ export default function ProductSyncPage() {
   const job = (jobRes?.data as SyncJob | undefined) || null;
   const jobActive =
     !!jobId && job?.status !== 'done' && job?.status !== 'failed';
-
-  const { data: branchesRes, isLoading: branchesLoading } = useBranchesQuery(
-    { page: 1, limit: 100 },
-    isTenantAdmin && canSync
-  );
-
-  const branchOptions = useMemo(() => {
-    const rows =
-      branchesRes?.data?.data ||
-      branchesRes?.data?.branches ||
-      (Array.isArray(branchesRes?.data) ? branchesRes.data : []) ||
-      [];
-    return (rows as { id: string; name: string; code?: string }[]).map((b) => ({
-      value: b.id,
-      label: b.name || b.code || b.id,
-    }));
-  }, [branchesRes]);
 
   const sourceOptions = useMemo(
     () => [
@@ -201,6 +185,22 @@ export default function ProductSyncPage() {
           className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-[var(--brand-primary)]"
         >
           <ArrowLeft className="h-4 w-4" /> Back to products
+        </Link>
+      </div>
+    );
+  }
+
+  if (!hasBranches) {
+    return (
+      <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center">
+        <p className="text-sm text-slate-600">
+          Create at least one branch before syncing products.
+        </p>
+        <Link
+          href="/branches"
+          className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-[var(--brand-primary)]"
+        >
+          Go to branches
         </Link>
       </div>
     );

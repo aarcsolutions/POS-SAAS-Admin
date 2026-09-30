@@ -47,14 +47,11 @@ export default function RootLayout({
           position="top-right"
           theme="light"
           closeButton
+          expand
+          visibleToasts={6}
+          gap={12}
           toastOptions={{
-            style: {
-              background: "var(--brand-toast)",
-              backgroundColor: "var(--brand-toast)",
-              color: "#ffffff",
-              border: "1px solid var(--brand-primary-dark)",
-              borderRadius: 16,
-            },
+            unstyled: false,
             classNames: {
               toast: "saas-toast",
               title: "saas-toast-title",

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Users,
   Plus,
@@ -23,9 +23,8 @@ import {
   useDeleteUserMutation,
 } from '@/hooks/users';
 import { useRolesQuery } from '@/hooks/roles';
-import { useBranchesQuery } from '@/hooks/branches';
+import { useTenantBranchScope } from '@/hooks/branches';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
-import { useAuthStore } from '@/store/authStore';
 import { extractListItems, extractPagination } from '@/utils/helpers';
 import { ApiUser } from '@/types/rbac.types';
 import { confirmDialog } from '@/store/dialogStore';
@@ -33,8 +32,8 @@ import { confirmDialog } from '@/store/dialogStore';
 const LIMIT = 10;
 
 export default function UsersPage() {
-  const authUser = useAuthStore((s) => s.user);
-  const isTenantAdmin = !authUser?.branchId;
+  const { isTenantAdmin, showBranchFilter, branchOptions } =
+    useTenantBranchScope();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [branchFilter, setBranchFilter] = useState('');
@@ -52,23 +51,6 @@ export default function UsersPage() {
     setPage(1);
   }, [debouncedSearch, branchFilter]);
 
-  const { data: branchesRes } = useBranchesQuery(
-    { page: 1, limit: 100 },
-    isTenantAdmin
-  );
-
-  const branchOptions = useMemo(() => {
-    const rows =
-      branchesRes?.data?.data ||
-      branchesRes?.data?.branches ||
-      (Array.isArray(branchesRes?.data) ? branchesRes.data : []) ||
-      [];
-    return (rows as { id: string; name: string; code?: string }[]).map((b) => ({
-      value: b.id,
-      label: b.name || b.code || b.id,
-    }));
-  }, [branchesRes]);
-
   const { data, isLoading, isFetching } = useUsersQuery({
     page,
     limit: LIMIT,
@@ -83,7 +65,7 @@ export default function UsersPage() {
 
   const users = extractListItems<ApiUser>(data, 'users');
   const pagination = extractPagination(data, LIMIT);
-  const colSpan = isTenantAdmin ? 6 : 5;
+  const colSpan = showBranchFilter ? 6 : 5;
 
   const roles = rolesData?.data?.roles ?? [];
 
@@ -175,7 +157,7 @@ export default function UsersPage() {
             className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm outline-none focus:border-[var(--brand-primary)] focus:ring-4 focus:ring-[var(--brand-primary-soft)]"
           />
         </div>
-        {isTenantAdmin && (
+        {showBranchFilter && (
           <div className="w-full sm:w-56">
             <Select
               value={branchFilter}
@@ -200,7 +182,7 @@ export default function UsersPage() {
             <tr>
               <th className="px-5 py-3 font-bold">User</th>
               <th className="px-5 py-3 font-bold">Role</th>
-              {isTenantAdmin && (
+              {showBranchFilter && (
                 <th className="px-5 py-3 font-bold">Branch</th>
               )}
               <th className="px-5 py-3 font-bold">Created</th>
@@ -238,7 +220,7 @@ export default function UsersPage() {
                   <td className="px-5 py-4 text-slate-600">
                     {user.role?.title || '—'}
                   </td>
-                  {isTenantAdmin && (
+                  {showBranchFilter && (
                     <td className="px-5 py-4">
                       <span
                         className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${

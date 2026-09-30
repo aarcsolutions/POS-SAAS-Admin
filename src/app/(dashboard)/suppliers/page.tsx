@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect, useMemo, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation';
 import {
   Truck,
@@ -30,9 +30,8 @@ import {
   useDeleteSupplierMutation,
   usePurchasesQuery,
 } from '@/hooks/suppliers';
-import { useBranchesQuery } from '@/hooks/branches';
+import { useTenantBranchScope } from '@/hooks/branches';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
-import { useAuthStore } from '@/store/authStore';
 import { extractListItems, extractPagination } from '@/utils/helpers';
 import {
   PurchaseRow,
@@ -47,7 +46,7 @@ const STATUS_BADGE: Record<PurchaseStatus, string> = {
   draft: 'bg-slate-100 text-slate-700',
   ordered: 'bg-[var(--brand-primary-soft)] text-[var(--brand-primary)]',
   received: 'bg-[var(--brand-icon-soft)] text-[var(--brand-icon)]',
-  cancelled: 'bg-rose-100 text-rose-700',
+  cancelled: 'bg-[color-mix(in_srgb,var(--brand-primary-dark)_12%,white)] text-[var(--brand-primary-dark)]',
 };
 
 export default function SuppliersPage() {
@@ -65,8 +64,8 @@ export default function SuppliersPage() {
 }
 
 function SuppliersPageInner() {
-  const user = useAuthStore((s) => s.user);
-  const isTenantAdmin = !user?.branchId;
+  const { isTenantAdmin, showBranchFilter, branchOptions } = useTenantBranchScope();
+
   const searchParams = useSearchParams();
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -82,13 +81,19 @@ function SuppliersPageInner() {
   const [initialPoMaterialIds, setInitialPoMaterialIds] = useState<string[]>(
     []
   );
+  const [initialPoLineType, setInitialPoLineType] = useState<
+    'raw_material' | 'product_variant' | 'inventory_item'
+  >('raw_material');
   const [receiptPurchase, setReceiptPurchase] = useState<PurchaseRow | null>(
     null
   );
   const [selectedSupplier, setSelectedSupplier] =
     useState<SupplierRow | null>(null);
   const [dropdownOpen, setDropdownOpen] = useState<string | null>(null);
-  const [queryHandled, setQueryHandled] = useState(false);
+  const [queryHandledKey, setQueryHandledKey] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'suppliers' | 'purchases'>(
+    'suppliers'
+  );
 
   const canCreate = usePermission(ENTITY_PERMS.suppliers.create);
   const canUpdate = usePermission(ENTITY_PERMS.suppliers.update);
@@ -113,39 +118,48 @@ function SuppliersPageInner() {
   }, [debouncedPoSearch, branchFilter]);
 
   useEffect(() => {
-    if (queryHandled) return;
     const createPo = searchParams.get('createPo');
-    if (createPo === '1' && canPurchase) {
-      const materialsParam = searchParams.get('materials') || '';
+    const tab = searchParams.get('tab');
+    const materialsParam = searchParams.get('materials') || '';
+    const lineTypeParam = searchParams.get('lineType') || 'raw_material';
+    const deepLinkKey =
+      createPo === '1'
+        ? `po:${lineTypeParam}:${materialsParam}`
+        : tab
+          ? `tab:${tab}`
+          : 'none';
+
+    if (createPo === '1') {
+      if (!canPurchase) return;
+      if (queryHandledKey === deepLinkKey) return;
       const ids = materialsParam
         .split(',')
         .map((s) => s.trim())
         .filter(Boolean);
+      const allowed = ['raw_material', 'product_variant', 'inventory_item'];
+      setInitialPoLineType(
+        (allowed.includes(lineTypeParam)
+          ? lineTypeParam
+          : 'raw_material') as
+          | 'raw_material'
+          | 'product_variant'
+          | 'inventory_item'
+      );
       setInitialPoMaterialIds(ids);
       setCreatePoMode(true);
       setFormMode(null);
       setAssignMode(false);
       setReceiptPurchase(null);
+      setQueryHandledKey(deepLinkKey);
+      return;
     }
-    setQueryHandled(true);
-  }, [searchParams, canPurchase, queryHandled]);
 
-  const { data: branchesRes } = useBranchesQuery(
-    { page: 1, limit: 100 },
-    isTenantAdmin
-  );
-
-  const branchOptions = useMemo(() => {
-    const rows =
-      branchesRes?.data?.data ||
-      branchesRes?.data?.branches ||
-      (Array.isArray(branchesRes?.data) ? branchesRes.data : []) ||
-      [];
-    return (rows as { id: string; name: string; code?: string }[]).map((b) => ({
-      value: b.id,
-      label: b.name || b.code || b.id,
-    }));
-  }, [branchesRes]);
+    if (queryHandledKey === deepLinkKey) return;
+    if (tab === 'purchases' && canListPurchases) {
+      setActiveTab('purchases');
+    }
+    setQueryHandledKey(deepLinkKey);
+  }, [searchParams, canPurchase, canListPurchases, queryHandledKey]);
 
   const { data, isLoading, isFetching } = useSuppliersQuery({
     page,
@@ -173,7 +187,7 @@ function SuppliersPageInner() {
   const pagination = extractPagination(data, LIMIT);
   const purchases = extractListItems<PurchaseRow>(purchasesRes, 'purchases');
   const purchasesPagination = extractPagination(purchasesRes, LIMIT);
-  const colSpan = isTenantAdmin ? 6 : 5;
+  const colSpan = showBranchFilter ? 6 : 5;
 
   const resetPanels = () => {
     setFormMode(null);
@@ -182,6 +196,7 @@ function SuppliersPageInner() {
     setReceiptPurchase(null);
     setSelectedSupplier(null);
     setInitialPoMaterialIds([]);
+    setInitialPoLineType('raw_material');
   };
 
   const handleOpenForm = (
@@ -232,11 +247,14 @@ function SuppliersPageInner() {
   if (createPoMode && canPurchase) {
     return (
       <PurchaseForm
+        key={`po-${initialPoLineType}-${initialPoMaterialIds.join(',')}`}
         initialMaterialIds={initialPoMaterialIds}
+        initialLineType={initialPoLineType}
         onClose={resetPanels}
         onCreated={(purchase) => {
           setCreatePoMode(false);
           setInitialPoMaterialIds([]);
+          setInitialPoLineType('raw_material');
           if (purchase?.id) setReceiptPurchase(purchase);
           else resetPanels();
         }}
@@ -257,7 +275,7 @@ function SuppliersPageInner() {
     return (
       <SupplierForm
         mode={formMode}
-        showBranchSelect={isTenantAdmin}
+        showBranchSelect={showBranchFilter}
         branchOptions={branchOptions}
         initialData={
           selectedSupplier
@@ -307,7 +325,7 @@ function SuppliersPageInner() {
               <ClipboardList className="h-4 w-4" /> Create Purchase Order
             </button>
           )}
-          {canCreate && (
+          {canCreate && activeTab === 'suppliers' && (
             <button
               onClick={() => handleOpenForm('create')}
               className="flex items-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-[color-mix(in_srgb,var(--brand-primary)_20%,transparent)] transition hover:brightness-95"
@@ -318,6 +336,35 @@ function SuppliersPageInner() {
         </div>
       </div>
 
+      {canListPurchases && (
+        <div className="flex gap-2 rounded-xl border border-slate-200 bg-white p-1">
+          <button
+            type="button"
+            onClick={() => setActiveTab('suppliers')}
+            className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
+              activeTab === 'suppliers'
+                ? 'bg-[var(--brand-primary)] text-white'
+                : 'text-slate-600 hover:bg-slate-50'
+            }`}
+          >
+            Suppliers
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('purchases')}
+            className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
+              activeTab === 'purchases'
+                ? 'bg-[var(--brand-primary)] text-white'
+                : 'text-slate-600 hover:bg-slate-50'
+            }`}
+          >
+            Purchase Orders
+          </button>
+        </div>
+      )}
+
+      {activeTab === 'suppliers' && (
+        <>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
@@ -328,7 +375,7 @@ function SuppliersPageInner() {
             className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm outline-none focus:border-[var(--brand-primary)] focus:ring-4 focus:ring-[var(--brand-primary-soft)]"
           />
         </div>
-        {isTenantAdmin && (
+        {showBranchFilter && (
           <div className="w-full sm:w-56">
             <Select
               value={branchFilter}
@@ -352,7 +399,7 @@ function SuppliersPageInner() {
               <th className="px-5 py-3 font-bold">Phone</th>
               <th className="px-5 py-3 font-bold">Email</th>
               <th className="px-5 py-3 font-bold">Address</th>
-              {isTenantAdmin && (
+              {showBranchFilter && (
                 <th className="px-5 py-3 font-bold">Branch</th>
               )}
               <th className="px-5 py-3 font-bold text-right">Actions</th>
@@ -392,7 +439,7 @@ function SuppliersPageInner() {
                   <td className="px-5 py-4 text-slate-600">
                     {s.address || <span className="text-slate-300">—</span>}
                   </td>
-                  {isTenantAdmin && (
+                  {showBranchFilter && (
                     <td className="px-5 py-4">
                       <span className="inline-flex rounded-full bg-[var(--brand-primary-soft)] px-2.5 py-1 text-xs font-semibold text-[var(--brand-primary)]">
                         {s.branch_name || 'Tenant'}
@@ -444,7 +491,7 @@ function SuppliersPageInner() {
                         <button
                           type="button"
                           onClick={() => handleDelete(s.id)}
-                          className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-rose-600 hover:bg-rose-50"
+                          className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[var(--brand-primary-dark)] hover:bg-[var(--brand-primary-soft)]"
                         >
                           <Trash2 className="h-4 w-4" /> Delete
                         </button>
@@ -465,8 +512,10 @@ function SuppliersPageInner() {
         limit={LIMIT}
         onPageChange={setPage}
       />
+        </>
+      )}
 
-      {canListPurchases && (
+      {activeTab === 'purchases' && canListPurchases && (
         <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
           <div className="flex flex-col gap-3 border-b border-slate-100 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
             <div>

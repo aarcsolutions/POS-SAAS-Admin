@@ -21,3 +21,14 @@ export const useDashboardQuery = (
       : false,
   });
 };
+
+export const useMenuPendingCountsQuery = (enabled = true) => {
+  return useQuery({
+    queryKey: ['menu-pending-counts'],
+    queryFn: () => dashboardApi.getPendingCounts(),
+    enabled,
+    placeholderData: (previousData) => previousData,
+    refetchInterval: 30000,
+    staleTime: 10000,
+  });
+};

@@ -12,9 +12,8 @@ import {
   useUpdateCategoryMutation,
   useDeleteCategoryMutation,
 } from '@/hooks/categories';
-import { useBranchesQuery } from '@/hooks/branches';
+import { useTenantBranchScope } from '@/hooks/branches';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
-import { useAuthStore } from '@/store/authStore';
 import { categoriesApi } from '@/services/categories';
 import { extractListItems, extractPagination } from '@/utils/helpers';
 import { Category } from '@/types/category.types';
@@ -48,8 +47,7 @@ async function loadAllCategories(params: {
 }
 
 export default function CategoriesPage() {
-  const user = useAuthStore((s) => s.user);
-  const isTenantAdmin = !user?.branchId;
+  const { isTenantAdmin, showBranchFilter, branchOptions } = useTenantBranchScope();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [branchFilter, setBranchFilter] = useState('');
@@ -73,23 +71,6 @@ export default function CategoriesPage() {
   const createMutation = useCreateCategoryMutation();
   const updateMutation = useUpdateCategoryMutation();
   const deleteMutation = useDeleteCategoryMutation();
-
-  const { data: branchesRes } = useBranchesQuery(
-    { page: 1, limit: 100 },
-    isTenantAdmin,
-  );
-
-  const branchOptions = useMemo(() => {
-    const rows =
-      branchesRes?.data?.data ||
-      branchesRes?.data?.branches ||
-      (Array.isArray(branchesRes?.data) ? branchesRes.data : []) ||
-      [];
-    return (rows as { id: string; name: string; code?: string }[]).map((b) => ({
-      value: b.id,
-      label: b.name || b.code || b.id,
-    }));
-  }, [branchesRes]);
 
   const listParams = useMemo(
     () => ({
@@ -289,7 +270,7 @@ export default function CategoriesPage() {
                 className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm outline-none focus:border-[var(--brand-primary)] focus:ring-4 focus:ring-[var(--brand-primary-soft)]"
               />
             </div>
-            {isTenantAdmin ? (
+            {showBranchFilter ? (
               <div className="w-full sm:w-56">
                 <Select
                   value={branchFilter}
@@ -314,7 +295,7 @@ export default function CategoriesPage() {
           loading={loading}
           expanded={expanded}
           parentNameById={parentNameById}
-          isTenantAdmin={isTenantAdmin}
+          isTenantAdmin={showBranchFilter}
           dropdownOpen={dropdownOpen}
           canUpdate={canUpdate}
           canDelete={canDelete}

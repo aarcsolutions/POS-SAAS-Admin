@@ -15,17 +15,10 @@ import {
 import ProductPerformanceTable from '@/components/reports/ProductPerformanceTable';
 import SalesPerformanceChart from '@/components/dashboard/SalesPerformanceChart';
 import PaymentMixChart from '@/components/dashboard/PaymentMixChart';
-import { Select } from '@/components/ui/Select';
+import DateRangePicker, {
+  defaultLastDaysRange,
+} from '@/components/ui/DateRangePicker';
 import { useReportsQuery } from '@/hooks/reports';
-import { DashboardPeriod } from '@/types/dashboard.types';
-
-const PERIOD_OPTIONS = [
-  { value: '7d', label: 'Last 7 Days' },
-  { value: '30d', label: 'Last 30 Days' },
-  { value: '90d', label: 'Last 90 Days' },
-  { value: 'month', label: 'This Month' },
-  { value: 'year', label: 'This Year' },
-];
 
 function formatChange(percent: number): string {
   const sign = percent > 0 ? '+' : '';
@@ -36,10 +29,10 @@ export default function ReportsPage() {
   const [activeTab, setActiveTab] = useState<'overview' | 'products'>(
     'overview'
   );
-  const [period, setPeriod] = useState<DashboardPeriod>('30d');
+  const [range, setRange] = useState(defaultLastDaysRange(30));
   const [searchQuery, setSearchQuery] = useState('');
 
-  const { data, isLoading, isError } = useReportsQuery(period);
+  const { data, isLoading, isError, isFetching } = useReportsQuery(range);
   const report = data?.data;
   const kpis = report?.kpis;
   const reviewsSummary = report?.reviews_summary;
@@ -76,7 +69,7 @@ export default function ReportsPage() {
         <div>
           <Link
             href="/dashboard"
-            className="mb-3 inline-flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-slate-700"
+            className="mb-3 inline-flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-[var(--brand-primary)]"
           >
             <ArrowLeft className="h-4 w-4" /> Back to Dashboard
           </Link>
@@ -84,18 +77,11 @@ export default function ReportsPage() {
             Sales & Reports
           </h1>
           <p className="mt-1 text-sm text-slate-500">
-            Analyze sales performance and product metrics from live data.
+            Analyze sales performance and product metrics from live data
+            {isFetching ? ' · updating…' : ''}
           </p>
         </div>
-        <div className="w-44">
-          <Select
-            value={period}
-            onChange={(value) => setPeriod(value as DashboardPeriod)}
-            size="lg"
-            allowEmpty={false}
-            options={PERIOD_OPTIONS}
-          />
-        </div>
+        <DateRangePicker value={range} onChange={setRange} />
       </div>
 
       {isLoading && !report ? (
@@ -254,24 +240,26 @@ export default function ReportsPage() {
                     ) : (
                       report?.sales_by_day_of_week.map((day) => (
                         <div key={day.label} className="flex items-center gap-3">
-                          <div className="w-12 text-xs font-medium text-slate-600">
+                          <div className="w-12 shrink-0 text-xs font-medium text-slate-600">
                             {day.label}
                           </div>
-                          <div className="flex-1">
-                            <div className="h-6 overflow-hidden rounded-lg bg-slate-50">
+                          <div className="min-w-0 flex-1">
+                            <div className="h-5 overflow-hidden rounded-full bg-slate-50">
                               <div
-                                className="flex h-full items-center justify-end rounded-lg bg-[var(--brand-chart)] px-2 text-xs font-bold text-white"
+                                className="h-full rounded-full bg-[var(--brand-chart)]"
                                 style={{
                                   width: `${(day.revenue / maxDowRevenue) * 100}%`,
-                                  minWidth: day.revenue > 0 ? '2rem' : 0,
                                 }}
-                              >
-                                {day.revenue > 0 && day.revenue_formatted}
-                              </div>
+                              />
                             </div>
                           </div>
-                          <div className="w-16 text-right text-xs text-slate-500">
-                            {day.orders} orders
+                          <div className="w-24 shrink-0 text-right">
+                            <div className="text-xs font-bold text-slate-700">
+                              {day.revenue_formatted}
+                            </div>
+                            <div className="text-[10px] text-slate-500">
+                              {day.orders} order{day.orders === 1 ? '' : 's'}
+                            </div>
                           </div>
                         </div>
                       ))
@@ -328,7 +316,7 @@ export default function ReportsPage() {
                       (reviewsSummary?.rating_distribution || []).map((row) => (
                         <div key={row.rating} className="flex items-center gap-3">
                           <div className="flex w-16 items-center gap-1 text-xs font-medium text-slate-600">
-                            <Star className="h-3 w-3 fill-[#f5c518] text-[#f5c518]" />
+                            <Star className="h-3 w-3 fill-[var(--brand-accent)] text-[var(--brand-accent)]" />
                             {row.rating}
                           </div>
                           <div className="flex-1">

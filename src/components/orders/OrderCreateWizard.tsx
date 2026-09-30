@@ -21,6 +21,7 @@ import { useCreateOrderMutation } from '@/hooks/orders';
 import { useTablesQuery } from '@/hooks/tables';
 import { useTaxesQuery } from '@/hooks/taxes';
 import { useBusinessSettingsQuery } from '@/hooks/business-settings';
+import { useAuthStore } from '@/store/authStore';
 import { ordersApi } from '@/services/orders';
 import { productsApi } from '@/services/products';
 import { CartLine, OrderType } from '@/types/order.types';
@@ -37,9 +38,19 @@ import Link from 'next/link';
 
 type Step = 'type' | 'customer' | 'table' | 'delivery' | 'browse' | 'confirm';
 
+export type OrderCreatePrefill = {
+  reservationId: string;
+  customerId: string;
+  customerLabel: string;
+  tableId: string;
+  tableLabel: string;
+};
+
 interface Props {
   onClose: () => void;
   onCreated: () => void;
+  /** When starting from a reservation — skip type/customer/table. */
+  prefill?: OrderCreatePrefill | null;
 }
 
 function productLines(product: Product): Array<{
@@ -85,13 +96,25 @@ function getProductImage(product: Product): string | null {
   return null;
 }
 
-export default function OrderCreateWizard({ onClose, onCreated }: Props) {
-  const [step, setStep] = useState<Step>('type');
-  const [orderType, setOrderType] = useState<OrderType | null>(null);
-  const [customerId, setCustomerId] = useState('');
-  const [customerLabel, setCustomerLabel] = useState('');
-  const [tableId, setTableId] = useState('');
-  const [tableLabel, setTableLabel] = useState('');
+export default function OrderCreateWizard({
+  onClose,
+  onCreated,
+  prefill = null,
+}: Props) {
+  const fromReservation = Boolean(prefill?.reservationId);
+  const [step, setStep] = useState<Step>(
+    fromReservation ? 'browse' : 'type'
+  );
+  const [orderType, setOrderType] = useState<OrderType | null>(
+    fromReservation ? 'dine_in' : null
+  );
+  const [customerId, setCustomerId] = useState(prefill?.customerId || '');
+  const [customerLabel, setCustomerLabel] = useState(
+    prefill?.customerLabel || ''
+  );
+  const [tableId, setTableId] = useState(prefill?.tableId || '');
+  const [tableLabel, setTableLabel] = useState(prefill?.tableLabel || '');
+  const [reservationId] = useState(prefill?.reservationId || '');
   const [tableError, setTableError] = useState('');
   const [showCustomerCreate, setShowCustomerCreate] = useState(false);
   const [newCustomerName, setNewCustomerName] = useState('');
@@ -122,6 +145,7 @@ export default function OrderCreateWizard({ onClose, onCreated }: Props) {
   const [resolvingProductId, setResolvingProductId] = useState<string | null>(
     null
   );
+  const user = useAuthStore((s) => s.user);
   const [taxId, setTaxId] = useState('');
   const [taxDefaultApplied, setTaxDefaultApplied] = useState(false);
 
@@ -131,7 +155,13 @@ export default function OrderCreateWizard({ onClose, onCreated }: Props) {
     search: customerSearch || undefined,
   });
   const tablesQuery = useTablesQuery(
-    { page: 1, limit: 100, status: 'available' },
+    {
+      page: 1,
+      limit: 100,
+      status: 'available',
+      // Tenant-level users only see tenant tables; branch users are scoped by JWT.
+      branch_id: user?.branchId ? undefined : 'tenant',
+    },
     orderType === 'dine_in' || step === 'table' || step === 'confirm'
   );
   const categoriesQuery = useCategoriesQuery({ page: 1, limit: 100 });
@@ -409,6 +439,10 @@ export default function OrderCreateWizard({ onClose, onCreated }: Props) {
         setSelectedCategoryId(current?.parent_id ?? null);
         return;
       }
+      if (fromReservation) {
+        onClose();
+        return;
+      }
       if (orderType === 'dine_in') {
         setStep('table');
       } else if (orderType === 'delivery') {
@@ -493,6 +527,7 @@ export default function OrderCreateWizard({ onClose, onCreated }: Props) {
         customer_id: customerId,
         order_type: orderType,
         table_id: orderType === 'dine_in' ? tableId : undefined,
+        reservation_id: reservationId || undefined,
         delivery_address:
           orderType === 'delivery' ? deliveryAddress.trim() : undefined,
         delivery_city:
@@ -676,7 +711,9 @@ export default function OrderCreateWizard({ onClose, onCreated }: Props) {
           <div>
             <h1 className="text-2xl font-bold text-slate-900">Create Order</h1>
             <p className="text-sm text-slate-500">
-              Step: {step === 'browse' ? 'Categories & products' : step}
+              {fromReservation
+                ? `From reservation · ${customerLabel || 'Guest'}${tableLabel ? ` · ${tableLabel}` : ''}`
+                : `Step: ${step === 'browse' ? 'Categories & products' : step}`}
             </p>
           </div>
         </div>

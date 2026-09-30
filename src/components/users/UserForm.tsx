@@ -161,6 +161,7 @@ export default function UserForm({
               options={roles.map((role) => ({
                 value: role.id,
                 label: role.title,
+                meta: role.branch_name || undefined,
               }))}
               searchable
               searchPlaceholder="Search roles…"
